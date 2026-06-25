@@ -1,0 +1,10 @@
+include README.md
+include LICENSE
+include strategy.sh
+recursive-include backtester *.py
+recursive-include backtester/plots/theme/configs *.py
+recursive-include strategies *.py
+recursive-include benchmarks *.md
+recursive-include compare *.md
+recursive-include docs *.md
+recursive-include skills *.md

@@ -1,0 +1,655 @@
+"""
+Fill Engine — processes pending orders against OHLCV bars.
+
+Supports: Market, Limit, Stop, StopLimit, StopTrail, StopTrailLimit, OCO,
+Bracket orders.
+Applies slippage and commission per fill.
+
+Usage:
+    from backtester.execution import (
+        FillEngine, Order, OrderType, OrderSide, BarData,
+        FixedBpsSlippage, PerShareCommission,
+    )
+
+    engine = FillEngine(
+        slippage=FixedBpsSlippage(bps=5.0),
+        commission=PerShareCommission(),
+    )
+    engine.submit(Order(
+        instrument="AAPL", side=OrderSide.BUY, quantity=100,
+        order_type=OrderType.LIMIT, limit_price=150.0,
+    ))
+
+    bar = BarData(timestamp=..., open=149.5, high=152.0, low=148.0, close=151.0, volume=1e6)
+    fills = engine.process_bar("AAPL", bar)
+
+Institutional-grade QuantJourney Backtester component.
+Designed for deterministic strategy simulation, portfolio accounting,
+analytics, reporting, and reproducible research workflows.
+
+Copyright (c) 2026 QuantJourney.
+Updated: 05.2026.
+Licensed under the Apache License 2.0.
+"""
+
+from __future__ import annotations
+
+import uuid
+from collections import defaultdict
+from typing import Dict, List, Optional
+
+from backtester.execution.order_types import (
+    BarData,
+    Fill,
+    Order,
+    OrderSide,
+    OrderStatus,
+    OrderType,
+    TimeInForce,
+)
+from backtester.execution.slippage import NoSlippage, SlippageModel
+from backtester.execution.commission import CommissionScheme, ZeroCommission
+
+
+class FillEngine:
+    """
+    Stateful order book that processes pending orders against OHLCV bars.
+
+    Processing priority per bar:
+        1. Stop / StopLimit / StopTrail / StopTrailLimit orders
+        2. Limit orders
+        3. Market orders
+
+    Same-bar convention:
+        Daily OHLC bars do not reveal the intrabar path. If a protective stop
+        and take-profit are both reachable inside the same bar, this engine
+        applies the priority above. For separate exit orders this is deliberately
+        conservative: stops are evaluated before limits. Use intraday data for
+        strategies whose edge depends on exact same-bar path ordering.
+
+    Bracket orders are decomposed into an entry order + OCO pair (TP + SL).
+    OCO logic: when one order in a pair fills, the other is cancelled.
+    """
+
+    def __init__(
+        self,
+        slippage: Optional[SlippageModel] = None,
+        commission: Optional[CommissionScheme] = None,
+        fill_at: str = "open",  # "open" or "close"
+        max_volume_participation: Optional[float] = None,
+    ):
+        self.slippage = slippage or NoSlippage()
+        self.commission = commission or ZeroCommission()
+        self.fill_at = fill_at
+        self.max_volume_participation = max_volume_participation
+
+        # Active orders keyed by instrument
+        self._orders: Dict[str, List[Order]] = defaultdict(list)
+        # OCO pair tracking: oco_pair_id → [order_id, order_id]
+        self._oco_pairs: Dict[str, List[str]] = {}
+        # All orders ever submitted (for audit trail)
+        self._order_history: List[Order] = []
+        # All fills emitted by this engine (for strategy-side metadata)
+        self._fill_history: List[Fill] = []
+        self._last_fill_by_instrument: Dict[str, Fill] = {}
+        self._last_fill_by_order: Dict[str, Fill] = {}
+
+    # ── Submit ─────────────────────────────────────────────────────────
+
+    def submit(self, order: Order) -> str:
+        """Submit an order. Returns order_id."""
+        self._validate_order(order)
+        if order.order_type == OrderType.BRACKET:
+            return self._submit_bracket(order)
+
+        self._orders[order.instrument].append(order)
+        self._order_history.append(order)
+
+        # Register OCO pair tracking for user-submitted OCO orders
+        if order.oco_pair_id:
+            pair = self._oco_pairs.setdefault(order.oco_pair_id, [])
+            pair.append(order.order_id)
+
+        return order.order_id
+
+    def _submit_bracket(self, order: Order) -> str:
+        """Decompose bracket into entry + OCO(TP, SL)."""
+        bracket = order.bracket
+        if bracket is None:
+            raise ValueError("Bracket order requires a BracketSpec")
+        self._validate_bracket(bracket)
+
+        # Entry order (market or limit)
+        entry_type = OrderType.LIMIT if order.limit_price else OrderType.MARKET
+        entry = Order(
+            instrument=order.instrument,
+            side=order.side,
+            quantity=order.quantity,
+            order_type=entry_type,
+            limit_price=order.limit_price,
+            time_in_force=order.time_in_force,
+            expire_at=order.expire_at,
+            expires_after_bars=order.expires_after_bars,
+            tag=f"bracket_entry:{order.order_id[:8]}",
+        )
+
+        # Take-profit and stop-loss as OCO pair
+        exit_side = OrderSide.SELL if order.side == OrderSide.BUY else OrderSide.BUY
+        oco_id = str(uuid.uuid4())
+
+        tp = Order(
+            instrument=order.instrument,
+            side=exit_side,
+            quantity=order.quantity,
+            order_type=bracket.take_profit_type,
+            limit_price=bracket.take_profit_price,
+            oco_pair_id=oco_id,
+            time_in_force=order.time_in_force,
+            expire_at=order.expire_at,
+            expires_after_bars=order.expires_after_bars,
+            tag=f"bracket_tp:{order.order_id[:8]}",
+        )
+        sl = Order(
+            instrument=order.instrument,
+            side=exit_side,
+            quantity=order.quantity,
+            order_type=bracket.stop_loss_type,
+            stop_price=bracket.stop_loss_price,
+            limit_price=bracket.stop_limit_price,
+            limit_offset=bracket.stop_limit_offset,
+            trail_amount=bracket.trail_amount,
+            trail_percent=bracket.trail_percent,
+            oco_pair_id=oco_id,
+            time_in_force=order.time_in_force,
+            expire_at=order.expire_at,
+            expires_after_bars=order.expires_after_bars,
+            tag=f"bracket_sl:{order.order_id[:8]}",
+        )
+
+        self._oco_pairs[oco_id] = [tp.order_id, sl.order_id]
+
+        # Submit entry immediately; TP + SL are parked until entry fills
+        self._orders[order.instrument].append(entry)
+        self._order_history.extend([entry, tp, sl])
+
+        # Store bracket children for post-entry activation
+        entry._bracket_children = [tp, sl]  # type: ignore[attr-defined]
+        entry._bracket_spec = bracket  # type: ignore[attr-defined]
+        entry._bracket_parent_side = order.side  # type: ignore[attr-defined]
+
+        order.status = OrderStatus.FILLED  # mark parent as processed
+        return order.order_id
+
+    # ── Cancel ─────────────────────────────────────────────────────────
+
+    def cancel(self, order_id: str) -> bool:
+        """Cancel an order by ID. Returns True if found and cancelled."""
+        for instrument_orders in self._orders.values():
+            for order in instrument_orders:
+                if order.order_id == order_id and order.is_active:
+                    order.cancel()
+                    return True
+        return False
+
+    def cancel_all(self, instrument: Optional[str] = None) -> int:
+        """Cancel all active orders, optionally filtered by instrument."""
+        count = 0
+        targets = (
+            [instrument] if instrument else list(self._orders.keys())
+        )
+        for inst in targets:
+            for order in self._orders.get(inst, []):
+                if order.is_active:
+                    order.cancel()
+                    count += 1
+        return count
+
+    # ── Process Bar ────────────────────────────────────────────────────
+
+    def process_bar(self, instrument: str, bar: BarData) -> List[Fill]:
+        """
+        Process all pending orders for an instrument against one bar.
+        Returns list of fills generated.
+        """
+        fills: List[Fill] = []
+        orders = self._orders.get(instrument, [])
+        if not orders:
+            return fills
+
+        remaining_bar_capacity = self._bar_fill_capacity(bar)
+
+        # Process in priority: stops → limits → markets
+        for order in sorted(orders, key=lambda o: _ORDER_PRIORITY.get(o.order_type, 99)):
+            if not order.is_active:
+                continue
+
+            if self._expire_before_bar(order, bar):
+                continue
+
+            fill = self._try_fill(order, bar, max_quantity=remaining_bar_capacity)
+            if fill:
+                fills.append(fill)
+                self._record_fill(fill)
+                if remaining_bar_capacity is not None:
+                    remaining_bar_capacity = max(0.0, remaining_bar_capacity - fill.quantity)
+
+                # Activate bracket children on entry fill
+                if order.status == OrderStatus.FILLED and hasattr(order, "_bracket_children"):
+                    self._prepare_bracket_children(order, fill)
+                    for child in order._bracket_children:  # type: ignore[attr-defined]
+                        self._orders[instrument].append(child)
+
+                # OCO: cancel the pair only after a complete fill.
+                if order.status == OrderStatus.FILLED and order.oco_pair_id:
+                    self._cancel_oco_pair(order.oco_pair_id, except_id=order.order_id)
+                elif order.is_active:
+                    self._expire_after_bar(order, bar)
+            else:
+                self._expire_after_bar(order, bar)
+
+        # Clean up filled/cancelled orders
+        self._orders[instrument] = [o for o in orders if o.is_active]
+        return fills
+
+    # ── Fill Logic ─────────────────────────────────────────────────────
+
+    def _try_fill(
+        self,
+        order: Order,
+        bar: BarData,
+        max_quantity: Optional[float] = None,
+    ) -> Optional[Fill]:
+        """Attempt to fill a single order against a bar."""
+        theoretical_price = self._get_theoretical_price(order, bar)
+        if theoretical_price is None:
+            # Update trailing stop anchor
+            if order.order_type in (OrderType.STOP_TRAIL, OrderType.STOP_TRAIL_LIMIT):
+                self._update_trail_anchor(order, bar)
+            return None
+
+        fill_qty = self._fill_quantity(order, max_quantity)
+        if fill_qty <= 0:
+            return None
+
+        # Apply slippage
+        fill_price = self.slippage.compute(
+            price=theoretical_price,
+            quantity=fill_qty,
+            side=order.side,
+            bar=bar,
+        )
+
+        # Apply commission
+        notional = fill_price * fill_qty
+        commission_cost = self.commission.compute(
+            price=fill_price,
+            quantity=fill_qty,
+            notional=notional,
+        )
+
+        slippage_per_share = abs(fill_price - theoretical_price)
+
+        previous_filled_qty = order.filled_qty
+        order.filled_qty += fill_qty
+        if order.avg_fill_price is None or previous_filled_qty <= 0:
+            order.avg_fill_price = fill_price
+        else:
+            order.avg_fill_price = (
+                (order.avg_fill_price * previous_filled_qty) + (fill_price * fill_qty)
+            ) / order.filled_qty
+        order.status = (
+            OrderStatus.FILLED
+            if order.remaining_qty <= 1e-12
+            else OrderStatus.PARTIAL
+        )
+
+        return Fill(
+            order_id=order.order_id,
+            instrument=order.instrument,
+            side=order.side,
+            quantity=fill_qty,
+            fill_price=fill_price,
+            slippage=slippage_per_share,
+            commission=commission_cost,
+            timestamp=bar.timestamp,
+            theoretical_price=theoretical_price,
+            remaining_qty=max(order.remaining_qty, 0.0),
+            order_status=order.status,
+        )
+
+    def _get_theoretical_price(self, order: Order, bar: BarData) -> Optional[float]:
+        """Determine the theoretical (pre-slippage) fill price, or None if not triggered."""
+        match order.order_type:
+            case OrderType.MARKET:
+                return bar.open if self.fill_at == "open" else bar.close
+
+            case OrderType.LIMIT:
+                if order.limit_price is None:
+                    return None
+                if order.side == OrderSide.BUY and bar.low <= order.limit_price:
+                    return min(order.limit_price, bar.open)
+                if order.side == OrderSide.SELL and bar.high >= order.limit_price:
+                    return max(order.limit_price, bar.open)
+                return None
+
+            case OrderType.STOP:
+                if order.stop_price is None:
+                    return None
+                if order.side == OrderSide.BUY and bar.high >= order.stop_price:
+                    return max(order.stop_price, bar.open)
+                if order.side == OrderSide.SELL and bar.low <= order.stop_price:
+                    return min(order.stop_price, bar.open)
+                return None
+
+            case OrderType.STOP_LIMIT:
+                return self._get_stop_limit_price(order, bar)
+
+            case OrderType.STOP_TRAIL:
+                effective_stop = self._compute_trail_stop(order, bar)
+                if effective_stop is None:
+                    return None
+                if order.side == OrderSide.SELL and bar.low <= effective_stop:
+                    return min(effective_stop, bar.open)
+                if order.side == OrderSide.BUY and bar.high >= effective_stop:
+                    return max(effective_stop, bar.open)
+                return None
+
+            case OrderType.STOP_TRAIL_LIMIT:
+                return self._get_trailing_stop_limit_price(order, bar)
+
+            case OrderType.OCO:
+                # OCO orders act as limit or stop depending on which price is set
+                if order.limit_price is not None:
+                    if order.side == OrderSide.BUY and bar.low <= order.limit_price:
+                        return min(order.limit_price, bar.open)
+                    if order.side == OrderSide.SELL and bar.high >= order.limit_price:
+                        return max(order.limit_price, bar.open)
+                if order.stop_price is not None:
+                    if order.side == OrderSide.BUY and bar.high >= order.stop_price:
+                        return max(order.stop_price, bar.open)
+                    if order.side == OrderSide.SELL and bar.low <= order.stop_price:
+                        return min(order.stop_price, bar.open)
+                return None
+
+            case _:
+                return None
+
+    def _compute_trail_stop(self, order: Order, bar: BarData) -> Optional[float]:
+        """Compute the effective stop price for a trailing stop."""
+        anchor = order._trail_anchor
+        if anchor is None:
+            return None
+
+        if order.trail_amount is not None:
+            distance = order.trail_amount
+        elif order.trail_percent is not None:
+            distance = anchor * order.trail_percent
+        else:
+            return None
+
+        if order.side == OrderSide.SELL:
+            return anchor - distance
+        else:
+            return anchor + distance
+
+    def _get_stop_limit_price(self, order: Order, bar: BarData) -> Optional[float]:
+        """Activate a stop-limit order, then fill only at-or-better than limit."""
+        if order.stop_price is None or order.limit_price is None:
+            return None
+
+        if not order._limit_activated:
+            if order.side == OrderSide.BUY and bar.high >= order.stop_price:
+                order._limit_activated = True
+                order._activated_limit_price = order.limit_price
+            elif order.side == OrderSide.SELL and bar.low <= order.stop_price:
+                order._limit_activated = True
+                order._activated_limit_price = order.limit_price
+            else:
+                return None
+
+        return self._get_limit_price(order, bar, order._activated_limit_price)
+
+    def _get_trailing_stop_limit_price(self, order: Order, bar: BarData) -> Optional[float]:
+        """Activate a trailing stop-limit, then fill only at-or-better than limit."""
+        effective_stop = self._compute_trail_stop(order, bar)
+        if effective_stop is None:
+            return None
+
+        if not order._limit_activated:
+            if order.side == OrderSide.SELL and bar.low <= effective_stop:
+                order._limit_activated = True
+                order._activated_limit_price = self._trail_limit_price(order, effective_stop)
+            elif order.side == OrderSide.BUY and bar.high >= effective_stop:
+                order._limit_activated = True
+                order._activated_limit_price = self._trail_limit_price(order, effective_stop)
+            else:
+                return None
+
+        return self._get_limit_price(order, bar, order._activated_limit_price)
+
+    def _trail_limit_price(self, order: Order, effective_stop: float) -> float:
+        """Resolve the limit price for a stop-trail-limit activation."""
+        if order.limit_price is not None:
+            return order.limit_price
+        offset = float(order.limit_offset or 0.0)
+        if order.side == OrderSide.SELL:
+            return effective_stop - offset
+        return effective_stop + offset
+
+    def _get_limit_price(
+        self,
+        order: Order,
+        bar: BarData,
+        limit_price: Optional[float],
+    ) -> Optional[float]:
+        """Return fill price for a limit order if reachable."""
+        if limit_price is None:
+            return None
+        if order.side == OrderSide.BUY and bar.low <= limit_price:
+            return min(limit_price, bar.open)
+        if order.side == OrderSide.SELL and bar.high >= limit_price:
+            return max(limit_price, bar.open)
+        return None
+
+    def _update_trail_anchor(self, order: Order, bar: BarData) -> None:
+        """Update the trailing stop anchor based on new bar data."""
+        current = order._trail_anchor
+
+        if order.side == OrderSide.SELL:
+            # Selling: anchor ratchets UP with high
+            new_anchor = bar.high
+            if current is None or new_anchor > current:
+                order._trail_anchor = new_anchor
+        else:
+            # Buying: anchor ratchets DOWN with low
+            new_anchor = bar.low
+            if current is None or new_anchor < current:
+                order._trail_anchor = new_anchor
+
+    def _cancel_oco_pair(self, oco_id: str, except_id: str) -> None:
+        """Cancel the other order in an OCO pair."""
+        pair_ids = self._oco_pairs.get(oco_id, [])
+        for oid in pair_ids:
+            if oid != except_id:
+                self.cancel(oid)
+
+    def _prepare_bracket_children(self, entry_order: Order, entry_fill: Fill) -> None:
+        """Resolve bracket child prices that depend on the actual entry fill."""
+        bracket = getattr(entry_order, "_bracket_spec", None)
+        parent_side = getattr(entry_order, "_bracket_parent_side", entry_order.side)
+        if bracket is None:
+            return
+
+        entry_price = float(entry_order.avg_fill_price or entry_fill.fill_price)
+        is_long = parent_side == OrderSide.BUY
+        for child in entry_order._bracket_children:  # type: ignore[attr-defined]
+            if child.tag.startswith("bracket_tp") and bracket.take_profit_pct is not None:
+                pct = float(bracket.take_profit_pct)
+                child.limit_price = entry_price * (1.0 + pct if is_long else 1.0 - pct)
+
+            if child.tag.startswith("bracket_sl"):
+                if bracket.stop_loss_pct is not None and child.order_type in (
+                    OrderType.STOP,
+                    OrderType.STOP_LIMIT,
+                ):
+                    pct = float(bracket.stop_loss_pct)
+                    child.stop_price = entry_price * (1.0 - pct if is_long else 1.0 + pct)
+
+                if child.order_type == OrderType.STOP_LIMIT and child.limit_price is None:
+                    stop = child.stop_price
+                    if stop is not None and bracket.stop_limit_offset is not None:
+                        offset = float(bracket.stop_limit_offset)
+                        child.limit_price = stop - offset if child.side == OrderSide.SELL else stop + offset
+
+    def _fill_quantity(self, order: Order, max_quantity: Optional[float]) -> float:
+        remaining = max(float(order.remaining_qty), 0.0)
+        if max_quantity is None:
+            return remaining
+        return min(remaining, max(float(max_quantity), 0.0))
+
+    def _bar_fill_capacity(self, bar: BarData) -> Optional[float]:
+        if self.max_volume_participation is None:
+            return None
+        if self.max_volume_participation <= 0:
+            return 0.0
+        return max(float(bar.volume), 0.0) * float(self.max_volume_participation)
+
+    def _normalize_tif(self, order: Order) -> TimeInForce:
+        tif = order.time_in_force
+        if isinstance(tif, TimeInForce):
+            return tif
+        return TimeInForce[str(tif).upper()]
+
+    def _expire_before_bar(self, order: Order, bar: BarData) -> bool:
+        if order.created_at is None:
+            order.created_at = bar.timestamp
+        if order.expire_at is not None and self._timestamp_gt(bar.timestamp, order.expire_at):
+            order.status = OrderStatus.EXPIRED
+            return True
+        return False
+
+    def _expire_after_bar(self, order: Order, bar: BarData) -> bool:
+        if not order.is_active:
+            return False
+
+        order._bars_live += 1
+        tif = self._normalize_tif(order)
+        should_expire = False
+        if tif == TimeInForce.DAY and order._bars_live >= 1:
+            should_expire = True
+        if order.expires_after_bars is not None and order._bars_live >= order.expires_after_bars:
+            should_expire = True
+        if order.expire_at is not None and self._timestamp_gte(bar.timestamp, order.expire_at):
+            should_expire = True
+
+        if should_expire:
+            order.status = OrderStatus.EXPIRED
+            return True
+        return False
+
+    @staticmethod
+    def _timestamp_gt(left, right) -> bool:
+        try:
+            return left > right
+        except TypeError:
+            import pandas as pd
+
+            return pd.Timestamp(left) > pd.Timestamp(right)
+
+    @staticmethod
+    def _timestamp_gte(left, right) -> bool:
+        try:
+            return left >= right
+        except TypeError:
+            import pandas as pd
+
+            return pd.Timestamp(left) >= pd.Timestamp(right)
+
+    def _record_fill(self, fill: Fill) -> None:
+        self._fill_history.append(fill)
+        self._last_fill_by_instrument[fill.instrument] = fill
+        self._last_fill_by_order[fill.order_id] = fill
+
+    def _validate_order(self, order: Order) -> None:
+        if order.quantity <= 0:
+            raise ValueError("Order quantity must be positive")
+        if order.order_type == OrderType.LIMIT and order.limit_price is None:
+            raise ValueError("LIMIT order requires limit_price")
+        if order.order_type == OrderType.STOP and order.stop_price is None:
+            raise ValueError("STOP order requires stop_price")
+        if order.order_type == OrderType.STOP_LIMIT:
+            if order.stop_price is None or order.limit_price is None:
+                raise ValueError("STOP_LIMIT order requires stop_price and limit_price")
+        if order.order_type == OrderType.STOP_TRAIL:
+            if order.trail_amount is None and order.trail_percent is None:
+                raise ValueError("STOP_TRAIL order requires trail_amount or trail_percent")
+        if order.order_type == OrderType.STOP_TRAIL_LIMIT:
+            if order.trail_amount is None and order.trail_percent is None:
+                raise ValueError("STOP_TRAIL_LIMIT order requires trail_amount or trail_percent")
+        self._normalize_tif(order)
+
+    def _validate_bracket(self, bracket) -> None:
+        if (
+            bracket.take_profit_type == OrderType.LIMIT
+            and bracket.take_profit_price is None
+            and bracket.take_profit_pct is None
+        ):
+            raise ValueError("Bracket LIMIT take-profit requires take_profit_price or take_profit_pct")
+        if (
+            bracket.stop_loss_type == OrderType.STOP
+            and bracket.stop_loss_price is None
+            and bracket.stop_loss_pct is None
+        ):
+            raise ValueError("Bracket STOP stop-loss requires stop_loss_price or stop_loss_pct")
+        if bracket.stop_loss_type == OrderType.STOP_LIMIT:
+            if bracket.stop_loss_price is None and bracket.stop_loss_pct is None:
+                raise ValueError("Bracket STOP_LIMIT stop-loss requires stop_loss_price or stop_loss_pct")
+            if bracket.stop_limit_price is None and bracket.stop_limit_offset is None:
+                raise ValueError("Bracket STOP_LIMIT stop-loss requires stop_limit_price or stop_limit_offset")
+        if bracket.stop_loss_type in (OrderType.STOP_TRAIL, OrderType.STOP_TRAIL_LIMIT):
+            if bracket.trail_amount is None and bracket.trail_percent is None:
+                raise ValueError("Bracket trailing stop-loss requires trail_amount or trail_percent")
+
+    # ── Queries ────────────────────────────────────────────────────────
+
+    @property
+    def pending_orders(self) -> List[Order]:
+        """All active pending orders across all instruments."""
+        return [
+            o for orders in self._orders.values()
+            for o in orders if o.is_active
+        ]
+
+    @property
+    def order_history(self) -> List[Order]:
+        """All orders ever submitted."""
+        return list(self._order_history)
+
+    @property
+    def fill_history(self) -> List[Fill]:
+        """All fills emitted by this engine."""
+        return list(self._fill_history)
+
+    def last_fill(self, instrument: Optional[str] = None) -> Optional[Fill]:
+        """Return the last fill globally or for one instrument."""
+        if instrument is not None:
+            return self._last_fill_by_instrument.get(instrument)
+        return self._fill_history[-1] if self._fill_history else None
+
+    def last_fill_price(self, instrument: Optional[str] = None) -> Optional[float]:
+        """Return the last actual fill price globally or for one instrument."""
+        fill = self.last_fill(instrument)
+        return None if fill is None else float(fill.fill_price)
+
+
+# ── Priority map ──────────────────────────────────────────────────────
+_ORDER_PRIORITY = {
+    OrderType.STOP: 0,
+    OrderType.STOP_LIMIT: 1,
+    OrderType.STOP_TRAIL: 2,
+    OrderType.STOP_TRAIL_LIMIT: 3,
+    OrderType.LIMIT: 4,
+    OrderType.MARKET: 5,
+    OrderType.BRACKET: 6,
+    OrderType.OCO: 7,
+}
