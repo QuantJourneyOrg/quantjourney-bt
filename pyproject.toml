@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quantjourney-bt"
+version = "0.1.0"
+description = "Public/light QuantJourney backtester package with runnable portfolio and order strategy examples"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {file = "LICENSE"}
+authors = [{name = "QuantJourney", email = "hello@quantjourney.pro"}]
+keywords = [
+    "backtesting",
+    "portfolio",
+    "quant",
+    "trading",
+    "research",
+    "quantitative-finance",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Typing :: Typed",
+]
+dependencies = [
+    "httpx>=0.24",
+    "requests>=2.31",
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "matplotlib>=3.7",
+    "scipy>=1.11",
+    "seaborn>=0.13",
+    "rich>=13.0",
+    "quantjourney_ti>=0.3.1",
+    "psutil>=5.9",
+    "python-dateutil",
+    "pydantic>=2.0",
+    "numba>=0.59",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio",
+    "hypothesis",
+    "ruff>=0.5",
+    "build>=1.2",
+    "twine>=5",
+]
+data = ["yfinance>=0.2"]
+reports = ["scipy>=1.11", "seaborn>=0.13"]
+
+[project.urls]
+Homepage = "https://backtester.quantjourney.cloud"
+Documentation = "https://backtester.quantjourney.cloud/engine"
+Changelog = "https://backtester.quantjourney.cloud/changelog"
+Source = "https://github.com/QuantJourneyOrg/quantjourney-bt"
+Issues = "https://github.com/QuantJourneyOrg/quantjourney-bt/issues"
+
+[tool.setuptools.packages.find]
+include = ["backtester*"]
+
+[tool.setuptools.package-data]
+backtester = [
+    "plots/theme/configs/*.py",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
