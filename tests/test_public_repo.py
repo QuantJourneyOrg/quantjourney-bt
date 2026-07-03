@@ -126,6 +126,30 @@ def test_sdk_prepare_payload_uses_normalized_granularity() -> None:
     assert captured["payload"]["provider"]["granularity"] == "5m"
 
 
+def test_smart_date_axis_uses_time_labels_for_intraday_data() -> None:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import pandas as pd
+
+    from backtester.plots.plot_compat import smart_date_axis
+
+    index = pd.date_range("2026-06-01 13:30:00", periods=12, freq="15min")
+    data = pd.Series(range(len(index)), index=index)
+    fig, ax = plt.subplots()
+    ax.plot(data.index, data.values)
+
+    smart_date_axis(ax, data)
+    fig.canvas.draw()
+    labels = [tick.get_text() for tick in ax.get_xticklabels() if tick.get_text()]
+
+    try:
+        assert ax.get_xlabel() == "Date / time"
+        assert any(":" in label for label in labels)
+    finally:
+        plt.close(fig)
+
+
 def test_auth_active_session_conflict_is_detected(monkeypatch) -> None:
     from backtester.mixins.sdk_client import SDKClientMixin
 

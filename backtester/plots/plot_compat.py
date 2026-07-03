@@ -517,7 +517,27 @@ def smart_date_axis(ax: plt.Axes, data: Any) -> None:
     if len(idx) < 2:
         return
 
-    span_days = (idx[-1] - idx[0]).days
+    span = idx[-1] - idx[0]
+    span_days = span.days
+    span_seconds = max(span.total_seconds(), 0)
+
+    has_intraday_time = not ((idx.hour == 0) & (idx.minute == 0) & (idx.second == 0)).all()
+    median_delta = pd.Series(idx).diff().dropna().median()
+    is_intraday = has_intraday_time or (
+        pd.notna(median_delta) and median_delta < pd.Timedelta(days=1)
+    )
+
+    if is_intraday:
+        locator = mdates.AutoDateLocator(minticks=4, maxticks=8)
+        ax.xaxis.set_major_locator(locator)
+        if span_seconds <= 2 * 86400:
+            ax.xaxis.set_major_formatter(mdates.DateFormatter("%d %b\n%H:%M"))
+        else:
+            ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+        ax.set_xlabel("Date / time")
+        ax.tick_params(axis="x", rotation=0)
+        ax.set_xlim(idx[0], idx[-1])
+        return
 
     if span_days > 3650:
         ax.xaxis.set_major_locator(mdates.YearLocator(2))
