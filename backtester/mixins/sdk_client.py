@@ -167,7 +167,8 @@ class SDKClientMixin:
 
         logger.info(
             f"[Backtester] POST /bt/prepare: {len(self.instruments)} instruments, "
-            f"{self.backtest_period.start}..{self.backtest_period.end}, source={self._source}"
+            f"{self.backtest_period.start}..{self.backtest_period.end}, "
+            f"source={self._source}, granularity={self._granularity}"
         )
 
         self._api_response = await client._request("/bt/prepare", payload)
@@ -179,7 +180,8 @@ class SDKClientMixin:
         logger.info(
             f"[Backtester] Data received: "
             f"session={self.session_id}, dataset={self.dataset_id}, "
-            f"instruments={summary.get('instruments')}, dates={summary.get('dates')}"
+            f"instruments={summary.get('instruments')}, dates={summary.get('dates')}, "
+            f"granularity={self._granularity}"
         )
 
     # ─────────────────────────────────────────────────────────────────

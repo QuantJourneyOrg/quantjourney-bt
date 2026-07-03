@@ -2,7 +2,7 @@
 
 Public/light release surface for the QuantJourney backtester.
 
-This repository contains a runnable light backtester package, 20 public strategy examples, and supporting comparison materials that can be linked from QuantJourney docs and the Compare page.
+This repository contains a runnable light backtester package, 21 public strategy examples, and supporting comparison materials that can be linked from QuantJourney docs and the Compare page.
 
 The PyPI package name is `quantjourney-bt`. The runtime package follows the current strategy API and is imported as `backtester`.
 
@@ -37,7 +37,7 @@ tests/                    Public repository checks
 
 ## Included Strategies
 
-The public strategy suite contains 20 files:
+The public strategy suite contains 21 files:
 
 - `example_orders_01_market_sma_cross.py`
 - `example_orders_02_market_rsi_reversion.py`
@@ -59,6 +59,7 @@ The public strategy suite contains 20 files:
 - `example_weights_04_quarterly_dual_momentum.py`
 - `example_weights_05_monthly_inverse_vol.py`
 - `example_weights_06_signal_change_defensive.py`
+- `example_weights_07_intraday_rsi_15m.py`
 
 ## Check That It Works
 

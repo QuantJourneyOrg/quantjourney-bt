@@ -44,12 +44,12 @@ def test_public_package_ships_only_quantjourney_plot_theme() -> None:
     assert theme_files == ["__init__.py", "quantjourney.py"]
 
 
-def test_public_strategy_suite_has_20_strategies() -> None:
+def test_public_strategy_suite_has_21_strategies() -> None:
     files = sorted(STRATEGIES.glob("example_*.py"))
 
-    assert len(files) == 20
+    assert len(files) == 21
     assert len(list(STRATEGIES.glob("example_orders_*.py"))) == 14
-    assert len(list(STRATEGIES.glob("example_weights_*.py"))) == 6
+    assert len(list(STRATEGIES.glob("example_weights_*.py"))) == 7
 
 
 def test_public_strategy_modules_import() -> None:
