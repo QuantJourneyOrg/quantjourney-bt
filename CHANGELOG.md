@@ -4,10 +4,6 @@
 
 ### Added
 - Added a deterministic bundled sample-data path for `example_weights_01_sma_daily` via `./strategy.sh example_weights_01_sma_daily --sample-data`, allowing a reproducible demo without API credentials.
-- Added a README engine-contract section showing the full research path from data to report packet, plus explicit assumptions and limitations.
-
-### Changed
-- Reframed README and package metadata around open-source reproducible portfolio research, removing legacy limited-release wording from user-facing descriptions, reports, logs, and theme documentation.
 
 ## 0.8.3 - 2026-07-04
 
