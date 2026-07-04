@@ -26,7 +26,7 @@ pytest
 
 ```text
 backtester/               Public/light backtester package
-strategies/               20 runnable public strategy examples
+strategies/               21 runnable public strategy examples
 strategy.sh               Strategy launcher
 benchmarks/               Benchmark-suite notes
 compare/                  Cross-engine comparison notes
@@ -106,9 +106,9 @@ strategy = MyStrategy(
 
 Intraday availability depends on yfinance history coverage for the requested symbols and dates.
 
-The real backtest path fetches market data through QuantJourney credentials. The public/light report writes a text summary, `summary.json`, `metrics.csv`, `equity_curve.csv`, `equity_curve.png`, `dashboard.html`, a selected native QuantJourney chart pack under `plots/`, and `run_metadata.json`. Full `portfolio_data.pkl`, `instruments_data.pkl`, and `blotter.pkl` debug archives are disabled by default; set `QJ_SAVE_PICKLE_ARCHIVE=1` only when you explicitly want local audit pickles. Full PDF packets, narrative generation, walk-forward validation, optimization and deeper institutional diagnostics are QuantJourney Backtester Pro/SaaS features.
+The real backtest path fetches market data through QuantJourney credentials. The public/light report writes a text summary, `summary.json`, `metrics.csv`, `equity_curve.csv`, `equity_curve.png`, `dashboard.html`, a selected native QuantJourney chart pack under `plots/`, and `run_metadata.json`. Local object archives are not part of the public package. Full PDF packets, narrative generation, walk-forward validation, optimization and deeper institutional diagnostics are QuantJourney Backtester Pro/SaaS features.
 
-Use `--no-reports` when you only want calculation and archive output:
+Use `--no-reports` when you only want calculation and run metadata:
 
 ```bash
 ./strategy.sh example_weights_01_sma_daily --no-reports --output /tmp/qj-reports
@@ -131,7 +131,7 @@ Included:
 Excluded:
 
 - Full PDF factsheets and institutional report packets.
-- Pickle archives by default; `portfolio_data.pkl`, `instruments_data.pkl` and `blotter.pkl` are opt-in local debug artifacts.
+- Local object archives and internal debug state.
 - Pro-only diagnostics: full plot orchestration, crisis analysis, trace plots, blotter plots and narrative generation.
 - Walk-forward validation and optimization.
 - Private deployment scripts, credentials and infrastructure files.

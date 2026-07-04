@@ -53,6 +53,41 @@ class SDKClientMixin:
         detail = cls._response_detail(resp)
         return isinstance(detail, dict) and detail.get("code") == "active_session_exists"
 
+    @staticmethod
+    def _quota_limit_message(exc: Exception) -> Optional[str]:
+        body = getattr(exc, "response_body", None)
+        body = body if isinstance(body, dict) else {}
+        code = (
+            getattr(exc, "error_code", None)
+            or body.get("error_code")
+            or body.get("code")
+            or body.get("type")
+        )
+        status = getattr(exc, "status_code", None) or body.get("status")
+        detail = str(body.get("detail") or exc)
+        text = f"{code or ''} {status or ''} {detail}".lower()
+        if code != "ERR_RATE_002" and status != 429 and "quota" not in text:
+            return None
+
+        yellow = "\033[33m"
+        reset = "\033[0m"
+        upgrade_url = "https://backtester.quantjourney.cloud"
+        return (
+            f"{yellow}QuantJourney Backtester limit reached.\n"
+            f"  {detail}\n"
+            f"  Upgrade to QuantJourney Pro to continue or ask support@quantjourney.cloud to increase your limit.\n"
+            f"  Pro: {upgrade_url}{reset}"
+        )
+
+    @classmethod
+    def _raise_quota_limit_error(cls, exc: Exception) -> None:
+        message = cls._quota_limit_message(exc)
+        if not message:
+            raise exc
+        quota_exc = RuntimeError("QuantJourney Backtester quota exceeded")
+        setattr(quota_exc, "_qj_quota_message", message)
+        raise quota_exc from exc
+
     # ─────────────────────────────────────────────────────────────────
     # SDK Client — uses quantjourney.sdk.client.AsyncAPIClient
     # ─────────────────────────────────────────────────────────────────
@@ -171,7 +206,10 @@ class SDKClientMixin:
             f"source={self._source}, granularity={self._granularity}"
         )
 
-        self._api_response = await client._request("/bt/prepare", payload)
+        try:
+            self._api_response = await client._request("/bt/prepare", payload)
+        except Exception as exc:
+            self._raise_quota_limit_error(exc)
 
         self.session_id = self._api_response.get("session_id")
         self.dataset_id = self._api_response.get("dataset_id")

@@ -1,5 +1,5 @@
 """
-ReportingMixin — performance analysis, archiving, blotter, summary
+ReportingMixin — performance analysis, metadata, blotter, summary
 ===================================================================
 
 Extracted from core.py to keep the Backtester class focused on the
@@ -17,13 +17,18 @@ Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
+import json
 import logging
+import math
+import numbers
 import os
 import platform
 import sys
+import time
 import numpy as np
 import pandas as pd
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 from backtester.version import __version__ as BACKTESTER_VERSION
@@ -35,7 +40,7 @@ except Exception:
 
 
 class ReportingMixin:
-    """Performance analysis, archiving, blotter utilities, and print_summary."""
+    """Performance analysis, metadata, blotter utilities, and print_summary."""
 
     # ─────────────────────────────────────────────────────────────────
     # Performance Analysis
@@ -53,7 +58,6 @@ class ReportingMixin:
                     "show_portfolio_plots": self._show_portfolio_plots,
                     "save_instrument_plots": self._save_instrument_plots,
                     "show_instrument_plots": self._show_instrument_plots,
-                    "save_pdf_report": self._save_pdf_report,
                     "theme_plots": self._theme_plots,
                     "dpi": self._plot_dpi,
                     "reports_directory": self._reports_directory,
@@ -109,11 +113,6 @@ class ReportingMixin:
             "Max Position Size": f"{self.max_position_size:.0%}",
             "Rebalance Policy": str(self._rebalance_policy),
         }
-        if getattr(self, "_risk_model", None) is not None:
-            params["Risk Model"] = str(self._risk_model)
-            params["Target Volatility"] = f"{self.target_volatility:.0%}"
-        else:
-            params["Risk Model"] = "not specified"
         # Add rebalance stats if available
         if hasattr(self, '_rebalance_stats'):
             rs = self._rebalance_stats
@@ -131,53 +130,51 @@ class ReportingMixin:
         return params
 
     # ─────────────────────────────────────────────────────────────────
-    # Archiving
+    # Run Metadata
     # ─────────────────────────────────────────────────────────────────
 
     async def _archive_strategy_data(self) -> None:
-        """Archive strategy results."""
+        """Write public/light run metadata."""
         try:
-            from pathlib import Path
-            from backtester.engines import StrategyArchive
+            metadata_started = time.perf_counter()
+            metadata_folder = Path(self._reports_directory) / self.strategy_name
+            metadata_folder.mkdir(parents=True, exist_ok=True)
 
-            save_pickle_archive = os.environ.get(
-                "QJ_SAVE_PICKLE_ARCHIVE",
-                "0",
-            ).strip().lower() in {"1", "true", "yes", "y", "on"}
+            metadata = self._build_run_metadata()
+            metadata_seconds = time.perf_counter() - metadata_started
+            timings = dict(metadata.get("timings_seconds") or {})
+            timings["metadata_seconds"] = metadata_seconds
+            if "total_before_metadata_seconds" in timings:
+                timings["total_seconds"] = timings["total_before_metadata_seconds"] + metadata_seconds
+            metadata["timings_seconds"] = timings
 
-            archive_folder = Path(self._reports_directory) / self.strategy_name
-            if not save_pickle_archive:
-                for filename in ("portfolio_data.pkl", "instruments_data.pkl", "blotter.pkl"):
-                    stale_path = archive_folder / filename
-                    if stale_path.exists():
-                        stale_path.unlink()
-                        logger.info(f"[Public] Removed stale pickle archive artifact: {stale_path}")
-
-            sta = StrategyArchive(
-                strategy_name=self.strategy_name,
-                save_folder=self._reports_directory,
-                save_blotter=(
-                    save_pickle_archive
-                    and self.blotter is not None
-                    and len(self.blotter.trades) > 0
-                ),
-                save_portfolio_data=save_pickle_archive,
-                save_instruments_data=save_pickle_archive,
-            )
-            await sta.archive_strategy_data(
-                portfolio_data=self.portfolio_data,
-                instruments_data=self.instruments_data,
-                blotter=self.blotter,
-                save_dir=self._reports_directory,
-                metadata=self._build_run_metadata(),
-            )
+            metadata_path = metadata_folder / "run_metadata.json"
+            with metadata_path.open("w", encoding="utf-8") as f:
+                json.dump(self._json_safe(metadata), f, indent=2, sort_keys=True, default=str, allow_nan=False)
+            logger.info(f"Run metadata saved to {metadata_path}")
         except Exception as e:
-            logger.warning(f"[Backtester] Archive skipped: {e}")
+            logger.warning(f"[Backtester] Metadata save skipped: {e}")
             if getattr(self, "_strict_reporting", False):
                 raise
 
+    @classmethod
+    def _json_safe(cls, value: Any) -> Any:
+        """Convert run metadata to strict JSON-compatible values."""
+        if isinstance(value, dict):
+            return {str(key): cls._json_safe(item) for key, item in value.items()}
+        if isinstance(value, (list, tuple, set)):
+            return [cls._json_safe(item) for item in value]
+        if isinstance(value, numbers.Integral) and not isinstance(value, bool):
+            return int(value)
+        if isinstance(value, numbers.Real) and not isinstance(value, bool):
+            number = float(value)
+            if math.isnan(number) or math.isinf(number):
+                return None
+            return number
+        return value
+
     def _build_run_metadata(self) -> Dict[str, Any]:
-        """Build machine-readable metadata saved next to archived results."""
+        """Build machine-readable metadata saved next to report results."""
         benchmark = getattr(self, "_benchmark", {}) or {}
         period = getattr(self, "backtest_period", None)
         return {
@@ -222,7 +219,6 @@ class ReportingMixin:
                 "QJ_PLOT_DPI": os.environ.get("QJ_PLOT_DPI"),
                 "QJ_OUTPUT_DIR": os.environ.get("QJ_OUTPUT_DIR"),
                 "QJ_REPORTING_FREQUENCY": os.environ.get("QJ_REPORTING_FREQUENCY"),
-                "QJ_SAVE_PICKLE_ARCHIVE": os.environ.get("QJ_SAVE_PICKLE_ARCHIVE", "0"),
             },
             "timings_seconds": dict(getattr(self, "_timings", {}) or {}),
             "run_started_at": getattr(self, "_run_started_at", None),

@@ -168,7 +168,7 @@ def test_auth_active_session_conflict_is_detected(monkeypatch) -> None:
     assert SDKClientMixin._replace_existing_session_enabled() is False
 
 
-def test_public_archive_does_not_save_pickles_by_default(tmp_path, monkeypatch) -> None:
+def test_public_metadata_archive_writes_json_only(tmp_path) -> None:
     import json
     import re
     from types import SimpleNamespace
@@ -180,8 +180,6 @@ def test_public_archive_does_not_save_pickles_by_default(tmp_path, monkeypatch) 
 
     strategy_dir = tmp_path / "SmokeLight"
     strategy_dir.mkdir()
-    for filename in ("portfolio_data.pkl", "instruments_data.pkl", "blotter.pkl"):
-        (strategy_dir / filename).write_bytes(b"stale")
 
     dummy = DummyBacktester()
     dummy.strategy_name = "SmokeLight"
@@ -215,7 +213,6 @@ def test_public_archive_does_not_save_pickles_by_default(tmp_path, monkeypatch) 
     dummy.instruments_data = SimpleNamespace()
     dummy.blotter = SimpleNamespace(trades=[{"symbol": "AAPL"}])
 
-    monkeypatch.delenv("QJ_SAVE_PICKLE_ARCHIVE", raising=False)
     asyncio.run(dummy._archive_strategy_data())
 
     assert (strategy_dir / "run_metadata.json").exists()
@@ -224,11 +221,9 @@ def test_public_archive_does_not_save_pickles_by_default(tmp_path, monkeypatch) 
     assert metadata["timings_seconds"]["compute_seconds"] is None
     assert metadata["timings_seconds"]["fetch_seconds"] is None
     assert metadata["timings_seconds"]["ok_seconds"] == 1.25
+    assert ("QJ_SAVE_" + "PICKLE_ARCHIVE") not in metadata["runtime_options"]
     assert not re.search(r":\s*NaN\b", metadata_text)
     assert not re.search(r":\s*-?Infinity\b", metadata_text)
-    assert not (strategy_dir / "portfolio_data.pkl").exists()
-    assert not (strategy_dir / "instruments_data.pkl").exists()
-    assert not (strategy_dir / "blotter.pkl").exists()
 
 
 def test_strategy_launcher_check_mode() -> None:
@@ -249,16 +244,56 @@ def test_public_light_excludes_pro_report_modules() -> None:
         "backtester/engines/factsheet_pdf.py",
         "backtester/engines/narrative.py",
         "backtester/engines/plot_orchestrator.py",
-        "backtester/portfolio/portfolio_plots_extra.py",
+        "backtester/portfolio/" + "portfolio_plots_extra.py",
         "backtester/portfolio/blotter_plots.py",
         "backtester/portfolio/strategy_trace_plots.py",
         "backtester/portfolio/crisis_analysis.py",
         "backtester/metrics/configs/crisis_periods.json",
         "backtester/portfolio/calc/montecarlo.py",
+        "backtester/engines/archive.py",
+        "backtester/risk",
+        "backtester/portfolio/calc/attribution.py",
+        "backtester/portfolio/calc/exposures.py",
+        "backtester/portfolio/calc/liquidity.py",
+        "backtester/portfolio/calc/outliers.py",
+        "backtester/portfolio/calc/pnl.py",
+        "backtester/portfolio/calc/pnl_multi_asset.py",
+        "backtester/portfolio/calc/rolling.py",
+        "backtester/portfolio/calc/round_trips.py",
+        "backtester/portfolio/calc/sampling.py",
+        "backtester/portfolio/calc/scenario.py",
+        "backtester/utils/reproducibility.py",
     ]
 
     for relative_path in forbidden_paths:
         assert not (ROOT / relative_path).exists(), relative_path
+
+
+def test_public_light_excludes_object_archive_hooks() -> None:
+    forbidden_tokens = [
+        "QJ_SAVE_" + "PICKLE_ARCHIVE",
+        "portfolio_data" + ".pkl",
+        "instruments_data" + ".pkl",
+        "blotter" + ".pkl",
+        "Strategy" + "Archive",
+    ]
+
+    checked_suffixes = {".py", ".md", ".sh", ".toml", ".txt"}
+    offenders: list[str] = []
+    for path in ROOT.rglob("*"):
+        parts = path.relative_to(ROOT).parts
+        if parts[0] in {".git", ".venv", "reports"} or "__pycache__" in parts:
+            continue
+        if not path.is_file() or path.suffix not in checked_suffixes:
+            continue
+        if path.relative_to(ROOT) == Path("tests/test_public_repo.py"):
+            continue
+        text = path.read_text(encoding="utf-8")
+        for token in forbidden_tokens:
+            if token in text:
+                offenders.append(f"{path.relative_to(ROOT)}: {token}")
+
+    assert offenders == []
 
 
 def test_public_light_report_generates_dashboard_metrics_and_plots(tmp_path) -> None:

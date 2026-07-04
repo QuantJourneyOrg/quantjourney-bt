@@ -8,7 +8,7 @@ Public/light Strategy Performance Analysis.
 This module intentionally reuses the QuantJourney plotting and metric stack
 (`PortfolioCalculations`, `PortfolioPlots`, `InstrumentPlots`, theme/compat
 helpers) and only limits the scope of what is generated publicly. It does not
-ship PDF/factsheet generation, narrative generation, walk-forward validation or
+ship factsheet generation, narrative generation, walk-forward validation or
 optimization.
 """
 
@@ -28,8 +28,6 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
-from rich.console import Console
-from rich.table import Table
 
 from backtester.metrics import format_metric, generate_report_sections
 from backtester.metrics.configs.portfolio_perf import PORTFOLIO_PERF_METRICS
@@ -59,7 +57,6 @@ class StrategyPerformanceConfig:
     show_portfolio_plots: bool = field(default=False)
     save_instrument_plots: bool = field(default=False)
     show_instrument_plots: bool = field(default=False)
-    save_pdf_report: bool = field(default=False)
     theme_plots: PlotTheme = field(default=PlotTheme.QUANTJOURNEY)
     reports_directory: Path = field(default_factory=lambda: Path("./reports"))
     benchmark: Dict[str, str] = field(default_factory=lambda: {"symbol": "SPY", "name": "S&P 500 Index"})
@@ -196,9 +193,6 @@ class StrategyPerformanceAnalysis:
             logger.info(f"[Public] Dashboard saved to {self.save_folder / 'dashboard.html'}")
             logger.info(f"[Public] Plot pack saved to {plots_folder} ({len(self._plot_paths)} PNG files)")
 
-        if self.config.save_pdf_report:
-            logger.info("[Public] PDF/factsheet reports are available in QuantJourney Backtester Pro.")
-
         return results
 
     @property
@@ -223,37 +217,19 @@ class StrategyPerformanceAnalysis:
             "compute_annualized_return": lambda: pc.compute_annualized_return(),
             "cumulative_returns": lambda: pc.compute_cumulative_returns(),
             "compute_periodic_returns": lambda: pc.compute_periodic_returns(),
-            "compute_monthly_stats": lambda: pc.compute_monthly_stats(),
             "compute_period_stats": lambda: pc.compute_period_stats(),
-            "compute_expected_returns": lambda: pc.compute_expected_returns(),
             "compute_sharpe_ratio": lambda: pc.compute_sharpe_ratio(),
             "compute_sortino_ratio": lambda: pc.compute_sortino_ratio(),
             "compute_max_drawdown": lambda: pc.compute_max_drawdown(),
-            "compute_drawdown_durations": lambda: pc.compute_drawdown_durations(),
             "compute_recovery_factor": lambda: pc.compute_recovery_factor(),
-            "compute_var_ratio": lambda: pc.compute_var_ratio(confidence=0.95),
-            "compute_cvar_ratio": lambda: pc.compute_cvar_ratio(confidence=0.95),
-            "compute_advanced_omega_ratio": lambda: pc.compute_advanced_omega_ratio(),
-            "compute_advanced_ulcer_index": lambda: pc.compute_advanced_ulcer_index(confidence=0.95),
-            "compute_advanced_sharpe_ratio": lambda: pc.compute_advanced_sharpe_ratio(),
-            "compute_advanced_sortino_ratio": lambda: pc.compute_advanced_sortino_ratio(min_periods=126),
             "compute_advanced_calmar_ratio": lambda: pc.compute_advanced_calmar_ratio(),
             "compute_advanced_annualized_volatility": lambda: pc.compute_advanced_annualized_volatility(
                 short_window=30,
                 long_window=252,
             ),
-            "compute_win_percentages": lambda: pc.compute_win_percentages(),
-            "compute_gain_to_pain_ratio": lambda: pc.compute_gain_to_pain_ratio(),
-            "compute_payoff_ratio": lambda: pc.compute_payoff_ratio(),
-            "compute_profit_factor": lambda: pc.compute_profit_factor(),
-            "compute_time_in_market": lambda: pc.compute_time_in_market(),
-            "compute_directionality": lambda: pc.compute_directionality(),
-            "compute_exposure_path_checks": lambda: pc.compute_exposure_path_checks(),
-            "compute_weight_summary": lambda: pc.compute_weight_summary(),
             "compute_advanced_turnover": lambda: pc.compute_advanced_turnover(
                 trades_df=self._blotter.get_trades_dataframe() if self._blotter is not None else None,
             ),
-            "compute_rolling_turnover": lambda: pc.compute_rolling_turnover(window=63),
         }
 
         results = {name: value for name, value in (self._safe_metric(name, func) for name, func in metric_definitions.items())}
@@ -272,18 +248,13 @@ class StrategyPerformanceAnalysis:
         return results
 
     def _create_public_report_table(self, results: Dict[str, Any]) -> str:
-        console = Console()
-        table = Table(show_header=True, header_style="bold yellow")
-        table.add_column("Section", justify="center", width=25, overflow="fold")
-        table.add_column("Metric", width=35, overflow="fold")
-        table.add_column("Value", justify="right", width=18, no_wrap=True)
-
         try:
             sections = generate_report_sections(results)
         except Exception as exc:
             logger.warning(f"[Public] Structured report sections skipped: {exc}")
             sections = {}
 
+        rows: list[tuple[str, str, str]] = []
         for section_name, metrics in sections.items():
             if not metrics or section_name == "Definitions":
                 continue
@@ -297,19 +268,29 @@ class StrategyPerformanceAnalysis:
             for metric_name, value in metrics.items():
                 if not str(value).strip():
                     continue
-                table.add_row(section_name if first else "", metric_name, str(value).strip())
+                rows.append((section_name if first else "", metric_name, str(value).strip()))
                 first = False
-            if not first:
-                table.add_section()
 
-        if not table.rows:
-            table.add_row("Summary", "Annualized Return", str(results.get("compute_annualized_return", "n/a")))
-            table.add_row("", "Sharpe Ratio", str(results.get("compute_sharpe_ratio", "n/a")))
-            table.add_row("", "Max Drawdown", str(results.get("compute_max_drawdown", "n/a")))
+        if not rows:
+            rows = [
+                ("Summary", "Annualized Return", str(results.get("compute_annualized_return", "n/a"))),
+                ("", "Sharpe Ratio", str(results.get("compute_sharpe_ratio", "n/a"))),
+                ("", "Max Drawdown", str(results.get("compute_max_drawdown", "n/a"))),
+            ]
 
-        with console.capture() as capture:
-            console.print(table)
-        return capture.get()
+        header = ("Section", "Metric", "Value")
+        widths = (
+            max(len(header[0]), *(len(row[0]) for row in rows)),
+            max(len(header[1]), *(len(row[1]) for row in rows)),
+            max(len(header[2]), *(len(row[2]) for row in rows)),
+        )
+        sep = f"{'-' * widths[0]}  {'-' * widths[1]}  {'-' * widths[2]}"
+        lines = [
+            f"{header[0]:<{widths[0]}}  {header[1]:<{widths[1]}}  {header[2]:>{widths[2]}}",
+            sep,
+        ]
+        lines.extend(f"{section:<{widths[0]}}  {metric:<{widths[1]}}  {value:>{widths[2]}}" for section, metric, value in rows)
+        return "\n".join(lines) + "\n"
 
     def _write_json(self, filename: str, data: Dict[str, Any]) -> None:
         with open(self.save_folder / filename, "w", encoding="utf-8") as f:

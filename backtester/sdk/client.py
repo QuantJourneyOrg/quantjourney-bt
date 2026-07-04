@@ -360,12 +360,16 @@ class APIClient:
             error = APIError(f"API error: {msg}")
             error.request_id = request_id or data.get("request_id")
             error.error_code = error_code
+            error.status_code = resp.status_code
+            error.response_body = data
             raise error
         # Check for RFC 7807 Problem Details format
         if isinstance(data, dict) and "type" in data and "detail" in data:
             error = APIError(f"API error: {data.get('detail')}")
             error.request_id = request_id or data.get("request_id")
-            error.error_code = data.get("type")
+            error.error_code = data.get("error_code") or data.get("code") or data.get("type")
+            error.status_code = resp.status_code
+            error.response_body = data
             raise error
         return data
 
@@ -477,8 +481,9 @@ class APIClient:
                 error = APIError(
                     message=f"HTTP {e.response.status_code}: {error_msg}",
                     request_id=error_body.get('request_id', self._last_request_id or request_id),
-                    error_code=error_body.get('code')
+                    error_code=error_body.get('error_code') or error_body.get('code') or error_body.get('type')
                 )
+                error.status_code = e.response.status_code
                 error.response_body = error_body  # Store full error body for inspection
             else:
                 error = APIError(f"HTTP request failed: {str(e)}")
@@ -652,11 +657,15 @@ class AsyncAPIClient:
             error = APIError(f"API error: {msg}")
             error.request_id = request_id or data.get("request_id")
             error.error_code = error_code
+            error.status_code = resp.status_code
+            error.response_body = data
             raise error
         if isinstance(data, dict) and "type" in data and "detail" in data:
             error = APIError(f"API error: {data.get('detail')}")
             error.request_id = request_id or data.get("request_id")
-            error.error_code = data.get("type")
+            error.error_code = data.get("error_code") or data.get("code") or data.get("type")
+            error.status_code = resp.status_code
+            error.response_body = data
             raise error
         return data
 
@@ -743,8 +752,28 @@ class AsyncAPIClient:
 
             return data
         except Exception as e:
-            error = APIError(f"HTTP request failed: {str(e)}")
-            error.request_id = self._last_request_id or request_id
+            response = getattr(e, "response", None)
+            error_body = None
+            if response is not None:
+                try:
+                    error_body = response.json()
+                except Exception:
+                    error_body = None
+            if isinstance(error_body, dict):
+                status_code = getattr(response, "status_code", None)
+                error_msg = error_body.get("detail") or error_body.get("error") or str(e)
+                error = APIError(
+                    message=f"HTTP {status_code}: {error_msg}" if status_code else f"HTTP request failed: {error_msg}",
+                    request_id=error_body.get("request_id", self._last_request_id or request_id),
+                    error_code=error_body.get("error_code") or error_body.get("code") or error_body.get("type"),
+                )
+                error.status_code = status_code
+                error.response_body = error_body
+            else:
+                error = APIError(f"HTTP request failed: {str(e)}")
+                error.request_id = self._last_request_id or request_id
+                if response is not None:
+                    error.status_code = getattr(response, "status_code", None)
             raise error
 
     async def _request(self, endpoint: str, payload: Dict[str, Any], _retry: bool = True) -> Any:

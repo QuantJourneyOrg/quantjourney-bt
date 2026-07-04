@@ -15,8 +15,3 @@ try:
     from .performance import StrategyPerformanceAnalysis
 except Exception:
     StrategyPerformanceAnalysis = None  # type: ignore
-
-try:
-    from .archive import StrategyArchive
-except Exception:
-    StrategyArchive = None  # type: ignore

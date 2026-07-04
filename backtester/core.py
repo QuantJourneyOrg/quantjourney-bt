@@ -206,7 +206,7 @@ class Backtester(SDKClientMixin, ReportingMixin):
         - implement _compute_weights() -> pd.DataFrame
         - implement _compute_positions() (can be a no-op)
 
-    All performance computation, reporting, and archiving works as before.
+    Performance computation, reporting and run metadata are handled by the base class.
     """
 
     def __init__(
@@ -227,7 +227,6 @@ class Backtester(SDKClientMixin, ReportingMixin):
         initial_capital: float = 100_000.0,
         instruments: Optional[List[str]] = None,
         backtest_period: Optional[Dict[str, str]] = None,
-        target_volatility: float = 0.15,
         max_position_size: float = 0.10,
         indicators_config: Optional[List[Dict[str, Any]]] = None,
         # ── Reporting ──
@@ -240,7 +239,6 @@ class Backtester(SDKClientMixin, ReportingMixin):
         show_portfolio_plots: bool = False,
         save_instrument_plots: bool = False,
         show_instrument_plots: bool = False,
-        save_pdf_report: bool = False,
         reporting_frequency: str = "daily",
         # ── BT API options ──
         persist: bool = True,
@@ -258,8 +256,6 @@ class Backtester(SDKClientMixin, ReportingMixin):
         max_volume_participation: Optional[float] = None,  # order-mode volume cap
         # ── Rebalancing ──
         rebalance_policy=None,             # RebalancePolicy instance (default: daily)
-        # ── Risk model ──
-        risk_model=None,                   # RiskModel instance (applied between weights and rebalance)
         # ── Performance flags ──
         skip_analysis: bool = False,       # skip StrategyPerformanceAnalysis (saves ~800ms)
         lite_init: bool = False,           # skip throwaway validation/metrics in data init (saves ~600ms)
@@ -302,7 +298,6 @@ class Backtester(SDKClientMixin, ReportingMixin):
             start=backtest_period["start"],
             end=backtest_period["end"],
         )
-        self.target_volatility = float(target_volatility)
         self.max_position_size = float(max_position_size)
         self.indicators_config = indicators_config or []
 
@@ -328,7 +323,6 @@ class Backtester(SDKClientMixin, ReportingMixin):
             save_text_reports = False
             save_portfolio_plots = False
             save_instrument_plots = False
-            save_pdf_report = False
             skip_analysis = True
         self._show_text_reports = show_text_reports
         self._save_text_reports = save_text_reports
@@ -336,7 +330,6 @@ class Backtester(SDKClientMixin, ReportingMixin):
         self._show_portfolio_plots = show_portfolio_plots
         self._save_instrument_plots = save_instrument_plots
         self._show_instrument_plots = show_instrument_plots
-        self._save_pdf_report = save_pdf_report
         self._reporting_frequency = os.environ.get(
             "QJ_REPORTING_FREQUENCY",
             reporting_frequency,
@@ -386,9 +379,6 @@ class Backtester(SDKClientMixin, ReportingMixin):
         # ── Rebalancing ──
         from backtester.portfolio.rebalance import RebalancePolicy
         self._rebalance_policy = rebalance_policy if rebalance_policy is not None else RebalancePolicy()
-
-        # ── Risk model ──
-        self._risk_model = risk_model  # None = no adjustment
 
         # ── Universe (lazy-initialized on first access) ──
         self._universe = None
@@ -1066,42 +1056,6 @@ class Backtester(SDKClientMixin, ReportingMixin):
         if weights is not None and not weights.empty:
             self.instruments_data.add_strategy_data(self.strategy_name, "weights", weights)
 
-    def _apply_risk_model(self) -> None:
-        """Apply pluggable risk model to adjust weights before rebalance.
-
-        Pipeline: signals → weights → **risk_model.adjust()** → rebalance → execution
-
-        If no risk_model is set, this is a no-op.
-        """
-        if self._risk_model is None:
-            return
-
-        weights = self.instruments_data.get_feature(
-            "strategies", self.strategy_name, "weights"
-        )
-        if weights is None or weights.empty:
-            return
-
-        close = self.instruments_data.get_feature("adj_close")
-        returns = close.pct_change().fillna(0.0)
-
-        adjusted = self._risk_model.adjust(weights, returns)
-
-        # Overwrite weights with risk-adjusted version
-        # Drop existing weight columns first (add_strategy_data appends, not replaces)
-        strats = self.instruments_data.strategies
-        if not strats.empty:
-            keep_mask = ~(
-                (strats.columns.get_level_values(0) == self.strategy_name)
-                & (strats.columns.get_level_values(1) == "weights")
-            )
-            self.instruments_data.strategies = strats.loc[:, keep_mask]
-
-        self.instruments_data.add_strategy_data(
-            self.strategy_name, "weights", adjusted
-        )
-        logger.info(f"[Risk] Applied {self._risk_model} to weights")
-
     def _generate_positions(self) -> None:
         """Generate and validate strategy positions."""
         positions = self._compute_positions()
@@ -1466,7 +1420,7 @@ class Backtester(SDKClientMixin, ReportingMixin):
           2. Reconstruct PortfolioData
           3. Compute indicators, signals, weights
           4. Compute performance
-          5. Generate analysis + archive
+          5. Generate analysis + run metadata
         """
         total_started = time.perf_counter()
         self._timings = {}
@@ -1480,10 +1434,14 @@ class Backtester(SDKClientMixin, ReportingMixin):
         except Exception as e:
             self._timings["data_fetch_seconds"] = time.perf_counter() - stage_started
             self._timings["total_seconds"] = time.perf_counter() - total_started
-            logger.error(
-                f"[Backtester] Could not fetch market data — skipping strategy.\n"
-                f"  Error: {e}"
-            )
+            quota_message = getattr(e, "_qj_quota_message", None)
+            if quota_message:
+                print(quota_message)
+            else:
+                logger.error(
+                    f"[Backtester] Could not fetch market data — skipping strategy.\n"
+                    f"  Error: {e}"
+                )
             if self._strict_data_fetch:
                 raise
             return
@@ -1497,23 +1455,22 @@ class Backtester(SDKClientMixin, ReportingMixin):
         stage_started = time.perf_counter()
         self._generate_signals()
         self._generate_weights()
-        self._apply_risk_model()
         self._generate_positions()
 
         # Performance (dispatches to order-based or weight-based)
         self._compute_strategy_performance()
         self._timings["calculation_seconds"] = time.perf_counter() - stage_started
 
-        # Reports & Archive
+        # Reports & Metadata
         stage_started = time.perf_counter()
         if not self._skip_analysis:
             await self._generate_strategy_analysis()
         self._timings["reporting_seconds"] = time.perf_counter() - stage_started
 
-        self._timings["total_before_archive_seconds"] = time.perf_counter() - total_started
+        self._timings["total_before_metadata_seconds"] = time.perf_counter() - total_started
         stage_started = time.perf_counter()
         await self._archive_strategy_data()
-        self._timings["archive_seconds"] = time.perf_counter() - stage_started
+        self._timings["metadata_seconds"] = time.perf_counter() - stage_started
         self._timings["total_seconds"] = time.perf_counter() - total_started
 
         logger.info(
@@ -1522,7 +1479,7 @@ class Backtester(SDKClientMixin, ReportingMixin):
             f"data={self._timings.get('data_processing_seconds', 0.0):.2f}s | "
             f"calc={self._timings.get('calculation_seconds', 0.0):.2f}s | "
             f"reports={self._timings.get('reporting_seconds', 0.0):.2f}s | "
-            f"archive={self._timings.get('archive_seconds', 0.0):.2f}s | "
+            f"metadata={self._timings.get('metadata_seconds', 0.0):.2f}s | "
             f"total={self._timings.get('total_seconds', 0.0):.2f}s"
         )
         logger.info(f"═══ Cloud Strategy {self.strategy_name} completed ═══")

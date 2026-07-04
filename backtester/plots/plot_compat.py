@@ -1,11 +1,8 @@
 """
-Unified institutional styling engine for QuantJourney plots.
-=============================================================
+Unified QuantJourney public plotting style helpers.
+==================================================
 
 Single source of truth for all plotting styles, colours, helpers.
-Both portfolio_plots.py and portfolio_plots_extra.py import from here.
-
-v0.5.0 — Merged best of plot_compat + portfolio_plots_extra style engines.
 
 Institutional-grade QuantJourney Backtester component.
 Designed for deterministic strategy simulation, portfolio accounting,

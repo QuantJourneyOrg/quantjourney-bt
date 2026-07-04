@@ -47,7 +47,7 @@ class Universe:
         canonical shape source for all factory methods.
     _sectors : dict[str, str]
         Instrument → sector mapping (e.g. ``{"AAPL": "Tech"}``).
-        Used by ``PositionLimitModel`` and future sector-aware logic.
+        Optional instrument grouping metadata.
     """
 
     _close: pd.DataFrame
@@ -173,7 +173,7 @@ class Universe:
 
     @property
     def sectors(self) -> Dict[str, str]:
-        """Instrument → sector map (e.g. for PositionLimitModel)."""
+        """Instrument → sector map."""
         return self._sectors
 
     @sectors.setter
