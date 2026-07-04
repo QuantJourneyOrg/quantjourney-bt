@@ -157,63 +157,63 @@ links in the [full catalog](strategies/README.md); a summary follows.
 
 **Weight-based (22)** — target-weight portfolios, market-neutral long/short, and risk overlays:
 
-| # | Strategy | Idea |
-|:--|:--|:--|
-| W01 | Daily SMA Trend | Hold each stock while SMA(50) > SMA(200) |
-| W02 | Monthly ETF Trend + Drift | SMA(50/200) trend on ETFs; month-end + 5% drift |
-| W03 | Weekly RSI Reversion | Enter RSI(14) < 35, exit RSI > 60 |
-| W04 | Quarterly Dual Momentum | Rank ETFs by 12-month return, hold top 2 if positive |
-| W05 | Monthly Inverse Volatility | Size each ETF by inverse 63-day volatility |
-| W06 | Signal-Change Defensive Rotation | Risk-on ETFs when SPY > SMA(200), else defensive |
-| W07 | Intraday RSI 15m | Equal-weight basket when RSI oversold; 15-minute bars |
-| W08 | Intraday EMA Scalp 1m | EMA(9/21) trend/cash; 1-minute bars |
-| W09 | Intraday SMA Trend 1h | SMA(10/30) trend/cash; hourly bars |
-| W10 | Monthly + Circuit Breaker | Monthly trend; flatten on a 15% drawdown + cooldown |
-| W11 | Quarterly TE + Cost Gate | Momentum with tracking-error trigger and turnover budget |
-| W12 | Daily Partial Drift | Trade only names past a 10% drift band |
-| W13 | Pairs Trading (Ratio Z-Score) | Market-neutral KO/PEP on a log-ratio z-score |
-| W14 | Pairs Trading (Hedge Ratio) | Market-neutral EWA/EWC on a rolling hedge-ratio spread |
-| W15 | Cross-Sectional Momentum (L/S) | Long top-3 / short bottom-3 by 12-month return |
-| W16 | Cross-Sectional Reversal (L/S) | Long losers / short winners by 1-month return |
-| W17 | Vol-Targeted Trend | SMA trend basket scaled to a 10% volatility target |
-| W18 | Vol-Targeted Momentum | Momentum basket scaled to a 15% volatility target |
-| W19 | Risk Parity (Multi-Asset ERC) | Equal risk contribution across a multi-asset basket |
-| W20 | Risk Parity + Position Cap | Sector ERC chained with a 25% per-position cap |
-| W21 | Bollinger Band Reversion | Buy below the lower band, exit at the midline |
-| W22 | MACD Trend | Long while MACD is above its signal line |
+| # | Strategy | Idea | Code | Results |
+|:--|:--|:--|:--|:--|
+| W01 | Daily SMA Trend | Hold each stock while SMA(50) > SMA(200); daily rebalance | [source](strategies/example_weights_01_sma_daily.py) | [view](https://backtester.quantjourney.cloud/strategies/daily-sma-trend) |
+| W02 | Monthly ETF Trend + Drift | SMA(50/200) trend on ETFs; month-end + 5% drift band | [source](strategies/example_weights_02_monthly_drift_etf.py) | [view](https://backtester.quantjourney.cloud/strategies/monthly-drift-etf) |
+| W03 | Weekly RSI Reversion | Enter RSI(14) < 35, exit RSI > 60; weekly (Fri) | [source](strategies/example_weights_03_weekly_rsi_reversion.py) | [view](https://backtester.quantjourney.cloud/strategies/weekly-rsi-reversion) |
+| W04 | Quarterly Dual Momentum | Rank ETFs by 12-month return, hold top 2 if positive; quarter-end | [source](strategies/example_weights_04_quarterly_dual_momentum.py) | [view](https://backtester.quantjourney.cloud/strategies/quarterly-dual-momentum) |
+| W05 | Monthly Inverse Volatility | Size each ETF by inverse 63-day volatility; month-end | [source](strategies/example_weights_05_monthly_inverse_vol.py) | [view](https://backtester.quantjourney.cloud/strategies/monthly-inverse-vol) |
+| W06 | Signal-Change Defensive Rotation | SPY > SMA(200) -> risk-on ETFs, else defensive; on signal change | [source](strategies/example_weights_06_signal_change_defensive.py) | [view](https://backtester.quantjourney.cloud/strategies/signal-change-defensive) |
+| W07 | Intraday RSI 15m | Equal-weight basket when RSI oversold; 15-minute bars | [source](strategies/example_weights_07_intraday_rsi_15m.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W08 | Intraday EMA Scalp 1m | EMA(9/21) trend/cash; 1-minute bars | [source](strategies/example_weights_08_intraday_1m_ema_scalp.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W09 | Intraday SMA Trend 1h | SMA(10/30) trend/cash; hourly bars | [source](strategies/example_weights_09_intraday_1h_sma_trend.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W10 | Monthly + Circuit Breaker | Monthly ETF trend; flatten on a 15% drawdown + cooldown | [source](strategies/example_weights_10_monthly_circuit_breaker.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W11 | Quarterly TE + Cost Gate | Momentum with tracking-error trigger and turnover budget | [source](strategies/example_weights_11_quarterly_te_cost_gate.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W12 | Daily Partial Drift | Momentum tilt; trade only names past a 10% drift band | [source](strategies/example_weights_12_daily_partial_drift.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W13 | Pairs Trading (Ratio Z-Score) | Market-neutral KO/PEP on a log-ratio z-score | [source](strategies/example_weights_13_pairs_ratio_zscore.py) | [view](https://backtester.quantjourney.cloud/strategies/pairs-trading) |
+| W14 | Pairs Trading (Hedge Ratio) | Market-neutral EWA/EWC on a rolling OLS hedge-ratio spread | [source](strategies/example_weights_14_pairs_hedge_ratio.py) | [view](https://backtester.quantjourney.cloud/strategies/pairs-trading) |
+| W15 | Cross-Sectional Momentum (L/S) | Long top-3 / short bottom-3 by 12-month return; monthly | [source](strategies/example_weights_15_cross_sectional_momentum.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W16 | Cross-Sectional Reversal (L/S) | Long losers / short winners by 1-month return; weekly | [source](strategies/example_weights_16_cross_sectional_reversal.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W17 | Vol-Targeted Trend | SMA trend basket scaled to a 10% volatility target | [source](strategies/example_weights_17_vol_target_trend.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W18 | Vol-Targeted Momentum | Momentum basket scaled to a 15% volatility target | [source](strategies/example_weights_18_vol_target_momentum.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W19 | Risk Parity (Multi-Asset ERC) | Equal risk contribution across a multi-asset basket | [source](strategies/example_weights_19_risk_parity_multiasset.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W20 | Risk Parity + Position Cap | Sector ERC chained with a 25% per-position cap | [source](strategies/example_weights_20_risk_parity_capped.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W21 | Bollinger Band Reversion | Buy below the lower band, exit at the midline | [source](strategies/example_weights_21_bollinger_reversion.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W22 | MACD Trend | Long while MACD is above its signal line | [source](strategies/example_weights_22_macd_trend.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
 
 **Order-based (18)** — explicit orders through the fill engine (slippage, commissions, blotter):
 
-| # | Strategy | Order type | Idea |
-|:--|:--|:--|:--|
-| O01 | Market SMA Crossover | Market | Buy SMA(20)>SMA(50), sell on reverse |
-| O02 | Market RSI Reversion | Market | Buy RSI(14) < 35, sell RSI > 60 |
-| O03 | Limit RSI Dip Buyer | Limit | Passive buy-limit below the close on weak RSI |
-| O04 | Limit Trend Pullback | Limit | In an uptrend, wait for a 1% pullback to enter |
-| O05 | Stop Breakout Entry | Stop | Buy-stop above the recent 20-day high |
-| O06 | Protective Stop Loss | Market + Stop | Trend entry with a 5% protective stop |
-| O07 | Stop-Limit Breakout | Stop-Limit | Enter breakouts but cap the maximum fill price |
-| O08 | Stop-Limit Protection | Market + Stop-Limit | Trend entry, downside protected by a stop-limit sell |
-| O09 | Trailing Stop Trend | Trailing Stop | Trend entry, 4% trailing stop exit |
-| O10 | RSI + Trailing Stop | Trailing Stop | Oversold RSI entry, 5% trailing stop |
-| O11 | Trailing Stop-Limit | Trailing Stop-Limit | Trailing stop that converts to a limit |
-| O12 | Bracket Trend | Bracket | Trend entry with a +6% / −3% bracket |
-| O13 | Bracket RSI Reversion | Bracket | RSI dip with a +4% / −2% bracket |
-| O14 | OCO Dip or Breakout | OCO | Competing buy-limit (dip) and buy-stop (breakout) |
-| O15 | Intraday 5m Bracket Reversion | Bracket | RSI dips with a tight bracket; 5-min bars |
-| O16 | Intraday 30m Stop Breakout | Stop | Buy-stop above the 12-bar high; 30-min bars |
-| O17 | Monthly Rotation (orders) | Market | Event-driven monthly momentum rotation via orders |
-| O18 | Signal-Change Rotation (orders) | Market | Trade only on SMA trend-signal flips |
+| # | Strategy | Order type | Idea | Code | Results |
+|:--|:--|:--|:--|:--|:--|
+| O01 | Market SMA Crossover | Market | Buy SMA(20) crossing above SMA(50), sell on reverse | [source](strategies/example_orders_01_market_sma_cross.py) | [view](https://backtester.quantjourney.cloud/strategies/market-sma-cross) |
+| O02 | Market RSI Reversion | Market | Buy RSI(14) < 35, sell RSI > 60 | [source](strategies/example_orders_02_market_rsi_reversion.py) | [view](https://backtester.quantjourney.cloud/strategies/market-rsi-reversion) |
+| O03 | Limit RSI Dip Buyer | Limit | Passive buy-limit below the close on weak RSI | [source](strategies/example_orders_03_limit_rsi_dip.py) | [view](https://backtester.quantjourney.cloud/strategies/limit-rsi-dip) |
+| O04 | Limit Trend Pullback | Limit | In an uptrend, wait for a 1% pullback to enter | [source](strategies/example_orders_04_limit_trend_pullback.py) | [view](https://backtester.quantjourney.cloud/strategies/limit-trend-pullback) |
+| O05 | Stop Breakout Entry | Stop | Buy-stop above the recent 20-day high | [source](strategies/example_orders_05_stop_breakout_entry.py) | [view](https://backtester.quantjourney.cloud/strategies/stop-breakout-entry) |
+| O06 | Protective Stop Loss | Market + Stop | Trend entry with a 5% protective stop | [source](strategies/example_orders_06_stop_loss_protection.py) | [view](https://backtester.quantjourney.cloud/strategies/protective-stop-loss) |
+| O07 | Stop-Limit Breakout | Stop-Limit | Enter breakouts but cap the maximum fill price | [source](strategies/example_orders_07_stop_limit_breakout.py) | [view](https://backtester.quantjourney.cloud/strategies/stop-limit-breakout) |
+| O08 | Stop-Limit Protection | Market + Stop-Limit | Trend entry, downside protected by a stop-limit sell | [source](strategies/example_orders_08_stop_limit_protection.py) | [view](https://backtester.quantjourney.cloud/strategies/stop-limit-protection) |
+| O09 | Trailing Stop Trend | Trailing Stop | Trend entry, 4% trailing stop manages the exit | [source](strategies/example_orders_09_trailing_stop_trend.py) | [view](https://backtester.quantjourney.cloud/strategies/trailing-stop-trend) |
+| O10 | RSI + Trailing Stop | Trailing Stop | Oversold RSI entry, 5% trailing stop for risk | [source](strategies/example_orders_10_trailing_stop_rsi.py) | [view](https://backtester.quantjourney.cloud/strategies/trailing-stop-rsi) |
+| O11 | Trailing Stop-Limit | Trailing Stop-Limit | Trailing stop that converts to a limit on trigger | [source](strategies/example_orders_11_trailing_stop_limit.py) | [view](https://backtester.quantjourney.cloud/strategies/trailing-stop-limit) |
+| O12 | Bracket Trend | Bracket | Trend entry with a +6% / -3% bracket | [source](strategies/example_orders_12_bracket_trend.py) | [view](https://backtester.quantjourney.cloud/strategies/bracket-trend) |
+| O13 | Bracket RSI Reversion | Bracket | RSI dip with a +4% / -2% bracket | [source](strategies/example_orders_13_bracket_rsi_reversion.py) | [view](https://backtester.quantjourney.cloud/strategies/bracket-rsi-reversion) |
+| O14 | OCO Dip or Breakout | OCO | Competing buy-limit (dip) and buy-stop (breakout) | [source](strategies/example_orders_14_oco_dip_or_breakout.py) | [view](https://backtester.quantjourney.cloud/strategies/oco-dip-or-breakout) |
+| O15 | Intraday 5m Bracket Reversion | Bracket | Oversold-RSI dips with a tight +0.6% / -0.4% bracket; 5-min bars | [source](strategies/example_orders_15_intraday_5m_bracket_reversion.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| O16 | Intraday 30m Stop Breakout | Stop | Buy-stop above the 12-bar high, fixed holding period; 30-min bars | [source](strategies/example_orders_16_intraday_30m_stop_breakout.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| O17 | Monthly Rotation (orders) | Market | Event-driven monthly momentum rotation, executed with orders | [source](strategies/example_orders_17_monthly_rotation_orders.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| O18 | Signal-Change Rotation (orders) | Market | Trade only on SMA trend-signal flips (no calendar) | [source](strategies/example_orders_18_signal_change_rotation_orders.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
 
 **Walk-forward & optimization (5)** — prove a strategy generalizes:
 
-| # | Example | Idea |
-|:--|:--|:--|
-| WF01 | Rolling Walk-Forward | Sliding fixed-length train/test windows with purge/embargo |
-| WF02 | Expanding Walk-Forward | Ever-growing training window vs sliding test window |
-| WF03 | Anchored + Purge/Embargo | How purge and embargo gaps prevent train/test leakage |
-| WF04 | Grid Search | Exhaustive SMA fast/slow tuning scored by real backtests |
-| WF05 | Optuna TPE + Walk-Forward | Bayesian parameter search, then out-of-sample validation |
+| # | Example | Idea | Code | Results |
+|:--|:--|:--|:--|:--|
+| WF01 | Rolling Walk-Forward | Sliding fixed-length train/test windows with purge/embargo | [source](strategies/example_wf_01_rolling_walkforward.py) | [view](https://backtester.quantjourney.cloud/strategies/walkforward-case-study) |
+| WF02 | Expanding Walk-Forward | Ever-growing training window vs sliding test window | [source](strategies/example_wf_02_expanding_walkforward.py) | [view](https://backtester.quantjourney.cloud/strategies/walkforward-case-study) |
+| WF03 | Anchored + Purge/Embargo | How purge and embargo gaps prevent train/test leakage | [source](strategies/example_wf_03_anchored_purge_embargo.py) | [view](https://backtester.quantjourney.cloud/strategies/walkforward-case-study) |
+| WF04 | Grid Search | Exhaustive SMA fast/slow tuning scored by real backtests | [source](strategies/example_wf_04_grid_search_optimization.py) | [view](https://backtester.quantjourney.cloud/strategies/optuna-optimization) |
+| WF05 | Optuna TPE + Walk-Forward | Bayesian parameter search, then out-of-sample validation | [source](strategies/example_wf_05_optuna_tpe_optimization.py) | [view](https://backtester.quantjourney.cloud/strategies/optuna-optimization) |
 
 Long/short examples (W13–W16) are market-neutral; short borrow/financing is not
 modeled (a documented research approximation).
