@@ -1,15 +1,13 @@
-# QuantJourney Backtester Public
+# QuantJourney Backtester
 # Copyright (c) 2026 QuantJourney.
 # Licensed under the Apache License 2.0.
 
 """
-Public/light Strategy Performance Analysis.
+Strategy Performance Analysis.
 
 This module intentionally reuses the QuantJourney plotting and metric stack
 (`PortfolioCalculations`, `PortfolioPlots`, `InstrumentPlots`, theme/compat
-helpers) and only limits the scope of what is generated publicly. It does not
-ship factsheet generation, narrative generation, walk-forward validation or
-optimization.
+helpers) to generate reproducible local performance reports.
 """
 
 from __future__ import annotations
@@ -71,7 +69,7 @@ class StrategyPerformanceConfig:
 
 
 class StrategyPerformanceAnalysis:
-    """Public/light report generator using QuantJourney's native plot/metric code."""
+    """Report generator using QuantJourney's native plot and metric code."""
 
     def __init__(
         self,
@@ -128,7 +126,7 @@ class StrategyPerformanceAnalysis:
             try:
                 self.instrument_calc = InstrumentCalculations(self.instruments_data)
             except Exception as exc:
-                logger.info(f"[Public] Instrument analytics skipped: {exc}")
+                logger.info(f"[Backtester] Instrument analytics skipped: {exc}")
                 self.instrument_calc = None
 
     async def generate_strategy_performance_analysis(
@@ -144,7 +142,7 @@ class StrategyPerformanceAnalysis:
         self._strategy_parameters = strategy_parameters or {}
         self._strategy_code = strategy_code
         self._fill_engine = fill_engine
-        logger.info("Generating public/light strategy performance analysis.")
+        logger.info("Generating strategy performance analysis.")
 
         if portfolio_data is not None:
             self.portfolio_data = portfolio_data
@@ -153,7 +151,7 @@ class StrategyPerformanceAnalysis:
         self._initialize_components()
 
         if self.portfolio_calc is None:
-            raise ValueError("portfolio_data is required to generate public/light performance analysis")
+            raise ValueError("portfolio_data is required to generate performance analysis")
 
         ThemeManager.set_theme(self.config.theme_plots)
         try:
@@ -172,7 +170,7 @@ class StrategyPerformanceAnalysis:
         if self.config.save_text_reports:
             report_path = self.save_folder / "performance_report.txt"
             report_path.write_text(report_text, encoding="utf-8")
-            # Compatibility with the first public-light implementation.
+            # Compatibility with the first package implementation.
             (self.save_folder / "summary.txt").write_text(report_text, encoding="utf-8")
             logger.info(f"Performance report saved to: {report_path}")
         if self.config.show_text_reports:
@@ -190,8 +188,8 @@ class StrategyPerformanceAnalysis:
             plots_folder.mkdir(parents=True, exist_ok=True)
             self._plot_paths = self._generate_public_plot_pack(plots_folder)
             self._write_dashboard_html(results, self._plot_paths)
-            logger.info(f"[Public] Dashboard saved to {self.save_folder / 'dashboard.html'}")
-            logger.info(f"[Public] Plot pack saved to {plots_folder} ({len(self._plot_paths)} PNG files)")
+            logger.info(f"[Backtester] Dashboard saved to {self.save_folder / 'dashboard.html'}")
+            logger.info(f"[Backtester] Plot pack saved to {plots_folder} ({len(self._plot_paths)} PNG files)")
 
         return results
 
@@ -206,7 +204,7 @@ class StrategyPerformanceAnalysis:
         try:
             return name, func()
         except Exception as exc:
-            logger.warning(f"[Public] Metric skipped: {name}: {exc}")
+            logger.warning(f"[Backtester] Metric skipped: {name}: {exc}")
             return name, None
 
     def _compute_public_metric_results(self) -> Dict[str, Any]:
@@ -251,7 +249,7 @@ class StrategyPerformanceAnalysis:
         try:
             sections = generate_report_sections(results)
         except Exception as exc:
-            logger.warning(f"[Public] Structured report sections skipped: {exc}")
+            logger.warning(f"[Backtester] Structured report sections skipped: {exc}")
             sections = {}
 
         rows: list[tuple[str, str, str]] = []
@@ -388,7 +386,7 @@ class StrategyPerformanceAnalysis:
                 plt.close(fig)
                 generated.append(path)
             except Exception as exc:
-                logger.warning(f"[Public] Plot skipped: {name}: {exc}")
+                logger.warning(f"[Backtester] Plot skipped: {name}: {exc}")
 
         cumulative = plots_folder / "cumulative_returns.png"
         if cumulative.exists():
@@ -534,7 +532,7 @@ class StrategyPerformanceAnalysis:
   <main>
     <header>
       <h1>{html.escape(self.strategy_name)}</h1>
-      <p>{html.escape(self.strategy_type)} | {html.escape(self.start_date)} to {html.escape(self.end_date)} | QuantJourney Public Light Dashboard</p>
+      <p>{html.escape(self.strategy_type)} | {html.escape(self.start_date)} to {html.escape(self.end_date)} | QuantJourney Backtester Dashboard</p>
     </header>
     <section class="cards">{cards}</section>
     <section class="table-wrap">

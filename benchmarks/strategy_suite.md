@@ -1,4 +1,4 @@
-# Public Benchmark Strategy Suite
+# Benchmark Strategy Suite
 
 Initial public suite:
 

@@ -150,6 +150,31 @@ def test_sdk_prepare_payload_uses_normalized_granularity() -> None:
     assert captured["payload"]["provider"]["granularity"] == "5m"
 
 
+def test_sample_data_payload_loads_without_credentials(monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from backtester.mixins.sdk_client import SDKClientMixin
+
+    class DummyBacktester(SDKClientMixin):
+        pass
+
+    monkeypatch.setenv("QJ_SAMPLE_DATA", "1")
+
+    dummy = DummyBacktester()
+    dummy._source = "sample"
+    dummy._granularity = "1d"
+    dummy.backtest_period = SimpleNamespace(start="2024-01-01", end="2024-12-31")
+    dummy.instruments = ["AAPL", "MSFT"]
+
+    asyncio.run(dummy._fetch_market_data())
+
+    assert dummy.session_id == "sample-session"
+    assert dummy.dataset_id == "sample-dataset"
+    assert dummy._api_response["summary"]["source"] == "sample"
+    assert dummy._api_response["summary"]["instruments"] == 2
+    assert dummy._api_response["summary"]["dates"] >= 260
+
+
 def test_smart_date_axis_uses_time_labels_for_intraday_data() -> None:
     import matplotlib
     matplotlib.use("Agg")

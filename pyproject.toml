@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "quantjourney-bt"
 version = "0.1.0"
-description = "Public/light QuantJourney backtester package with runnable portfolio and order strategy examples"
+description = "Open-source QuantJourney backtester package for reproducible portfolio and order-based strategy research"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {file = "LICENSE"}

@@ -134,7 +134,7 @@ class ReportingMixin:
     # ─────────────────────────────────────────────────────────────────
 
     async def _archive_strategy_data(self) -> None:
-        """Write public/light run metadata."""
+        """Write run metadata."""
         try:
             metadata_started = time.perf_counter()
             metadata_folder = Path(self._reports_directory) / self.strategy_name
@@ -243,8 +243,8 @@ class ReportingMixin:
         return csv_path
 
     def generate_blotter_plots(self, output_dir: Optional[str] = None) -> None:
-        """Blotter plot pack is a Pro reporting feature in the public/light repo."""
-        logger.info("[Public] Blotter plot pack is available in QuantJourney Backtester Pro.")
+        """Blotter plot pack is not included in this package."""
+        logger.info("[Backtester] Blotter plot pack is not included in this package.")
 
     # ─────────────────────────────────────────────────────────────────
     # Quick Summary

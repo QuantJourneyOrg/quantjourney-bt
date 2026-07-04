@@ -1,5 +1,5 @@
 """
-Public portfolio performance metric configuration.
+Portfolio performance metric configuration.
 
 Copyright (c) 2026 QuantJourney.
 Licensed under the Apache License 2.0.

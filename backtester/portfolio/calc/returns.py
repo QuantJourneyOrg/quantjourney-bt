@@ -1,5 +1,5 @@
 """
-Public return calculations for QuantJourney portfolio reports.
+Return calculations for QuantJourney portfolio reports.
 
 Copyright (c) 2026 QuantJourney.
 Licensed under the Apache License 2.0.

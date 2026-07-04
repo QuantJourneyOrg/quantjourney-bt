@@ -363,7 +363,7 @@ class PortfolioCalculations:
         self,
         trades_df: Optional[pd.DataFrame] = None,
     ) -> Dict[str, float]:
-        """Public/light turnover analytics from target-weight changes."""
+        """Turnover analytics from target-weight changes."""
         if self.weights is None:
             return {"status": "error", "message": "No weights data"}
         turnover = self.compute_turnover()

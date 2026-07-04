@@ -22,6 +22,9 @@ build/
 /reports/
 /plots/
 
+# Local/private planning notes.
+/_requests/
+
 # Local data/cache artifacts.
 /data/
 /cache/

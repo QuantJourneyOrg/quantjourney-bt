@@ -183,6 +183,30 @@ class SDKClientMixin:
         Fetch market data from /bt/prepare API via the SDK client.
         Auto token refresh on 401 is handled by the SDK.
         """
+        if self._source == "sample" or os.getenv("QJ_SAMPLE_DATA", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+            from backtester.sample_data import build_sample_bt_payload
+
+            self._api_response = build_sample_bt_payload(
+                instruments=self.instruments,
+                start=self.backtest_period.start,
+                end=self.backtest_period.end,
+                initial_nav=100.0,
+            )
+            self.session_id = self._api_response["session_id"]
+            self.dataset_id = self._api_response["dataset_id"]
+            summary = self._api_response["summary"]
+            logger.info(
+                f"[Backtester] Sample data loaded: "
+                f"session={self.session_id}, dataset={self.dataset_id}, "
+                f"instruments={summary.get('instruments')}, dates={summary.get('dates')}"
+            )
+            return
+
         client = await self._get_sdk_client()
 
         payload = {

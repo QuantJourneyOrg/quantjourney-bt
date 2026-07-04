@@ -1,4 +1,4 @@
-# QuantJourney Backtester Public
+# QuantJourney Backtester
 # Copyright (c) 2026 QuantJourney.
 # Licensed under the Apache License 2.0.
 
@@ -28,11 +28,22 @@ from backtester.portfolio.rebalance import RebalancePolicy
 
 
 def _credentials() -> dict:
+    if _sample_mode():
+        return {"api_key": None, "email": None, "password": None}
     api_key = os.environ.get("QJ_API_KEY")
     return {
         "api_key": api_key,
         "email": None if api_key else os.environ.get("QJ_EMAIL"),
         "password": None if api_key else os.environ.get("QJ_PASSWORD"),
+    }
+
+
+def _sample_mode() -> bool:
+    return os.environ.get("QJ_SAMPLE_DATA", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
     }
 
 
@@ -53,6 +64,7 @@ class DailySMATrend(Backtester):
 
 
 async def main() -> None:
+    sample_mode = _sample_mode()
     strategy = DailySMATrend(
         **_credentials(),
         strategy_name="ExampleWeights01_DailySMATrend",
@@ -60,7 +72,7 @@ async def main() -> None:
         initial_capital=100_000,
         instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
         backtest_period={"start": "2015-01-01", "end": "2025-01-01"},
-        source="yfinance",
+        source="sample" if sample_mode else "yfinance",
         execution_mode="weights",
         max_position_size=0.25,
         rebalance_policy=RebalancePolicy(frequency="D"),

@@ -4,6 +4,7 @@
 #
 # Usage:
 #   ./strategy.sh example_weights_01_sma_daily
+#   ./strategy.sh example_weights_01_sma_daily --sample-data
 #   ./strategy.sh example_weights_01_sma_daily --quiet
 #   ./strategy.sh example_weights_01_sma_daily --no-reports
 #   ./strategy.sh example_weights_01_sma_daily --output /tmp/qj-reports
@@ -11,7 +12,7 @@
 #   ./strategy.sh --list
 #
 # Looks for strategies/<name>.py and runs it with local .venv or python3.
-# Set QJ_API_KEY or QJ_EMAIL + QJ_PASSWORD before running.
+# Set QJ_API_KEY or QJ_EMAIL + QJ_PASSWORD before running real-data backtests.
 
 set -euo pipefail
 
@@ -25,6 +26,7 @@ SYSTEM_PYTHON="$(command -v python3 || command -v python || true)"
 # for strategy runs; users can override this from the shell if needed.
 export NUMBA_DISABLE_JIT="${NUMBA_DISABLE_JIT:-1}"
 export MPLCONFIGDIR="${MPLCONFIGDIR:-/tmp/matplotlib}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-/tmp}"
 
 python_has_runtime_deps() {
     local py="$1"
@@ -48,6 +50,7 @@ usage() {
     echo -e "${CYAN}Usage:${NC} $0 <strategy_name> [options] | --list"
     echo ""
     echo "  Run a strategy:        $0 example_weights_01_sma_daily"
+    echo "  Demo without API key:  $0 example_weights_01_sma_daily --sample-data"
     echo "  Import check only:     $0 example_weights_01_sma_daily --check"
     echo "  Quiet final summary:   $0 example_weights_01_sma_daily --quiet"
     echo "  No reports/plots:      $0 example_weights_01_sma_daily --no-reports"
@@ -56,6 +59,7 @@ usage() {
     echo ""
     echo -e "${YELLOW}Options:${NC}"
     echo "      --check            Import the strategy module without running a backtest"
+    echo "      --sample-data      Run against deterministic bundled sample data; no API key required"
     echo "  -q, --quiet            Hide INFO output and text report; keep final summary"
     echo "      --no-reports       Skip text report and plots; keep run metadata"
     echo "  -o, --output DIR       Save reports and metadata under DIR/<strategy_name>/"
@@ -101,11 +105,17 @@ fi
 STRATEGY_NAME="$1"
 shift
 CHECK_ONLY=false
+SAMPLE_DATA=false
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --check)
             CHECK_ONLY=true
+            shift
+            ;;
+        --sample-data)
+            SAMPLE_DATA=true
+            export QJ_SAMPLE_DATA="1"
             shift
             ;;
         -q|--quiet)
@@ -205,8 +215,9 @@ PY
 fi
 
 # ── check credentials ────────────────────────────────────────────────
-if [ -z "${QJ_API_KEY:-}" ] && { [ -z "${QJ_EMAIL:-}" ] || [ -z "${QJ_PASSWORD:-}" ]; }; then
+if [ "$SAMPLE_DATA" != true ] && [ -z "${QJ_API_KEY:-}" ] && { [ -z "${QJ_EMAIL:-}" ] || [ -z "${QJ_PASSWORD:-}" ]; }; then
     echo -e "${RED}Error:${NC} No credentials set. Export QJ_API_KEY or QJ_EMAIL + QJ_PASSWORD."
+    echo -e "For a credential-free demo, run: ${GREEN}$0 ${STRATEGY_NAME} --sample-data${NC}"
     exit 1
 fi
 
@@ -219,6 +230,9 @@ echo -e "${CYAN}File:${NC} ${STRATEGY_FILE}"
 echo -e "${CYAN}Python:${NC} ${VENV_PYTHON}"
 echo -e "${CYAN}Backtester:${NC} v${BACKTESTER_VERSION}"
 echo -e "${CYAN}Theme:${NC} quantjourney"
+if [ "$SAMPLE_DATA" = true ]; then
+    echo -e "${CYAN}Data:${NC} deterministic sample data"
+fi
 echo -e "${CYAN}Plot DPI:${NC} ${QJ_PLOT_DPI:-300}"
 echo -e "${CYAN}Log Level:${NC} ${QJ_LOG_LEVEL:-INFO}"
 echo -e "${CYAN}Output:${NC} ${QJ_OUTPUT_DIR:-./reports}"

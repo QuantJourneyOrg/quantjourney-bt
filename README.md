@@ -1,18 +1,100 @@
 # QuantJourney Backtester
 
-**Local quantitative strategy backtesting powered by QuantJourney market data**
+A Python-native backtesting engine for reproducible portfolio research.
 
-[![Python](https://img.shields.io/badge/Python-%3E%3D3.10-3776AB?logo=python&logoColor=white)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-%3E%3D3.11-3776AB?logo=python&logoColor=white)](https://python.org)
 [![PyPI](https://img.shields.io/pypi/v/quantjourney-bt?color=orange)](https://pypi.org/project/quantjourney-bt/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()
 [![API](https://img.shields.io/badge/API-QuantJourney%20Cloud-1B4F72)](https://quantjourney.cloud)
 [![Changelog](https://img.shields.io/badge/Changelog-backtester.quantjourney.cloud-111827)](https://backtester.quantjourney.cloud/changelog)
 
-QuantJourney Backtester is a Python framework for researching, testing, and
-reviewing systematic trading strategies. The cloud API supplies market data;
-strategy logic, portfolio accounting, execution simulation, metrics, and report
-generation run locally in Python.
+QuantJourney Backtester turns strategy ideas into auditable research packets:
+signals become target weights or explicit orders, orders become simulated fills,
+fills update cash and positions, and NAV is reconstructed from portfolio state.
+
+It is designed for researchers who need more than an equity curve: execution
+assumptions, costs, slippage, rebalancing rules, crisis behavior, walk-forward
+validation, optimization diagnostics, metrics, plots, and run fingerprints from
+one repeatable run.
+
+## Why It Exists
+
+Most backtests stop at `signal x returns`. That is fast, but it hides the
+questions that matter before a strategy can be trusted:
+
+- Was there look-ahead?
+- What happened to missing bars?
+- How were weights converted into trades?
+- Did costs and turnover destroy the edge?
+- Did parameters generalize out of sample?
+- Which crisis regimes broke the strategy?
+- Can the run be reproduced and reviewed later?
+
+QuantJourney Backtester makes these assumptions explicit.
+
+## Two Research Modes
+
+**Weight mode** is for portfolio research: factor portfolios, rotation models,
+long/cash strategies, long/short books, risk overlays, volatility targeting,
+and scheduled rebalancing.
+
+**Order mode** is for execution-aware research: market, limit, stop, stop-limit,
+trailing stop, bracket, and OCO orders with commissions, slippage, volume
+participation, fills, positions, cash, NAV, and trade blotters.
+
+## Engine Contract
+
+```text
+Data -> Features -> Signals -> Target Weights / Orders -> Fills -> Positions -> NAV -> Metrics -> Report Packet
+```
+
+Each stage is explicit. Data is transformed into features, features drive
+signals, signals become either target weights or orders, execution assumptions
+turn those decisions into fills, and portfolio state is used to reconstruct NAV,
+metrics, plots, and reproducibility metadata.
+
+## Reproducible Demo Without API Key
+
+Run the first strategy against deterministic bundled sample data:
+
+```bash
+./strategy.sh example_weights_01_sma_daily --sample-data --output /tmp/qj-sample
+```
+
+The sample dataset is intentionally small and reproducible. It is useful for
+install checks, report generation, and reading the engine flow without creating
+an account. For real market data, set QuantJourney API credentials and run the
+same strategy without `--sample-data`.
+
+## What You Get From One Run
+
+Each run can produce metrics, plots, equity curves, drawdowns, rolling risk,
+crisis diagnostics, optimization evidence, walk-forward results, CSV/JSON
+artifacts, HTML dashboards, PDF tear sheets, and reproducibility metadata.
+
+## What It Is Not
+
+This is not a broker, not a live trading system, not investment advice, and not
+a guarantee that a strategy will work out of sample. Some examples intentionally
+simplify assumptions such as borrow cost, financing, liquidity and market
+impact. Those assumptions are documented so they can be changed, not hidden.
+
+## Assumptions & Limitations
+
+- Example strategies are research templates, not production trading systems.
+- Long/short examples do not model borrow fees, stock-loan availability,
+  financing, or margin interest by default.
+- Commissions, slippage, volume participation, and market impact are model
+  assumptions. Treat them as part of the research contract.
+- The deterministic sample dataset is illustrative. It is not historical market
+  data and should not be used to judge strategy quality.
+- Historical intraday availability depends on the upstream provider and the
+  requested symbols, dates, and granularity.
+- Walk-forward and optimization diagnostics help expose overfit risk, but a
+  good in-sample or single out-of-sample result is not proof of robustness.
+
+The runtime package is imported as `backtester`.
 
 ## Example Output
 
@@ -38,43 +120,6 @@ and walk-forward / optimization diagnostics. A few examples:
 
 More report and chart examples at
 [backtester.quantjourney.cloud](https://backtester.quantjourney.cloud).
-
-## Why QuantJourney Backtester
-
-- **Transparent** — every metric is computed locally in readable Python; there is no black box to trust.
-- **Reproducible** — runs are fingerprinted over configuration and data, and reports embed metric definitions.
-- **Honest by construction** — next-bar execution (no look-ahead), realistic gap/stop/limit fills, and missing bars stay unavailable instead of becoming synthetic 0% returns.
-- **Deep analytics** — portfolio returns, risk, drawdowns, rolling statistics, attribution, Monte Carlo, and crisis analysis in one report.
-- **Execution-aware** — six order types with slippage, volume participation, commissions, and a full trade blotter.
-- **Validated** — rolling, expanding, and anchored walk-forward with purge/embargo, plus grid and Optuna parameter optimization.
-
-## What It Does
-
-The engine supports two core workflows:
-
-- **Weight mode** for portfolio research: generate target weights, apply risk
-  overlays and rebalance rules, then let positions drift through time.
-- **Order mode** for execution-aware strategies: submit market, limit, stop,
-  stop-limit, trailing-stop, bracket, and OCO orders through a deterministic
-  fill engine with slippage, volume participation, commissions, and trade
-  blotter output.
-
-The accounting path is designed for reproducible research:
-
-- Market data is fetched through `/bt/prepare` and converted into local pandas
-  containers.
-- Daily and intraday bars are supported through the `granularity` setting.
-- Missing market-data gaps remain unavailable assets instead of silent 0%
-  return observations.
-- Contract multipliers and lot sizes flow through order-mode NAV, trade value,
-  position values, weights, and commission notional.
-- Rebalance policies support calendar schedules, drift triggers, signal-change
-  triggers, circuit breakers, turnover gates, partial rebalance, and tax-aware
-  young-lot avoidance.
-- Reports write a text summary, JSON/CSV metrics, equity curve CSV/PNG,
-  dashboard HTML, selected chart pack, and run metadata.
-
-The runtime package is imported as `backtester`.
 
 ## Install
 
@@ -128,6 +173,12 @@ Check one strategy import without credentials or a data call:
 
 ```bash
 ./strategy.sh example_weights_01_sma_daily --check
+```
+
+Run a deterministic demo without API credentials:
+
+```bash
+./strategy.sh example_weights_01_sma_daily --sample-data --output /tmp/qj-sample
 ```
 
 Run repository checks:
