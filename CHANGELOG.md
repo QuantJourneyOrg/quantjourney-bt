@@ -5,7 +5,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), and the
 project uses semantic-style version numbers. This file is kept identical across
 the QuantJourney Backtester repositories.
 
-## 0.8.2 - 2026-07-05
+## 0.8.2 - 2026-07-04
 
 ### Added
 - Expanded the example strategy suite to 35 runnable templates: 12 weight-based, 18 order-based, and 5 walk-forward / optimization examples.

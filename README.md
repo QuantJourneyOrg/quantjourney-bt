@@ -114,6 +114,10 @@ it gives the package a quick install/import/report safety check before release.
 
 ## Quick Start
 
+For a full catalog of all 35 example strategies — each with a one-line
+description, a link to its source, and a link to its results page — see
+[strategies/README.md](strategies/README.md).
+
 List available strategies:
 
 ```bash
