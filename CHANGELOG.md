@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), and the
 project uses semantic-style version numbers. This file is kept identical across
 the QuantJourney Backtester repositories.
 
+## 0.8.3 - 2026-07-04
+
+### Added
+- Grew the example strategy suite to 45. Added 10 weight-based templates: long/short pairs trading with a ratio z-score and with a rolling OLS hedge-ratio spread; dollar-neutral cross-sectional momentum and short-term reversal; volatility-targeted trend and momentum baskets; risk-parity (equal risk contribution) standalone and chained with a per-position cap; Bollinger Band mean reversion; and MACD trend.
+- Added a per-folder strategy catalog (`strategies/README.md`) that links each example's source and, where published, its results page, and embedded a summary catalog in the main README.
+- Attached the risk-overlay modules (volatility targeting, risk parity, position limits, chained overlays) to runnable examples via the `risk_model=` hook.
+
 ## 0.8.2 - 2026-07-04
 
 ### Added

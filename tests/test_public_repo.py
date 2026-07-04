@@ -71,9 +71,9 @@ def test_strategy_suite_has_expected_strategy_families() -> None:
     order_files = [path for path in files if path.name.startswith("example_orders_")]
     weight_files = [path for path in files if path.name.startswith("example_weights_")]
 
-    assert len(files) >= 21
-    assert len(order_files) >= 14
-    assert len(weight_files) >= 7
+    assert len(files) >= 45
+    assert len(order_files) >= 18
+    assert len(weight_files) >= 22
 
 
 def test_strategy_modules_import() -> None:
@@ -275,7 +275,6 @@ def test_package_excludes_internal_report_modules() -> None:
         "backtester/metrics/configs/crisis_periods.json",
         "backtester/portfolio/calc/montecarlo.py",
         "backtester/engines/archive.py",
-        "backtester/risk",
         "backtester/portfolio/calc/attribution.py",
         "backtester/portfolio/calc/exposures.py",
         "backtester/portfolio/calc/liquidity.py",

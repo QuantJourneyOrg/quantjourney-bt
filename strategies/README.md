@@ -1,7 +1,7 @@
 # Strategy Examples
 
-This folder contains **35 runnable example strategies** for the QuantJourney
-Backtester — **12 weight-based**, **18 order-based**, and **5 walk-forward /
+This folder contains **45 runnable example strategies** for the QuantJourney
+Backtester — **22 weight-based**, **18 order-based**, and **5 walk-forward /
 optimization** examples. Each file is a complete, self-contained template: copy
 the one closest to your idea, change the rule, and you are testing your own
 strategy in minutes.
@@ -27,9 +27,11 @@ Naming: `example_<mode>_<NN>_<name>.py`, where mode is `weights`, `orders`, or
 
 ---
 
-## Weight-based strategies (12)
+## Weight-based strategies (22)
 
-Portfolio thinking — produce target weights, let the rebalance engine trade them.
+Portfolio thinking — produce target weights, let the rebalance engine (and any
+risk overlay) trade them. Includes long/cash, market-neutral long/short, and
+risk-overlay templates.
 
 | # | Strategy | Idea | Code | Results |
 |:--|:--|:--|:--|:--|
@@ -45,6 +47,19 @@ Portfolio thinking — produce target weights, let the rebalance engine trade th
 | W10 | Monthly + Circuit Breaker | Monthly ETF trend; flatten on a 15% drawdown + cooldown | [source](./example_weights_10_monthly_circuit_breaker.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
 | W11 | Quarterly TE + Cost Gate | Momentum with tracking-error trigger and turnover budget | [source](./example_weights_11_quarterly_te_cost_gate.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
 | W12 | Daily Partial Drift | Momentum tilt; trade only names past a 10% drift band | [source](./example_weights_12_daily_partial_drift.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W13 | Pairs Trading (Ratio Z-Score) | Market-neutral KO/PEP on a log-ratio z-score | [source](./example_weights_13_pairs_ratio_zscore.py) | [view](https://backtester.quantjourney.cloud/strategies/pairs-trading) |
+| W14 | Pairs Trading (Hedge Ratio) | Market-neutral EWA/EWC on a rolling OLS hedge-ratio spread | [source](./example_weights_14_pairs_hedge_ratio.py) | [view](https://backtester.quantjourney.cloud/strategies/pairs-trading) |
+| W15 | Cross-Sectional Momentum (L/S) | Long top-3 / short bottom-3 by 12-month return; monthly | [source](./example_weights_15_cross_sectional_momentum.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W16 | Cross-Sectional Reversal (L/S) | Long losers / short winners by 1-month return; weekly | [source](./example_weights_16_cross_sectional_reversal.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W17 | Vol-Targeted Trend | SMA trend basket scaled to a 10% volatility target | [source](./example_weights_17_vol_target_trend.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W18 | Vol-Targeted Momentum | Momentum basket scaled to a 15% volatility target | [source](./example_weights_18_vol_target_momentum.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W19 | Risk Parity (Multi-Asset ERC) | Equal risk contribution across a multi-asset basket | [source](./example_weights_19_risk_parity_multiasset.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W20 | Risk Parity + Position Cap | Sector ERC chained with a 25% per-position cap | [source](./example_weights_20_risk_parity_capped.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W21 | Bollinger Band Reversion | Buy below the lower band, exit at the midline | [source](./example_weights_21_bollinger_reversion.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W22 | MACD Trend | Long while MACD is above its signal line | [source](./example_weights_22_macd_trend.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+
+The long/short examples (W13–W16) are market-neutral; short borrow/financing is
+not modeled (a documented research approximation).
 
 ## Order-based strategies (18)
 
