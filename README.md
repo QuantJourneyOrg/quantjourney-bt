@@ -151,11 +151,19 @@ strategy.sh               Strategy launcher and report runner
 benchmarks/               Benchmark-suite notes
 skills/                   Strategy-authoring skill materials
 tests/                    Import, packaging, and report smoke checks
+docs/                     Roadmap and supporting documentation
 CHANGELOG.md              Release history
 ```
 
 The `tests/` directory is intentionally kept. It is not required at runtime, but
 it gives the package a quick install/import/report safety check before release.
+
+## Documentation
+
+- [Roadmap](docs/ROADMAP.md) - direction of travel by theme, without delivery
+  dates or ordering commitments.
+- [Strategy catalog](strategies/README.md) - runnable examples with source and
+  result links.
 
 ## Quick Start
 
