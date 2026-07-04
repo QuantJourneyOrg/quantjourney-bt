@@ -71,19 +71,6 @@ assumptions, and the common failure modes it helps you catch (survivorship,
 look-ahead, unrealistic intrabar fills, costs too low) — is documented at
 [backtester.quantjourney.cloud/engine](https://backtester.quantjourney.cloud/engine).
 
-## Reproducible Demo Without API Key
-
-Run the first strategy against deterministic bundled sample data:
-
-```bash
-./strategy.sh example_weights_01_sma_daily --sample-data --output /tmp/qj-sample
-```
-
-The sample dataset is intentionally small and reproducible. It is useful for
-install checks, report generation, and reading the engine flow without creating
-an account. For real market data, set QuantJourney API credentials and run the
-same strategy without `--sample-data`.
-
 ## What You Get From One Run
 
 Each run can produce metrics, plots, equity curves, drawdowns, rolling risk,
@@ -96,22 +83,6 @@ This is not a broker, not a live trading system, not investment advice, and not
 a guarantee that a strategy will work out of sample. Some examples intentionally
 simplify assumptions such as borrow cost, financing, liquidity and market
 impact. Those assumptions are documented so they can be changed, not hidden.
-
-## Assumptions & Limitations
-
-- Example strategies are research templates, not production trading systems.
-- Long/short examples do not model borrow fees, stock-loan availability,
-  financing, or margin interest by default.
-- Commissions, slippage, volume participation, and market impact are model
-  assumptions. Treat them as part of the research contract.
-- The deterministic sample dataset is illustrative. It is not historical market
-  data and should not be used to judge strategy quality.
-- Historical intraday availability depends on the upstream provider and the
-  requested symbols, dates, and granularity.
-- Walk-forward and optimization diagnostics help expose overfit risk, but a
-  good in-sample or single out-of-sample result is not proof of robustness.
-
-The runtime package is imported as `backtester`.
 
 ## Example Output
 
@@ -158,6 +129,19 @@ Do not install dependencies into the Homebrew/system Python. Use a virtual
 environment; otherwise macOS/Homebrew may raise an
 `externally-managed-environment` error and the launcher may miss packages such
 as `quantjourney_ti`.
+
+## Reproducible Demo Without API Key
+
+Run the first strategy against deterministic bundled sample data:
+
+```bash
+./strategy.sh example_weights_01_sma_daily --sample-data --output /tmp/qj-sample
+```
+
+The sample dataset is intentionally small and reproducible. It is useful for
+install checks, report generation, and reading the engine flow without creating
+an account. For real market data, set QuantJourney API credentials and run the
+same strategy without `--sample-data`.
 
 ## Repository Layout
 
@@ -400,6 +384,22 @@ Use `--no-reports` when you only want calculation and run metadata:
 ```bash
 ./strategy.sh example_weights_01_sma_daily --no-reports --output /tmp/qj-reports
 ```
+
+## Assumptions & Limitations
+
+- Example strategies are research templates, not production trading systems.
+- Long/short examples do not model borrow fees, stock-loan availability,
+  financing, or margin interest by default.
+- Commissions, slippage, volume participation, and market impact are model
+  assumptions. Treat them as part of the research contract.
+- The deterministic sample dataset is illustrative. It is not historical market
+  data and should not be used to judge strategy quality.
+- Historical intraday availability depends on the upstream provider and the
+  requested symbols, dates, and granularity.
+- Walk-forward and optimization diagnostics help expose overfit risk, but a
+  good in-sample or single out-of-sample result is not proof of robustness.
+
+The runtime package is imported as `backtester`.
 
 ## License
 
