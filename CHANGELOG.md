@@ -1,5 +1,15 @@
 # QuantJourney Backtester Changelog
 
+## 0.8.6 - 2026-07-06
+
+### Added
+- Added explicit walk-forward mode reporting in logs, summaries and archived metadata: `slice_diagnostics` for fast NAV-slice diagnostics and `per_fold_refit` when a fold-local `backtester_factory` reruns the strategy.
+- Added `QJ_WF_MODE=per_fold_refit` support to WF01-WF03 examples, with optional `QJ_WF_REPORT_PACKET=1` report/plot packet generation.
+
+### Changed
+- Deduplicated the walk-forward slice-diagnostics warning so it appears once per result instead of once per fold.
+- Clarified README and strategy-catalog language around walk-forward diagnostics, per-fold refit cost, and optimization workflow interpretation.
+
 ## 0.8.5 - 2026-07-04
 
 ### Fixed

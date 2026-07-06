@@ -302,6 +302,19 @@ links in the [full catalog](strategies/README.md); a summary follows.
 | WF04 | Grid Search | Exhaustive SMA fast/slow tuning scored by real backtests | [source](strategies/example_wf_04_grid_search_optimization.py) | [view](https://backtester.quantjourney.cloud/strategies/optuna-optimization) |
 | WF05 | Optuna TPE + Walk-Forward | Bayesian parameter search, then out-of-sample validation | [source](strategies/example_wf_05_optuna_tpe_optimization.py) | [view](https://backtester.quantjourney.cloud/strategies/optuna-optimization) |
 
+WF01-WF03 default to `slice_diagnostics`: train/test metrics are computed from
+one full-period NAV so examples run quickly and remain easy to inspect. To run
+a fuller per-fold strategy re-run/refit, enable:
+
+```bash
+QJ_WF_MODE=per_fold_refit ./strategy.sh example_wf_01_rolling_walkforward
+```
+
+The logs and walk-forward summary report the active mode. Per-fold refit is
+slower because each fold runs the strategy again through the data/preparation
+pipeline. WF04-WF05 are optimization workflows and should be read as selection
+diagnostics rather than a simple winner-takes-all backtest.
+
 Long/short examples (W13–W16) are market-neutral; short borrow/financing is not
 modeled (a documented research approximation).
 
@@ -404,6 +417,7 @@ Use `--no-reports` when you only want calculation and run metadata:
   requested symbols, dates, and granularity.
 - Walk-forward and optimization diagnostics help expose overfit risk, but a
   good in-sample or single out-of-sample result is not proof of robustness.
+  Check whether a run used `slice_diagnostics` or `per_fold_refit`.
 
 The runtime package is imported as `backtester`.
 

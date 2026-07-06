@@ -70,14 +70,25 @@ class FoldRunner:
     def run(self) -> FoldResult:
         """Execute fold and return FoldResult."""
         portfolio_data = self._portfolio_data
-        best_params = None
-        optimizer_n_evals = None
-        optimizer_best_objective = None
+        opt_meta: Dict[str, Any] = {}
         if self._backtester_factory is not None:
             portfolio_data, opt_meta = self._run_fold_refit()
-            best_params = opt_meta.get("best_params")
-            optimizer_n_evals = opt_meta.get("optimizer_n_evals")
-            optimizer_best_objective = opt_meta.get("optimizer_best_objective")
+
+        return self._build_result(portfolio_data, opt_meta)
+
+    async def run_async(self) -> FoldResult:
+        """Execute fold from an active event loop and return FoldResult."""
+        portfolio_data = self._portfolio_data
+        opt_meta: Dict[str, Any] = {}
+        if self._backtester_factory is not None:
+            portfolio_data, opt_meta = await self._run_fold_refit_async()
+
+        return self._build_result(portfolio_data, opt_meta)
+
+    def _build_result(self, portfolio_data: Any, opt_meta: Dict[str, Any]) -> FoldResult:
+        best_params = opt_meta.get("best_params")
+        optimizer_n_evals = opt_meta.get("optimizer_n_evals")
+        optimizer_best_objective = opt_meta.get("optimizer_best_objective")
 
         is_metrics = self._compute_metrics_for_window(
             self._fold.train_start,
@@ -107,11 +118,6 @@ class FoldRunner:
 
         # Sanity warnings
         warnings = []
-        if self._backtester_factory is None:
-            warnings.append(
-                "Walk-forward result is slice diagnostics, not true out-of-sample: "
-                "provide backtester_factory for per-fold refit."
-            )
         if oos_sr < 0:
             warnings.append(
                 f"Fold {self._fold.fold_id}: OOS Sharpe {oos_sr:.2f} is negative"
@@ -308,6 +314,37 @@ class FoldRunner:
             "optimizer_best_objective": optimizer_best_objective,
         }
 
+    async def _run_fold_refit_async(self) -> tuple[Any, Dict[str, Any]]:
+        best_params: Dict[str, Any] = {}
+        optimizer_n_evals = None
+        optimizer_best_objective = None
+
+        if self._optimizer is not None:
+            opt_result_or_awaitable = self._optimizer.optimize(
+                self._backtester_factory,
+                self._fold.train_start.strftime("%Y-%m-%d"),
+                self._fold.effective_is_end.strftime("%Y-%m-%d"),
+                self._base_config,
+            )
+            if inspect.isawaitable(opt_result_or_awaitable):
+                opt_result = await opt_result_or_awaitable
+            else:
+                opt_result = opt_result_or_awaitable
+            best_params = dict(getattr(opt_result, "best_params", {}) or {})
+            optimizer_n_evals = getattr(opt_result, "n_evaluated", None)
+            optimizer_best_objective = getattr(opt_result, "best_objective", None)
+
+        bt = self._build_fold_backtester(best_params)
+        await self._run_backtester_async(bt)
+        pdata = getattr(bt, "portfolio_data", None)
+        if pdata is None:
+            raise ValueError("backtester_factory result must expose portfolio_data after run")
+        return pdata, {
+            "best_params": best_params or None,
+            "optimizer_n_evals": optimizer_n_evals,
+            "optimizer_best_objective": optimizer_best_objective,
+        }
+
     def _build_fold_backtester(self, best_params: Dict[str, Any]) -> Any:
         assert self._backtester_factory is not None
         train_start = self._fold.train_start.strftime("%Y-%m-%d")
@@ -339,6 +376,14 @@ class FoldRunner:
         result = runner()
         if inspect.isawaitable(result):
             self._run_async(result)
+
+    async def _run_backtester_async(self, bt: Any) -> None:
+        runner = getattr(bt, "run_strategy", None) or getattr(bt, "run", None)
+        if runner is None:
+            raise ValueError("backtester_factory result must provide run_strategy() or run()")
+        result = runner()
+        if inspect.isawaitable(result):
+            await result
 
     @staticmethod
     def _run_async(awaitable: Any) -> Any:

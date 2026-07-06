@@ -111,6 +111,7 @@ class WalkForwardResult:
     # ── Meta ──
     fingerprint: str = ""
     warnings: List[str] = field(default_factory=list)
+    mode: str = "slice_diagnostics"
 
     # ── Derived properties ──
 
@@ -149,6 +150,7 @@ class WalkForwardResult:
             "deflated_sharpe": self.deflated_sharpe,
             "pbo": self.pbo,
             "fingerprint": self.fingerprint,
+            "mode": self.mode,
             "warnings": self.warnings,
             "config": self.config_dict,
         }
@@ -191,6 +193,7 @@ class WalkForwardResult:
             f"({scheme}, {train_m}m/{test_m}m)"
         )
         lines.append(f"Fingerprint: {self.fingerprint[:12]}")
+        lines.append(f"Mode: {self.mode}")
         lines.append("")
 
         # Per-fold table

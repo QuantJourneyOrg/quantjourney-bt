@@ -20,6 +20,8 @@ uses a generous purge/embargo so you can see their effect on the OOS metrics.
 
 Usage:
     ./strategy.sh example_wf_03_anchored_purge_embargo
+
+    QJ_WF_MODE=per_fold_refit ./strategy.sh example_wf_03_anchored_purge_embargo
 """
 
 import asyncio
@@ -40,6 +42,17 @@ def _credentials() -> dict:
         "email": None if api_key else os.environ.get("QJ_EMAIL"),
         "password": None if api_key else os.environ.get("QJ_PASSWORD"),
     }
+
+
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _wf_mode() -> str:
+    raw = os.environ.get("QJ_WF_MODE", "").strip().lower()
+    if raw in {"per_fold_refit", "refit", "true_oos"} or _env_flag("QJ_WF_REFIT"):
+        return "per_fold_refit"
+    return "slice_diagnostics"
 
 
 class RSIReversionForWF(Backtester):
@@ -66,14 +79,19 @@ class RSIReversionForWF(Backtester):
         return active.div(counts, axis=0).fillna(0.0).clip(upper=0.25)
 
 
-async def main() -> None:
-    strategy = RSIReversionForWF(
+def _build_strategy(
+    *,
+    strategy_name: str = "ExampleWF03_AnchoredPurgeEmbargo",
+    backtest_period: dict | None = None,
+) -> RSIReversionForWF:
+    save_packet = _env_flag("QJ_WF_REPORT_PACKET")
+    return RSIReversionForWF(
         **_credentials(),
-        strategy_name="ExampleWF03_AnchoredPurgeEmbargo",
+        strategy_name=strategy_name,
         strategy_type="Long / Cash",
         initial_capital=100_000,
         instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
-        backtest_period={"start": "2012-01-01", "end": "2025-01-01"},
+        backtest_period=backtest_period or {"start": "2012-01-01", "end": "2025-01-01"},
         source="yfinance",
         execution_mode="weights",
         max_position_size=0.25,
@@ -84,8 +102,14 @@ async def main() -> None:
         benchmark_symbol="^GSPC",
         benchmark_name="S&P 500 Index",
         show_text_reports=False,
-        save_portfolio_plots=False,
+        save_text_reports=save_packet,
+        save_portfolio_plots=save_packet,
     )
+
+
+async def main() -> None:
+    mode = _wf_mode()
+    strategy = _build_strategy()
     await strategy.run_strategy()
 
     config = WalkForwardConfig(
@@ -96,8 +120,21 @@ async def main() -> None:
         purge_days=10,       # drop the 10 training days nearest the test window
         embargo_pct=0.02,    # 2% buffer after the test window
     )
-    engine = WalkForwardEngine(config=config, initial_capital=100_000)
-    result = engine.run(strategy.portfolio_data)
+    engine_kwargs = {}
+    if mode == "per_fold_refit":
+        def factory(*, fold, train_start, train_end, oos_start, oos_end, **_) -> RSIReversionForWF:
+            return _build_strategy(
+                strategy_name=f"ExampleWF03_AnchoredPurgeEmbargo_Fold{fold.fold_id:02d}",
+                backtest_period={"start": train_start, "end": oos_end},
+            )
+
+        engine_kwargs["backtester_factory"] = factory
+
+    engine = WalkForwardEngine(config=config, initial_capital=100_000, **engine_kwargs)
+    if mode == "per_fold_refit":
+        result = await engine.run_async(strategy.portfolio_data)
+    else:
+        result = engine.run(strategy.portfolio_data)
 
     print(result.summary())
 

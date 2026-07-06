@@ -89,7 +89,12 @@ slippage, commissions, and a trade blotter.
 
 ## Walk-forward & optimization examples (5)
 
-Prove a strategy generalizes — validate out-of-sample and tune parameters.
+Validate temporal robustness and tune parameters. WF01-WF03 default to the
+fast `slice_diagnostics` mode, which scores train/test slices from one full
+strategy run. For a fuller per-fold re-run/refit, use
+`QJ_WF_MODE=per_fold_refit`; this is slower because every fold runs the
+strategy again. WF04-WF05 are optimization workflows and should be read as
+selection diagnostics, not as a simple winner-takes-all backtest.
 
 | # | Example | Idea | Code | Results |
 |:--|:--|:--|:--|:--|

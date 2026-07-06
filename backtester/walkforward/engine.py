@@ -81,6 +81,10 @@ class WalkForwardEngine:
         self._optimizer = optimizer
         self._base_config = dict(base_config or {})
 
+    @property
+    def mode(self) -> str:
+        return "per_fold_refit" if self._backtester_factory is not None else "slice_diagnostics"
+
     def run(
         self,
         portfolio_data: Any,  # PortfolioData
@@ -109,6 +113,7 @@ class WalkForwardEngine:
             logger.info(
                 f"[WalkForward] Starting {self._config.scheme} WF: "
                 f"{start.date()} → {end.date()}, "
+                f"mode={self.mode}, "
                 f"train={self._config.train_months}m, test={self._config.test_months}m, "
                 f"purge={self._config.purge_days}d, embargo={self._config.embargo_pct:.0%}"
             )
@@ -185,6 +190,100 @@ class WalkForwardEngine:
 
         return wf_result
 
+    async def run_async(
+        self,
+        portfolio_data: Any,  # PortfolioData
+        *,
+        resume: bool = False,
+    ) -> WalkForwardResult:
+        """
+        Execute walk-forward validation from an active event loop.
+
+        This is equivalent to ``run()`` but awaits per-fold backtester refits when
+        ``backtester_factory`` returns an async strategy.
+        """
+        trading_dates = portfolio_data.net_asset_value.index.sort_values()
+        if len(trading_dates) < 2:
+            raise ValueError("Insufficient data for walk-forward (need >= 2 trading days)")
+
+        start = trading_dates[0]
+        end = trading_dates[-1]
+
+        if self._config.verbose:
+            logger.info(
+                f"[WalkForward] Starting {self._config.scheme} WF: "
+                f"{start.date()} → {end.date()}, "
+                f"mode={self.mode}, "
+                f"train={self._config.train_months}m, test={self._config.test_months}m, "
+                f"purge={self._config.purge_days}d, embargo={self._config.embargo_pct:.0%}"
+            )
+
+        scheme = fold_scheme_factory(self._config)
+        folds = scheme.generate_folds(start, end, trading_dates)
+
+        if not folds:
+            raise ValueError(
+                f"No valid folds generated for {self._config.scheme} scheme "
+                f"with train={self._config.train_months}m, test={self._config.test_months}m "
+                f"over {start.date()} → {end.date()}"
+            )
+
+        if self._config.verbose:
+            logger.info(f"[WalkForward] Generated {len(folds)} folds")
+
+        completed_results: dict[int, FoldResult] = {}
+        if resume and self._checkpoint_dir:
+            completed_results = load_checkpoint(self._checkpoint_dir)
+            if completed_results and self._config.verbose:
+                logger.info(
+                    f"[WalkForward] Resumed {len(completed_results)} folds from checkpoint"
+                )
+
+        fold_results: list[FoldResult] = []
+
+        for fold in folds:
+            if fold.fold_id in completed_results:
+                fold_results.append(completed_results[fold.fold_id])
+                continue
+
+            if self._config.verbose:
+                logger.info(
+                    f"[WalkForward] Fold {fold.fold_id}: "
+                    f"IS {fold.train_start.date()} → {fold.effective_is_end.date()}, "
+                    f"OOS {fold.oos_start.date()} → {fold.oos_end.date()}"
+                )
+
+            runner = FoldRunner(
+                fold=fold,
+                portfolio_data=portfolio_data,
+                blotter=self._blotter,
+                initial_capital=self._initial_capital,
+                risk_free_rate=self._risk_free_rate,
+                backtester_factory=self._backtester_factory,
+                optimizer=self._optimizer,
+                base_config=self._base_config,
+            )
+            result = await runner.run_async()
+            fold_results.append(result)
+
+            if self._checkpoint_dir:
+                completed_results[fold.fold_id] = result
+                save_checkpoint(self._checkpoint_dir, completed_results)
+
+        wf_result = self._aggregate(fold_results)
+
+        if self._config.verbose:
+            dsr_str = f", DSR={wf_result.deflated_sharpe:.2f}" if wf_result.deflated_sharpe is not None else ""
+            pbo_str = f", PBO={wf_result.pbo:.2f}" if wf_result.pbo is not None else ""
+            logger.info(
+                f"[WalkForward] Complete: OOS Sharpe={wf_result.oos_sharpe:.2f}, "
+                f"Overfit Ratio={wf_result.overfit_ratio:.2f}, "
+                f"Efficiency={wf_result.efficiency:.2f}"
+                f"{dsr_str}{pbo_str}"
+            )
+
+        return wf_result
+
     # ── Aggregation ───────────────────────────────────────────────────
 
     def _aggregate(self, fold_results: list[FoldResult]) -> WalkForwardResult:
@@ -230,6 +329,11 @@ class WalkForwardEngine:
 
         # Collect warnings
         all_warnings = []
+        if self._backtester_factory is None:
+            all_warnings.append(
+                "Walk-forward mode=slice_diagnostics: metrics are computed from "
+                "a full-period NAV; pass backtester_factory for per-fold refit."
+            )
         for fr in fold_results:
             all_warnings.extend(fr.sanity_warnings)
 
@@ -276,4 +380,5 @@ class WalkForwardEngine:
             pbo=pbo_val,
             fingerprint=fingerprint,
             warnings=all_warnings,
+            mode=self.mode,
         )
