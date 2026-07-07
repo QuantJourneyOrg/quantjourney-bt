@@ -1,9 +1,15 @@
 """
 Optuna Optimizer — Institutional-grade Bayesian parameter optimization.
 
-Multi-sampler (TPE / CMA-ES / QMC / Random), adaptive pruning,
-warm-start, multi-objective Pareto, convergence early-stopping,
-parameter importance, and real-time progress callbacks.
+Multi-sampler (TPE / CMA-ES / QMC / Random), warm-start,
+multi-objective Pareto, convergence early-stopping, parameter
+importance, and real-time progress callbacks.
+
+NOTE on pruners: the objective runs ONE backtest per trial and reports
+no intermediate values (``trial.report``), so Optuna pruners
+(median/percentile/hyperband) structurally cannot act.  The default is
+``pruner="none"``; configuring any other pruner logs a warning and has
+no effect on trial execution.
 
 Guarded import: ``pip install optuna``.
 
@@ -18,7 +24,6 @@ Usage::
         },
         n_trials=200,
         sampler="tpe",
-        pruner="hyperband",
     )
 
     result = optimizer.optimize_fn(
@@ -38,6 +43,7 @@ Licensed under the Apache License 2.0.
 
 from __future__ import annotations
 
+import inspect
 import logging
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -196,7 +202,6 @@ class OptunaOptimizer:
 
     Features:
         - Multi-sampler: TPE (default), CMA-ES, QMC, Random
-        - Adaptive pruning: Median, Percentile, Hyperband, or None
         - Warm-start from previous study results
         - Multi-objective Pareto optimization
         - Convergence early-stopping with configurable patience
@@ -229,7 +234,7 @@ class OptunaOptimizer:
         direction: str = "maximize",
         directions: List[str] | None = None,  # multi-objective
         sampler: str = "tpe",
-        pruner: str = "median",
+        pruner: str = "none",
         seed: int = 42,
         n_startup_trials: int = 10,
         patience: int | None = None,  # convergence early-stop
@@ -312,7 +317,15 @@ class OptunaOptimizer:
         is_multi = self._directions is not None and len(self._directions) > 1
         trial_records: List[TrialRecord] = []
         convergence: List[float] = []
-        best_so_far = -np.inf
+
+        # Direction-aware improvement tracking: comparisons happen in
+        # "signed" space so minimize studies do not spuriously early-stop.
+        primary_direction = (
+            self._directions[0] if is_multi else self._direction
+        )
+        sign = -1.0 if primary_direction == "minimize" else 1.0
+        best_signed = -np.inf
+        best_so_far = np.nan  # actual best objective value (unsigned)
         no_improve_count = 0
         early_stopped = False
         early_stop_reason = ""
@@ -324,6 +337,14 @@ class OptunaOptimizer:
         # ── Create study ──
         sampler = _create_sampler(self._sampler_name, self._seed, self._n_startup)
         pruner = _create_pruner(self._pruner_name)
+        if self._pruner_name != "none":
+            logger.warning(
+                "OptunaOptimizer: pruner=%r configured but the objective "
+                "runs a single backtest per trial and reports no "
+                "intermediate values — the pruner cannot act and is "
+                "effectively inactive. Use pruner='none' to silence this.",
+                self._pruner_name,
+            )
 
         if is_multi:
             study = optuna.create_study(
@@ -357,7 +378,7 @@ class OptunaOptimizer:
 
         # ── Objective ──
         def objective(trial: optuna.Trial) -> float | Tuple[float, ...]:
-            nonlocal best_so_far, no_improve_count, _cancel_flag
+            nonlocal best_signed, best_so_far, no_improve_count, _cancel_flag
 
             # Cancel check
             if cancel_check and cancel_check():
@@ -434,8 +455,9 @@ class OptunaOptimizer:
             )
             trial_records.append(record)
 
-            # Convergence tracking
-            if primary > best_so_far:
+            # Convergence tracking (direction-aware)
+            if sign * primary > best_signed:
+                best_signed = sign * primary
                 best_so_far = primary
                 no_improve_count = 0
             else:
@@ -486,6 +508,23 @@ class OptunaOptimizer:
         completed = [t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]
         pruned = [t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED]
         failed = [t for t in study.trials if t.state == optuna.trial.TrialState.FAIL]
+
+        # Failed evaluations are surfaced to Optuna as TrialPruned, so count
+        # real failures from our own records and make total failure LOUD.
+        n_failed_records = sum(1 for t in trial_records if t.state == "FAIL")
+        n_completed_records = sum(1 for t in trial_records if t.state == "COMPLETE")
+        all_failed = (
+            len(trial_records) > 0
+            and n_completed_records == 0
+            and n_failed_records > 0
+        )
+        if all_failed:
+            logger.error(
+                "OptunaOptimizer: ALL %d evaluated trials failed — "
+                "best_params is empty and the fold will run unoptimized. "
+                "Check the trial errors logged above.",
+                n_failed_records,
+            )
 
         # Best params
         if is_multi:
@@ -550,8 +589,9 @@ class OptunaOptimizer:
             pareto_front=pareto_front,
             study_metadata=metadata,
             n_completed=len(completed),
-            n_pruned=len(pruned),
-            n_failed=len(failed),
+            n_pruned=max(len(pruned) - n_failed_records, 0),
+            n_failed=len(failed) + n_failed_records,
+            all_trials_failed=all_failed,
             early_stopped=early_stopped,
             early_stop_reason=early_stop_reason,
         )
@@ -580,6 +620,15 @@ class OptunaOptimizer:
 
         Returns:
             OptimizationResult with full detail.
+
+        Implementation note: ``study.optimize`` is synchronous, so the
+        whole study is offloaded to a worker thread via
+        ``asyncio.to_thread``.  Inside the objective, awaitable backtests
+        run via ``asyncio.run`` — legal there because the worker thread
+        has no running event loop.  (Calling
+        ``loop.run_until_complete`` on the caller's loop, as this method
+        previously did, raised ``RuntimeError: This event loop is
+        already running`` on EVERY trial, silently failing the study.)
         """
         import asyncio
 
@@ -590,15 +639,18 @@ class OptunaOptimizer:
                 "backtest_period": {"start": train_start, "end": train_end},
             }
             bt = backtester_factory(**merged)
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(bt.run())
+            run_result = bt.run()
+            if inspect.isawaitable(run_result):
+                # Runs in the asyncio.to_thread worker — no active loop here.
+                asyncio.run(run_result)
             nav = bt.portfolio_data.net_asset_value
             returns = nav.pct_change().dropna()
             if returns.std() == 0 or len(returns) < 2:
                 return 0.0
             return float(returns.mean() / returns.std() * np.sqrt(252))
 
-        return self.optimize_fn(
+        return await asyncio.to_thread(
+            self.optimize_fn,
             evaluate_fn,
             progress_callback=progress_callback,
             cancel_check=cancel_check,

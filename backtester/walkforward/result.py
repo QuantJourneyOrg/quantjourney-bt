@@ -71,6 +71,14 @@ class FoldResult:
     best_params: Optional[Dict[str, Any]] = None
     optimizer_n_evals: Optional[int] = None
     optimizer_best_objective: Optional[float] = None
+    # Completed-trial objective values (IS, annualized Sharpe) — the trial
+    # population used for DSR's E[max SR] deflation.
+    optimizer_trial_values: Optional[List[float]] = None
+
+    # PBO (opt-in via WalkForwardConfig.pbo_trials): top-K trials'
+    # OOS objective values and the selected trial's rank logit λ.
+    pbo_candidate_oos: Optional[List[float]] = None
+    pbo_selected_logit: Optional[float] = None
 
     # Cost sensitivity (optional)
     cost_sensitivity: Optional[Dict[int, Dict[str, float]]] = None
@@ -97,8 +105,10 @@ class WalkForwardResult:
     overfit_ratio: float = 0.0
     efficiency: float = 0.0
     sharpe_decay: float = 0.0
-    deflated_sharpe: Optional[float] = None
+    deflated_sharpe: Optional[float] = None  # probability in [0, 1]
     pbo: Optional[float] = None
+    pbo_available: bool = False
+    pbo_reason: Optional[str] = None  # why PBO is unavailable (when None)
 
     # ── Parameter stability ──
     param_stability: Optional[Dict[str, float]] = None
@@ -149,6 +159,8 @@ class WalkForwardResult:
             "sharpe_decay": self.sharpe_decay,
             "deflated_sharpe": self.deflated_sharpe,
             "pbo": self.pbo,
+            "pbo_available": self.pbo_available,
+            "pbo_reason": self.pbo_reason,
             "fingerprint": self.fingerprint,
             "mode": self.mode,
             "warnings": self.warnings,
@@ -228,8 +240,11 @@ class WalkForwardResult:
                       f"Sharpe Decay:  {self.sharpe_decay:+.3f}/fold")
 
         if self.deflated_sharpe is not None:
-            lines.append(f"  Deflated Sharpe:      {self.deflated_sharpe:>8.2f}    "
-                          f"PBO:           {self.pbo:.2f}" if self.pbo is not None else "")
+            lines.append(f"  Deflated Sharpe (prob):{self.deflated_sharpe:>7.2f}")
+        pbo_render = f"{self.pbo:.2f}" if self.pbo is not None else "n/a"
+        lines.append(f"  PBO:                  {pbo_render:>8}")
+        if self.pbo is None and self.pbo_reason:
+            lines.append(f"    (PBO unavailable: {self.pbo_reason})")
 
         if self.warnings:
             lines.append("")

@@ -31,10 +31,15 @@ from backtester.walkforward.statistics.overfit import (
     efficiency,
     sharpe_decay,
 )
-from backtester.walkforward.statistics.deflated_sharpe import deflated_sharpe
+from backtester.walkforward.statistics.deflated_sharpe import (
+    deflated_sharpe,
+    probabilistic_sharpe,
+)
 from backtester.walkforward.statistics.pbo import (
     probability_of_backtest_overfitting,
     pbo_logit_distribution,
+    pbo_from_selected_ranks,
+    selected_trial_logit,
 )
 from backtester.walkforward.statistics.aggregation import (
     aggregate_oos_returns,
@@ -47,8 +52,11 @@ __all__ = [
     "efficiency",
     "sharpe_decay",
     "deflated_sharpe",
+    "probabilistic_sharpe",
     "probability_of_backtest_overfitting",
     "pbo_logit_distribution",
+    "pbo_from_selected_ranks",
+    "selected_trial_logit",
     "aggregate_oos_returns",
     "compute_composite_metrics",
     "interpret_metrics",

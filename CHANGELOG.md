@@ -1,5 +1,29 @@
 # QuantJourney Backtester Changelog
 
+## 0.8.8 - 2026-07-08
+
+### Fixed
+- OCO orders now share the conservative stop-family fill priority instead of being processed after MARKET orders.
+- The tracking-error rebalance trigger measures portfolio returns on beginning-of-day weights, matching the NAV accounting basis.
+- Zero purge/embargo folds report an empty exclusion window (None) instead of marking the whole training window as purged.
+- Overlapping OOS windows (step < test) log a warning that averaged, differently-parameterized folds bias the composite Sharpe.
+- `scheme="cpcv"` fails at config time with `NotImplementedError` instead of deep inside fold generation.
+
+## 0.8.7 - 2026-07-07
+
+### Fixed
+- Rebalance accounting: rebalance-day returns now use the weights actually held into the day (pre-trade), in both the vectorized and loop paths; circuit-breaker days book PnL on prior weights instead of showing a flat NAV.
+- Circuit breaker re-entry: after cooldown the portfolio re-enters and the drawdown reference resets; previously the first trigger left the portfolio flat for the rest of the backtest.
+- Partial rebalancing can no longer flip long targets into short positions when kept drifted weights exceed the target total.
+- Unknown rebalance frequency strings now raise `ValueError` instead of silently rebalancing daily; calendar rebalances falling on market holidays snap to the prior trading day instead of being skipped.
+- Order sizing rejects non-finite close prices (a NaN bar no longer poisons NAV for the rest of the run); portfolio weights are cleaned of ±inf in both accounting paths; `cash_buffer=0` passed as int now disables the buffer instead of defaulting to 5%.
+- Fill engine: trailing stops are live from their first bar and keep ratcheting when volume caps block a fill; OCO legs cancel the sibling on any (also partial) fill; bracket TP/SL children activate on the first partial entry fill and track the filled quantity; `expires_after_bars` no longer counts bars with partial fills; OCO evaluates the stop leg before the limit leg; stop-limit and trailing-stop-limit fills on the activation bar are bounded by the trigger price instead of referencing the pre-trigger open; non-finite bar volume yields zero fill capacity with a warning instead of bypassing `max_volume_participation`.
+- `stop_loss()` and `take_profit()` helpers now OCO-link automatically for the same instrument, so a wide bar fills exactly one protective exit instead of flipping the position.
+- Inverse-contract positions are marked to market with the correct sign; order-based NAV PnL now matches `ContractSpec.pnl`.
+- Walk-forward optimization actually runs: Optuna and grid evaluations no longer fail silently inside the event loop (all-failed runs now warn loudly); `direction="minimize"` is respected by early stopping and best-trial selection; configured pruners report that they are inactive instead of pretending to prune.
+- Deflated Sharpe reimplemented per Bailey & López de Prado (2014): returns a probability, uses √(T−1) scaling, correct kurtosis term and a consistent trial population; degenerate cases reduce to PSR instead of the raw max Sharpe.
+- The fold-level pseudo-PBO is deprecated (it could label textbook overfitting as safe); a rank-based PBO over top-K optimizer trials is available via `pbo_trials`, and reports honestly report "n/a" when the statistic is unavailable.
+
 ## 0.8.6 - 2026-07-06
 
 ### Added

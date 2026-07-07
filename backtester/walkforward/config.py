@@ -48,6 +48,11 @@ class WalkForwardConfig:
     compute_deflated_sharpe: bool = True
     compute_pbo: bool = True
     pbo_n_partitions: int = 16
+    # Rank-based PBO needs per-trial OOS data: with pbo_trials = K >= 2
+    # (and an optimizer), each fold re-backtests the optimizer's top-K
+    # trials on the OOS window and records the selected trial's OOS rank.
+    # 0 disables the extra backtests; PBO is then reported as unavailable.
+    pbo_trials: int = 0
     min_oos_sharpe: float = 0.0
 
     # ── Cost Sensitivity ──────────────────────────────────────────────
@@ -81,8 +86,13 @@ class WalkForwardConfig:
             raise ValueError("purge_days must be >= 0")
         if not (0.0 <= self.embargo_pct <= 1.0):
             raise ValueError("embargo_pct must be in [0, 1]")
-        if self.scheme == "cpcv" and (self.n_splits is None or self.n_splits < 2):
-            raise ValueError("CPCV scheme requires n_splits >= 2")
+        if self.pbo_trials < 0 or self.pbo_trials == 1:
+            raise ValueError("pbo_trials must be 0 (disabled) or >= 2")
+        if self.scheme == "cpcv":
+            # Fail at config time instead of deep inside fold generation.
+            raise NotImplementedError(
+                "scheme='cpcv' is not implemented yet; use rolling, expanding or anchored"
+            )
 
     # ── Serialisation ─────────────────────────────────────────────────
 

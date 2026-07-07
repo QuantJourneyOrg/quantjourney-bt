@@ -70,20 +70,28 @@ class OptimizationResult:
     n_completed: int = 0
     n_pruned: int = 0
     n_failed: int = 0
+    all_trials_failed: bool = False  # every evaluated trial failed — best_params is empty
     early_stopped: bool = False
     early_stop_reason: str = ""
 
+    def _maximize(self) -> bool:
+        """Study direction — trials are 'best' at max for maximize, min for minimize."""
+        direction = (self.study_metadata or {}).get("direction") or "maximize"
+        return direction != "minimize"
+
     def best_trial(self) -> Optional[TrialRecord]:
-        """Return the trial with the best objective value."""
+        """Return the trial with the best objective value (direction-aware)."""
         completed = [t for t in self.trials if t.state == "COMPLETE"]
         if not completed:
             return None
-        return max(completed, key=lambda t: t.value)
+        if self._maximize():
+            return max(completed, key=lambda t: t.value)
+        return min(completed, key=lambda t: t.value)
 
     def top_k(self, k: int = 10) -> List[TrialRecord]:
-        """Return top-k trials by objective value (descending)."""
+        """Return top-k trials by objective value, best first (direction-aware)."""
         completed = [t for t in self.trials if t.state == "COMPLETE"]
-        return sorted(completed, key=lambda t: t.value, reverse=True)[:k]
+        return sorted(completed, key=lambda t: t.value, reverse=self._maximize())[:k]
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialise to JSON-safe dictionary."""
@@ -94,6 +102,7 @@ class OptimizationResult:
             "n_completed": self.n_completed,
             "n_pruned": self.n_pruned,
             "n_failed": self.n_failed,
+            "all_trials_failed": self.all_trials_failed,
             "elapsed_seconds": round(self.elapsed_seconds, 2),
             "early_stopped": self.early_stopped,
             "early_stop_reason": self.early_stop_reason,

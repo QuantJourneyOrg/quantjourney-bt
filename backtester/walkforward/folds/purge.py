@@ -57,6 +57,12 @@ def compute_purge_embargo(
 
     total_remove = effective_purge + embargo_days
 
+    if total_remove == 0:
+        # No purge/embargo: an empty exclusion window is reported as None,
+        # never as is_dates[-0] == is_dates[0] (which claimed the whole IS
+        # window was purged).
+        return is_dates[-1], None, None
+
     if total_remove >= is_length:
         # Edge case: purge + embargo exceeds IS window
         effective_is_end = is_dates[0]

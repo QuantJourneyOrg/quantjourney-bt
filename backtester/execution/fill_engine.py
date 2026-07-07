@@ -34,6 +34,8 @@ Licensed under the Apache License 2.0.
 
 from __future__ import annotations
 
+import logging
+import math
 import uuid
 from collections import defaultdict
 from typing import Callable, Dict, List, Optional
@@ -49,6 +51,8 @@ from backtester.execution.order_types import (
 )
 from backtester.execution.slippage import NoSlippage, SlippageModel
 from backtester.execution.commission import CommissionScheme, ZeroCommission
+
+logger = logging.getLogger(__name__)
 
 
 class FillEngine:
@@ -179,6 +183,7 @@ class FillEngine:
         entry._bracket_children = [tp, sl]  # type: ignore[attr-defined]
         entry._bracket_spec = bracket  # type: ignore[attr-defined]
         entry._bracket_parent_side = order.side  # type: ignore[attr-defined]
+        entry._bracket_children_activated = False  # type: ignore[attr-defined]
 
         order.status = OrderStatus.FILLED  # mark parent as processed
         return order.order_id
@@ -219,7 +224,7 @@ class FillEngine:
         if not orders:
             return fills
 
-        remaining_bar_capacity = self._bar_fill_capacity(bar)
+        remaining_bar_capacity = self._bar_fill_capacity(instrument, bar)
 
         # Process in priority: stops → limits → markets
         for order in sorted(orders, key=lambda o: _ORDER_PRIORITY.get(o.order_type, 99)):
@@ -236,19 +241,28 @@ class FillEngine:
                 if remaining_bar_capacity is not None:
                     remaining_bar_capacity = max(0.0, remaining_bar_capacity - fill.quantity)
 
-                # Activate bracket children on entry fill
-                if order.status == OrderStatus.FILLED and hasattr(order, "_bracket_children"):
-                    self._prepare_bracket_children(order, fill)
+                # Activate bracket children on the FIRST entry fill (partial
+                # or full) so the position is never left unprotected. Children
+                # are sized to the actual filled quantity (the engine does not
+                # clamp sells to held quantity) and resized on later partials.
+                if hasattr(order, "_bracket_children"):
                     for child in order._bracket_children:  # type: ignore[attr-defined]
-                        self._orders[instrument].append(child)
+                        if child.is_active:
+                            child.quantity = order.filled_qty
+                    if not order._bracket_children_activated:  # type: ignore[attr-defined]
+                        order._bracket_children_activated = True  # type: ignore[attr-defined]
+                        self._prepare_bracket_children(order, fill)
+                        for child in order._bracket_children:  # type: ignore[attr-defined]
+                            self._orders[instrument].append(child)
 
-                # OCO: cancel the pair only after a complete fill.
-                if order.status == OrderStatus.FILLED and order.oco_pair_id:
+                # OCO: any fill (partial or full) cancels the sibling leg.
+                if order.oco_pair_id:
                     self._cancel_oco_pair(order.oco_pair_id, except_id=order.order_id)
-                elif order.is_active:
-                    self._expire_after_bar(order, bar)
+
+                if order.is_active:
+                    self._expire_after_bar(order, bar, filled_this_bar=True)
             else:
-                self._expire_after_bar(order, bar)
+                self._expire_after_bar(order, bar, filled_this_bar=False)
 
         # Clean up filled/cancelled orders
         self._orders[instrument] = [o for o in orders if o.is_active]
@@ -263,11 +277,13 @@ class FillEngine:
         max_quantity: Optional[float] = None,
     ) -> Optional[Fill]:
         """Attempt to fill a single order against a bar."""
+        # Ratchet the trailing anchor first so the stop is live from the
+        # first bar and keeps trailing even when capacity blocks a fill.
+        if order.order_type in (OrderType.STOP_TRAIL, OrderType.STOP_TRAIL_LIMIT):
+            self._update_trail_anchor(order, bar)
+
         theoretical_price = self._get_theoretical_price(order, bar)
         if theoretical_price is None:
-            # Update trailing stop anchor
-            if order.order_type in (OrderType.STOP_TRAIL, OrderType.STOP_TRAIL_LIMIT):
-                self._update_trail_anchor(order, bar)
             return None
 
         fill_qty = self._fill_quantity(order, max_quantity)
@@ -358,17 +374,18 @@ class FillEngine:
                 return self._get_trailing_stop_limit_price(order, bar)
 
             case OrderType.OCO:
-                # OCO orders act as limit or stop depending on which price is set
-                if order.limit_price is not None:
-                    if order.side == OrderSide.BUY and bar.low <= order.limit_price:
-                        return min(order.limit_price, bar.open)
-                    if order.side == OrderSide.SELL and bar.high >= order.limit_price:
-                        return max(order.limit_price, bar.open)
+                # OCO orders act as limit or stop depending on which price is set.
+                # Stop is evaluated first per the same-bar convention above.
                 if order.stop_price is not None:
                     if order.side == OrderSide.BUY and bar.high >= order.stop_price:
                         return max(order.stop_price, bar.open)
                     if order.side == OrderSide.SELL and bar.low <= order.stop_price:
                         return min(order.stop_price, bar.open)
+                if order.limit_price is not None:
+                    if order.side == OrderSide.BUY and bar.low <= order.limit_price:
+                        return min(order.limit_price, bar.open)
+                    if order.side == OrderSide.SELL and bar.high >= order.limit_price:
+                        return max(order.limit_price, bar.open)
                 return None
 
             case _:
@@ -451,17 +468,22 @@ class FillEngine:
         if order.stop_price is None or order.limit_price is None:
             return None
 
+        reference_price = bar.open
         if not order._limit_activated:
             if order.side == OrderSide.BUY and bar.high >= order.stop_price:
                 order._limit_activated = True
                 order._activated_limit_price = order.limit_price
+                # Activation bar: the fill cannot reference prices from before
+                # the stop triggered — floor the reference at the stop price.
+                reference_price = max(order.stop_price, bar.open)
             elif order.side == OrderSide.SELL and bar.low <= order.stop_price:
                 order._limit_activated = True
                 order._activated_limit_price = order.limit_price
+                reference_price = min(order.stop_price, bar.open)
             else:
                 return None
 
-        return self._get_limit_price(order, bar, order._activated_limit_price)
+        return self._get_limit_price(order, bar, order._activated_limit_price, reference_price)
 
     def _get_trailing_stop_limit_price(self, order: Order, bar: BarData) -> Optional[float]:
         """Activate a trailing stop-limit, then fill only at-or-better than limit."""
@@ -469,17 +491,21 @@ class FillEngine:
         if effective_stop is None:
             return None
 
+        reference_price = bar.open
         if not order._limit_activated:
             if order.side == OrderSide.SELL and bar.low <= effective_stop:
                 order._limit_activated = True
                 order._activated_limit_price = self._trail_limit_price(order, effective_stop)
+                # Activation bar: bound the fill reference by the trigger price.
+                reference_price = min(effective_stop, bar.open)
             elif order.side == OrderSide.BUY and bar.high >= effective_stop:
                 order._limit_activated = True
                 order._activated_limit_price = self._trail_limit_price(order, effective_stop)
+                reference_price = max(effective_stop, bar.open)
             else:
                 return None
 
-        return self._get_limit_price(order, bar, order._activated_limit_price)
+        return self._get_limit_price(order, bar, order._activated_limit_price, reference_price)
 
     def _trail_limit_price(self, order: Order, effective_stop: float) -> float:
         """Resolve the limit price for a stop-trail-limit activation."""
@@ -495,14 +521,21 @@ class FillEngine:
         order: Order,
         bar: BarData,
         limit_price: Optional[float],
+        reference_price: Optional[float] = None,
     ) -> Optional[float]:
-        """Return fill price for a limit order if reachable."""
+        """Return fill price for a limit order if reachable.
+
+        ``reference_price`` overrides ``bar.open`` as the price-improvement
+        reference (used on stop-limit activation bars where the fill must be
+        bounded by the trigger price rather than the pre-trigger open).
+        """
         if limit_price is None:
             return None
+        reference = bar.open if reference_price is None else reference_price
         if order.side == OrderSide.BUY and bar.low <= limit_price:
-            return min(limit_price, bar.open)
+            return min(limit_price, reference)
         if order.side == OrderSide.SELL and bar.high >= limit_price:
-            return max(limit_price, bar.open)
+            return max(limit_price, reference)
         return None
 
     def _update_trail_anchor(self, order: Order, bar: BarData) -> None:
@@ -561,12 +594,22 @@ class FillEngine:
             return remaining
         return min(remaining, max(float(max_quantity), 0.0))
 
-    def _bar_fill_capacity(self, bar: BarData) -> Optional[float]:
+    def _bar_fill_capacity(self, instrument: str, bar: BarData) -> Optional[float]:
         if self.max_volume_participation is None:
             return None
         if self.max_volume_participation <= 0:
             return 0.0
-        return max(float(bar.volume), 0.0) * float(self.max_volume_participation)
+        volume = float(bar.volume)
+        if not math.isfinite(volume):
+            # Unknown liquidity: refuse to fill rather than fill uncapped
+            # (NaN would otherwise bypass min() and poison later capacity).
+            logger.warning(
+                "Non-finite volume for %s at %s with max_volume_participation set; "
+                "treating bar capacity as 0 (no fills this bar)",
+                instrument, bar.timestamp,
+            )
+            return 0.0
+        return max(volume, 0.0) * float(self.max_volume_participation)
 
     def _normalize_tif(self, order: Order) -> TimeInForce:
         tif = order.time_in_force
@@ -582,14 +625,17 @@ class FillEngine:
             return True
         return False
 
-    def _expire_after_bar(self, order: Order, bar: BarData) -> bool:
+    def _expire_after_bar(self, order: Order, bar: BarData, filled_this_bar: bool = False) -> bool:
         if not order.is_active:
             return False
 
-        order._bars_live += 1
+        # Bars with a (partial) fill do not count against expires_after_bars —
+        # an actively-filling order must not be silently expired.
+        if not filled_this_bar:
+            order._bars_live += 1
         tif = self._normalize_tif(order)
         should_expire = False
-        if tif == TimeInForce.DAY and order._bars_live >= 1:
+        if tif == TimeInForce.DAY:
             should_expire = True
         if order.expires_after_bars is not None and order._bars_live >= order.expires_after_bars:
             should_expire = True
@@ -702,8 +748,10 @@ _ORDER_PRIORITY = {
     OrderType.STOP_LIMIT: 1,
     OrderType.STOP_TRAIL: 2,
     OrderType.STOP_TRAIL_LIMIT: 3,
-    OrderType.LIMIT: 4,
-    OrderType.MARKET: 5,
-    OrderType.BRACKET: 6,
-    OrderType.OCO: 7,
+    # OCO may carry a protective stop leg, so it shares the conservative
+    # stop-family priority instead of trailing MARKET orders.
+    OrderType.OCO: 4,
+    OrderType.LIMIT: 5,
+    OrderType.MARKET: 6,
+    OrderType.BRACKET: 7,
 }

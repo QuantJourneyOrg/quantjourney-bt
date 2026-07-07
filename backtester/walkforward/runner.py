@@ -31,6 +31,7 @@ import pandas as pd
 from backtester.walkforward.folds.base import Fold
 from backtester.walkforward.result import FoldResult
 from backtester.walkforward.statistics.overfit import overfit_ratio, efficiency
+from backtester.walkforward.statistics.pbo import selected_trial_logit
 
 
 class FoldRunner:
@@ -57,6 +58,7 @@ class FoldRunner:
         backtester_factory: Optional[Callable[..., Any]] = None,
         optimizer: Any = None,
         base_config: Optional[Dict[str, Any]] = None,
+        pbo_trials: int = 0,
     ) -> None:
         self._fold = fold
         self._portfolio_data = portfolio_data
@@ -66,6 +68,7 @@ class FoldRunner:
         self._backtester_factory = backtester_factory
         self._optimizer = optimizer
         self._base_config = dict(base_config or {})
+        self._pbo_trials = pbo_trials
 
     def run(self) -> FoldResult:
         """Execute fold and return FoldResult."""
@@ -89,6 +92,9 @@ class FoldRunner:
         best_params = opt_meta.get("best_params")
         optimizer_n_evals = opt_meta.get("optimizer_n_evals")
         optimizer_best_objective = opt_meta.get("optimizer_best_objective")
+        optimizer_trial_values = opt_meta.get("optimizer_trial_values")
+        pbo_candidate_oos = opt_meta.get("pbo_candidate_oos")
+        pbo_selected_logit = opt_meta.get("pbo_selected_logit")
 
         is_metrics = self._compute_metrics_for_window(
             self._fold.train_start,
@@ -118,6 +124,16 @@ class FoldRunner:
 
         # Sanity warnings
         warnings = []
+        if self._backtester_factory is None:
+            warnings.append(
+                f"Fold {self._fold.fold_id}: slice diagnostics mode — metrics "
+                "are sliced from the full-period NAV (no per-fold refit)"
+            )
+        if opt_meta.get("optimizer_all_failed"):
+            warnings.append(
+                f"Fold {self._fold.fold_id}: ALL optimizer trials failed — "
+                "fold ran with base config (unoptimized)"
+            )
         if oos_sr < 0:
             warnings.append(
                 f"Fold {self._fold.fold_id}: OOS Sharpe {oos_sr:.2f} is negative"
@@ -163,6 +179,9 @@ class FoldRunner:
             best_params=best_params,
             optimizer_n_evals=optimizer_n_evals,
             optimizer_best_objective=optimizer_best_objective,
+            optimizer_trial_values=optimizer_trial_values,
+            pbo_candidate_oos=pbo_candidate_oos,
+            pbo_selected_logit=pbo_selected_logit,
         )
 
     # ── Private helpers ───────────────────────────────────────────────
@@ -286,9 +305,8 @@ class FoldRunner:
         }
 
     def _run_fold_refit(self) -> tuple[Any, Dict[str, Any]]:
+        opt_meta: Dict[str, Any] = {}
         best_params: Dict[str, Any] = {}
-        optimizer_n_evals = None
-        optimizer_best_objective = None
 
         if self._optimizer is not None:
             opt_result = self._run_async(
@@ -300,24 +318,24 @@ class FoldRunner:
                 )
             )
             best_params = dict(getattr(opt_result, "best_params", {}) or {})
-            optimizer_n_evals = getattr(opt_result, "n_evaluated", None)
-            optimizer_best_objective = getattr(opt_result, "best_objective", None)
+            opt_meta = self._optimizer_meta(opt_result, best_params)
+
+            # Opt-in PBO: evaluate the optimizer's top-K trials OOS
+            if self._pbo_trials >= 2:
+                candidate_oos, lam = self._evaluate_pbo_candidates(opt_result)
+                opt_meta["pbo_candidate_oos"] = candidate_oos
+                opt_meta["pbo_selected_logit"] = lam
 
         bt = self._build_fold_backtester(best_params)
         self._run_backtester(bt)
         pdata = getattr(bt, "portfolio_data", None)
         if pdata is None:
             raise ValueError("backtester_factory result must expose portfolio_data after run")
-        return pdata, {
-            "best_params": best_params or None,
-            "optimizer_n_evals": optimizer_n_evals,
-            "optimizer_best_objective": optimizer_best_objective,
-        }
+        return pdata, opt_meta
 
     async def _run_fold_refit_async(self) -> tuple[Any, Dict[str, Any]]:
+        opt_meta: Dict[str, Any] = {}
         best_params: Dict[str, Any] = {}
-        optimizer_n_evals = None
-        optimizer_best_objective = None
 
         if self._optimizer is not None:
             opt_result_or_awaitable = self._optimizer.optimize(
@@ -331,19 +349,122 @@ class FoldRunner:
             else:
                 opt_result = opt_result_or_awaitable
             best_params = dict(getattr(opt_result, "best_params", {}) or {})
-            optimizer_n_evals = getattr(opt_result, "n_evaluated", None)
-            optimizer_best_objective = getattr(opt_result, "best_objective", None)
+            opt_meta = self._optimizer_meta(opt_result, best_params)
+
+            if self._pbo_trials >= 2:
+                candidate_oos, lam = await self._evaluate_pbo_candidates_async(
+                    opt_result
+                )
+                opt_meta["pbo_candidate_oos"] = candidate_oos
+                opt_meta["pbo_selected_logit"] = lam
 
         bt = self._build_fold_backtester(best_params)
         await self._run_backtester_async(bt)
         pdata = getattr(bt, "portfolio_data", None)
         if pdata is None:
             raise ValueError("backtester_factory result must expose portfolio_data after run")
-        return pdata, {
+        return pdata, opt_meta
+
+    @staticmethod
+    def _optimizer_meta(opt_result: Any, best_params: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract fold-level optimizer metadata from an OptimizationResult."""
+        return {
             "best_params": best_params or None,
-            "optimizer_n_evals": optimizer_n_evals,
-            "optimizer_best_objective": optimizer_best_objective,
+            "optimizer_n_evals": getattr(opt_result, "n_evaluated", None),
+            "optimizer_best_objective": getattr(opt_result, "best_objective", None),
+            "optimizer_trial_values": FoldRunner._extract_trial_values(opt_result),
+            "optimizer_all_failed": bool(getattr(opt_result, "all_trials_failed", False)),
         }
+
+    @staticmethod
+    def _extract_trial_values(opt_result: Any) -> Optional[list[float]]:
+        """Completed-trial objective values — the DSR trial population."""
+        trials = getattr(opt_result, "trials", None) or []
+        vals = [
+            float(t.value)
+            for t in trials
+            if getattr(t, "state", "COMPLETE") == "COMPLETE"
+            and np.isfinite(getattr(t, "value", np.nan))
+        ]
+        if vals:
+            return vals
+        # Fallback for optimizers that only populate all_results
+        df = getattr(opt_result, "all_results", None)
+        if df is not None and "objective" in getattr(df, "columns", []):
+            arr = pd.to_numeric(df["objective"], errors="coerce").to_numpy(dtype=float)
+            arr = arr[np.isfinite(arr)]
+            if arr.size:
+                return [float(v) for v in arr]
+        return None
+
+    # ── PBO top-K OOS evaluation (opt-in) ─────────────────────────────
+
+    def _pbo_top_trials(self, opt_result: Any) -> list[Any]:
+        top_k = getattr(opt_result, "top_k", None)
+        if top_k is None:
+            return []
+        top = top_k(self._pbo_trials)
+        return top if len(top) >= 2 else []
+
+    def _pbo_logit_from_scores(self, oos_scores: list[float]) -> Optional[float]:
+        """λ of the IS-selected trial (top_k[0]) among candidate OOS scores."""
+        if not oos_scores:
+            return None
+        return selected_trial_logit(oos_scores[0], oos_scores)
+
+    def _oos_score_for_params(self, pdata: Any) -> float:
+        """OOS Sharpe of a candidate backtest (higher = better rank)."""
+        metrics = self._compute_metrics_for_window(
+            self._fold.oos_start, self._fold.oos_end, portfolio_data=pdata
+        )
+        return float(metrics["sharpe"])
+
+    def _evaluate_pbo_candidates(
+        self, opt_result: Any
+    ) -> tuple[Optional[list[float]], Optional[float]]:
+        """
+        Re-backtest the optimizer's top-K IS trials over the fold window
+        and score each on the OOS slice (by OOS Sharpe; the ranking
+        assumes higher-is-better regardless of the IS objective
+        direction).  Failed candidates score -inf (worst rank).
+        """
+        top = self._pbo_top_trials(opt_result)
+        if not top:
+            return None, None
+
+        oos_scores: list[float] = []
+        for tr in top:
+            try:
+                bt = self._build_fold_backtester(dict(tr.params))
+                self._run_backtester(bt)
+                pdata = getattr(bt, "portfolio_data", None)
+                if pdata is None:
+                    raise ValueError("candidate backtester exposes no portfolio_data")
+                oos_scores.append(self._oos_score_for_params(pdata))
+            except Exception:
+                oos_scores.append(float("-inf"))
+        return oos_scores, self._pbo_logit_from_scores(oos_scores)
+
+    async def _evaluate_pbo_candidates_async(
+        self, opt_result: Any
+    ) -> tuple[Optional[list[float]], Optional[float]]:
+        """Async twin of ``_evaluate_pbo_candidates``."""
+        top = self._pbo_top_trials(opt_result)
+        if not top:
+            return None, None
+
+        oos_scores: list[float] = []
+        for tr in top:
+            try:
+                bt = self._build_fold_backtester(dict(tr.params))
+                await self._run_backtester_async(bt)
+                pdata = getattr(bt, "portfolio_data", None)
+                if pdata is None:
+                    raise ValueError("candidate backtester exposes no portfolio_data")
+                oos_scores.append(self._oos_score_for_params(pdata))
+            except Exception:
+                oos_scores.append(float("-inf"))
+        return oos_scores, self._pbo_logit_from_scores(oos_scores)
 
     def _build_fold_backtester(self, best_params: Dict[str, Any]) -> Any:
         assert self._backtester_factory is not None

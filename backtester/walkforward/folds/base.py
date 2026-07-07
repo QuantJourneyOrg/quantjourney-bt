@@ -16,7 +16,7 @@ Licensed under the Apache License 2.0.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Protocol, runtime_checkable
+from typing import List, Optional, Protocol, runtime_checkable
 
 import pandas as pd
 
@@ -40,10 +40,10 @@ class Fold:
     oos_start: pd.Timestamp
     oos_end: pd.Timestamp
 
-    # After purge/embargo
+    # After purge/embargo (None when no dates are excluded)
     effective_is_end: pd.Timestamp
-    purge_start: pd.Timestamp   # first excluded date
-    purge_end: pd.Timestamp     # last excluded date (= oos_start - 1 trading day)
+    purge_start: Optional[pd.Timestamp]   # first excluded date
+    purge_end: Optional[pd.Timestamp]     # last excluded date (= oos_start - 1 trading day)
 
 
 @runtime_checkable

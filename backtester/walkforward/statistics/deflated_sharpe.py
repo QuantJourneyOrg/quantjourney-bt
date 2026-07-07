@@ -1,5 +1,5 @@
 """
-Deflated Sharpe Ratio (DSR).
+Deflated Sharpe Ratio (DSR) and Probabilistic Sharpe Ratio (PSR).
 
 Bailey & López de Prado (2014), "The Deflated Sharpe Ratio: Correcting
 for Selection Bias, Backtest Overfitting, and Non-Normality".
@@ -7,26 +7,44 @@ for Selection Bias, Backtest Overfitting, and Non-Normality".
 When an optimizer tests N parameter combinations and reports the best
 Sharpe, the expected maximum under the null is strictly positive even
 if every single combination has zero true alpha.  DSR corrects for
-this selection bias by comparing observed SR* against E[max(SR|H₀)].
+this selection bias by testing the observed SR against
+SR₀ = E[max(SR|H₀)] via the Probabilistic Sharpe Ratio:
 
-Interpretation:
-    DSR > 2.0  →  robust (SR* far exceeds selection-bias threshold)
-    1.0 – 2.0  →  marginal
-    DSR < 1.0  →  likely false positive
+    DSR = PSR(SR₀)
+        = Φ[ (SR̂ − SR₀) · √(T − 1) / √(1 − γ₃·SR̂ + ((γ₄ − 1)/4)·SR̂²) ]
+
+where:
+    SR̂  = observed per-period Sharpe of the candidate strategy
+    SR₀  = E[max SR over N trials] = √V[SR]·((1−γ)·Φ⁻¹(1−1/N)
+                                           + γ·Φ⁻¹(1−1/(N·e)))
+    γ    = Euler–Mascheroni constant
+    T    = number of return observations behind SR̂
+    γ₃   = skewness of the candidate's returns
+    γ₄   = RAW kurtosis of the candidate's returns (3.0 = normal)
+
+IMPORTANT — units: all Sharpe inputs (``observed_sr``, ``trial_sharpes``,
+``benchmark_sr``) must be expressed per observation period of the T
+returns (e.g. *daily* Sharpe with daily T).  Passing annualized Sharpes
+with daily T massively overstates significance.
+
+Interpretation (DSR is a probability in [0, 1]):
+    DSR ≥ 0.95   →  robust (SR survives multiple-testing deflation)
+    0.80 – 0.95  →  marginal
+    DSR < 0.80   →  likely false positive
 
 Institutional-grade QuantJourney Backtester component.
 Designed for deterministic strategy simulation, portfolio accounting,
 analytics, reporting, and reproducible research workflows.
 
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
+Updated: 07.2026.
 Licensed under the Apache License 2.0.
 """
 
 from __future__ import annotations
 
 import math
-from typing import Sequence
+from typing import Optional, Sequence
 
 import numpy as np
 
@@ -42,9 +60,10 @@ def _expected_max_sr(
     """
     E[max(SR)] under the null, using the Euler–Mascheroni approximation
     of the expected maximum of *n_trials* i.i.d. standard normals,
-    scaled by sr_std.
+    scaled by sr_std (= √V[SR] across trials).
 
-    Bailey & López de Prado (2014), Eq. 6.
+    Bailey & López de Prado (2014):
+        E[max SR] ≈ √V[SR] · ((1 − γ)·Φ⁻¹(1 − 1/N) + γ·Φ⁻¹(1 − 1/(N·e)))
     """
     from scipy.stats import norm  # lazy import — only needed here
 
@@ -55,52 +74,108 @@ def _expected_max_sr(
     return sr_std * ((1.0 - _GAMMA) * z1 + _GAMMA * z2)
 
 
-def deflated_sharpe(
-    sharpes: Sequence[float],
-    n_trials: int,
+def probabilistic_sharpe(
+    observed_sr: float,
     *,
+    benchmark_sr: float = 0.0,
+    n_obs: int,
     skewness: float = 0.0,
     kurtosis: float = 3.0,
 ) -> float:
     """
-    Compute the Deflated Sharpe Ratio.
+    Probabilistic Sharpe Ratio — P[true SR > benchmark_sr].
+
+    Bailey & López de Prado (2012/2014):
+        PSR = Φ[ (SR̂ − SR₀)·√(T−1) / √(1 − γ₃·SR̂ + ((γ₄−1)/4)·SR̂²) ]
 
     Args:
-        sharpes: Observed Sharpe ratios (e.g. per-fold IS Sharpes).
-                 Only max(sharpes) and std(sharpes) are used.
-        n_trials: Total number of parameter combinations explored
-                  (sum of Optuna trials across folds, or len(sharpes)
-                  when no optimizer is used).
-        skewness: Skewness of the trial-Sharpe distribution (0 = normal).
-        kurtosis: *Raw* kurtosis (3.0 = normal).  Excess kurtosis is
-                  kurtosis − 3.
+        observed_sr: Per-period Sharpe of the candidate strategy
+                     (same periodicity as the T observations).
+        benchmark_sr: Null-hypothesis Sharpe SR₀ (same units).
+        n_obs: T — number of return observations behind observed_sr.
+        skewness: Skewness γ₃ of the candidate's returns.
+        kurtosis: RAW kurtosis γ₄ of the candidate's returns (3 = normal).
+                  Fat tails (γ₄ > 3) widen the SR estimator's variance and
+                  therefore LOWER the probability.
 
     Returns:
-        DSR value.  Interpretable like a z-score:
-        > 2.0 robust, 1.0–2.0 marginal, < 1.0 likely false positive.
+        Probability in [0, 1].
     """
-    if not sharpes or n_trials < 1:
-        return 0.0
+    from scipy.stats import norm  # lazy import
 
-    arr = np.asarray(sharpes, dtype=np.float64)
-    sr_max = float(arr.max())
-    sr_std = float(arr.std(ddof=0))
+    if n_obs is None or n_obs < 2:
+        return 0.0  # cannot assess significance with < 2 observations
 
-    if sr_std == 0.0 or n_trials <= 1:
-        return sr_max  # no variability → can't deflate
+    denom_sq = 1.0 - skewness * observed_sr + ((kurtosis - 1.0) / 4.0) * observed_sr**2
+    if denom_sq <= 0.0:
+        # Degenerate higher moments — fall back to the normal-returns
+        # denominator (γ₃ = 0, γ₄ = 3) rather than fabricating certainty.
+        denom_sq = 1.0 + 0.5 * observed_sr**2
 
-    try:
-        e_max = _expected_max_sr(sr_std, n_trials)
-    except ImportError:
-        # scipy unavailable — return raw max as fallback
-        return sr_max
+    z = (observed_sr - benchmark_sr) * math.sqrt(n_obs - 1.0) / math.sqrt(denom_sq)
+    return float(norm.cdf(z))
 
-    # Probabilistic Sharpe Ratio denominator with skew/kurtosis adjustment
-    # Bailey & López de Prado (2014), Eq. 4
-    excess_kurt = kurtosis - 3.0
-    psr_var = 1.0 - skewness * sr_max + (excess_kurt / 4.0) * sr_max**2
-    if psr_var <= 0:
-        psr_var = 1.0  # degenerate — fall back to unadjusted
 
-    dsr = (sr_max - e_max) / (sr_std / math.sqrt(psr_var))
-    return float(dsr)
+def deflated_sharpe(
+    trial_sharpes: Sequence[float],
+    n_trials: Optional[int] = None,
+    *,
+    observed_sr: Optional[float] = None,
+    n_obs: int,
+    skewness: float = 0.0,
+    kurtosis: float = 3.0,
+    benchmark_sr: float = 0.0,
+) -> float:
+    """
+    Compute the Deflated Sharpe Ratio (a probability in [0, 1]).
+
+    The trial population (``trial_sharpes`` / ``n_trials``) and the
+    candidate (``observed_sr`` / ``n_obs`` / moments) must describe
+    consistent quantities in the SAME per-period units:
+
+    - ``trial_sharpes``: objective values (Sharpes) of ALL trials the
+      optimizer evaluated.  Used only to estimate √V[SR] across trials
+      for the E[max] deflation threshold.
+    - ``n_trials``: population size N.  Defaults to
+      ``len(trial_sharpes)``.  Must describe the same population as
+      ``trial_sharpes`` — do NOT pass fold counts here; folds are not
+      trials.
+    - ``observed_sr``: per-period Sharpe of the selected candidate.
+      Defaults to ``max(trial_sharpes)``.
+    - ``n_obs``: T, the number of return observations behind
+      ``observed_sr``.
+    - ``skewness`` / ``kurtosis``: moments of the candidate strategy's
+      RETURNS (kurtosis is RAW, 3 = normal).
+
+    Degenerate inputs are handled honestly: with N ≤ 1 or zero variance
+    across trials there is no selection bias to correct, so the result
+    reduces to the PSR against ``benchmark_sr`` (NOT the raw Sharpe).
+
+    Returns:
+        DSR = Φ(z) ∈ [0, 1].  ≥ 0.95 robust, 0.80–0.95 marginal,
+        < 0.80 likely false positive.
+    """
+    arr = np.asarray(list(trial_sharpes), dtype=np.float64)
+    arr = arr[np.isfinite(arr)]
+
+    if observed_sr is None:
+        if arr.size == 0:
+            return 0.0  # nothing to evaluate
+        observed_sr = float(arr.max())
+
+    n = int(n_trials) if n_trials is not None else int(arr.size)
+    sr_std = float(arr.std(ddof=0)) if arr.size > 1 else 0.0
+
+    if n <= 1 or sr_std == 0.0:
+        # No multiple-testing to deflate — plain PSR vs the benchmark.
+        sr0 = benchmark_sr
+    else:
+        sr0 = benchmark_sr + _expected_max_sr(sr_std, n)
+
+    return probabilistic_sharpe(
+        float(observed_sr),
+        benchmark_sr=sr0,
+        n_obs=n_obs,
+        skewness=skewness,
+        kurtosis=kurtosis,
+    )

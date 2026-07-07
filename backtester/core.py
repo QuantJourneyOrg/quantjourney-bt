@@ -37,6 +37,7 @@ import asyncio
 import logging
 import os
 import time
+import uuid
 import pandas as pd
 import numpy as np
 from datetime import datetime, timezone
@@ -385,6 +386,9 @@ class Backtester(SDKClientMixin, ReportingMixin):
                 ),
             )
         self._order_context: Dict[str, Any] = {}
+        # instrument → {"stop_loss": order_id, "take_profit": order_id} for
+        # auto OCO-linking of protective exits (see _oco_link_protective_exit).
+        self._protective_exit_ids: Dict[str, Dict[str, str]] = {}
         self.average_entry_price: Dict[str, Optional[float]] = {}
         self.current_positions_meta: Dict[str, Dict[str, Optional[float]]] = {}
 
@@ -784,7 +788,9 @@ class Backtester(SDKClientMixin, ReportingMixin):
         from backtester.execution import Order, OrderType
 
         self._require_order_context()
-        if abs(quantity_delta) <= 1e-12:
+        # Non-finite deltas (NaN/inf sizing inputs) must never become orders:
+        # NaN quantity passes `qty <= 0` validation and poisons cash/NAV.
+        if not np.isfinite(quantity_delta) or abs(quantity_delta) <= 1e-12:
             return None
         resolved_order_type = self._normalize_order_type(order_type) or OrderType.MARKET
         order = Order(
@@ -799,7 +805,7 @@ class Backtester(SDKClientMixin, ReportingMixin):
     def order_value(self, instrument: str, value: float, **order_kwargs) -> Optional[str]:
         """Submit a market order for a signed notional value."""
         bar = self._order_bar(instrument)
-        if bar.close <= 0:
+        if not np.isfinite(bar.close) or bar.close <= 0:
             return None
         quantity_delta = float(value) / float(bar.close)
         return self._submit_quantity_delta(instrument, quantity_delta, **order_kwargs)
@@ -899,7 +905,7 @@ class Backtester(SDKClientMixin, ReportingMixin):
         if percent is None:
             raise ValueError("limit_percent requires percent or weight")
         bar = self._order_bar(instrument)
-        if bar.close <= 0:
+        if not np.isfinite(bar.close) or bar.close <= 0:
             return None
         value = float(self._require_order_context()["nav"]) * float(percent)
         quantity_delta = value / float(bar.close)
@@ -910,6 +916,43 @@ class Backtester(SDKClientMixin, ReportingMixin):
             limit_price=float(limit_price),
             **order_kwargs,
         )
+
+    def _active_order(self, order_id: Optional[str]):
+        """Return the still-active pending Order with this id, or None."""
+        if not order_id or self.fill_engine is None:
+            return None
+        for order in self.fill_engine.pending_orders:
+            if order.order_id == order_id:
+                return order
+        return None
+
+    def _oco_link_protective_exit(self, instrument: str, kind: str, order_kwargs: Dict[str, Any]) -> None:
+        """
+        Auto-link stop_loss()/take_profit() exits on the same instrument as an
+        OCO pair, so a single wide bar (low <= stop and high >= limit) fills
+        only one of them instead of both flipping the position to an
+        unintended short. Skipped when the caller passes oco_pair_id itself.
+        Mutates order_kwargs in place; single-helper usage is unchanged.
+        """
+        if "oco_pair_id" in order_kwargs:
+            return
+        other_kind = "take_profit" if kind == "stop_loss" else "stop_loss"
+        sibling_id = self._protective_exit_ids.get(instrument, {}).get(other_kind)
+        sibling = self._active_order(sibling_id)
+        if sibling is None:
+            return
+        if sibling.oco_pair_id is None:
+            sibling.oco_pair_id = str(uuid.uuid4())
+            # Retroactive registration: FillEngine.submit() only records
+            # oco_pair_ids present at submit time.
+            self.fill_engine._oco_pairs.setdefault(
+                sibling.oco_pair_id, []
+            ).append(sibling.order_id)
+        order_kwargs["oco_pair_id"] = sibling.oco_pair_id
+
+    def _track_protective_exit(self, instrument: str, kind: str, order_id: Optional[str]) -> None:
+        if order_id is not None:
+            self._protective_exit_ids.setdefault(instrument, {})[kind] = order_id
 
     def stop_loss(
         self,
@@ -939,13 +982,17 @@ class Backtester(SDKClientMixin, ReportingMixin):
                 raise ValueError(f"No average entry price available for {instrument}")
             stop_price = entry * (1.0 - float(stop_loss) if pos > 0 else 1.0 + float(stop_loss))
         quantity_delta = -float(quantity) if pos > 0 else float(quantity)
-        return self._submit_quantity_delta(
+        order_kwargs = dict(order_kwargs)
+        self._oco_link_protective_exit(instrument, "stop_loss", order_kwargs)
+        order_id = self._submit_quantity_delta(
             instrument,
             quantity_delta,
             order_type=OrderType.STOP,
             stop_price=float(stop_price),
             **order_kwargs,
         )
+        self._track_protective_exit(instrument, "stop_loss", order_id)
+        return order_id
 
     def take_profit(
         self,
@@ -975,13 +1022,17 @@ class Backtester(SDKClientMixin, ReportingMixin):
                 raise ValueError(f"No average entry price available for {instrument}")
             limit_price = entry * (1.0 + float(take_profit) if pos > 0 else 1.0 - float(take_profit))
         quantity_delta = -float(quantity) if pos > 0 else float(quantity)
-        return self._submit_quantity_delta(
+        order_kwargs = dict(order_kwargs)
+        self._oco_link_protective_exit(instrument, "take_profit", order_kwargs)
+        order_id = self._submit_quantity_delta(
             instrument,
             quantity_delta,
             order_type=OrderType.LIMIT,
             limit_price=float(limit_price),
             **order_kwargs,
         )
+        self._track_protective_exit(instrument, "take_profit", order_id)
+        return order_id
 
     def bracket_percent(
         self,
@@ -1011,7 +1062,7 @@ class Backtester(SDKClientMixin, ReportingMixin):
 
         bar = self._order_bar(instrument)
         qty_value = float(self._require_order_context()["nav"]) * float(weight)
-        if bar.close <= 0 or abs(qty_value) <= 1e-12:
+        if not np.isfinite(bar.close) or bar.close <= 0 or abs(qty_value) <= 1e-12:
             return None
 
         if (take_profit_price is None and tp is None) or (stop_loss_price is None and sl is None):
@@ -1171,7 +1222,16 @@ class Backtester(SDKClientMixin, ReportingMixin):
         try:
             volume_data = self.instruments_data.get_feature("volume")
         except Exception:
-            volume_data = pd.DataFrame(0.0, index=all_dates, columns=instruments)
+            # No volume feature: mark volume as unknown (NaN) instead of
+            # fabricating 0.0, so a participation cap fails loudly downstream
+            # rather than silently producing zero fills forever.
+            volume_data = pd.DataFrame(np.nan, index=all_dates, columns=instruments)
+            if getattr(self.fill_engine, "max_volume_participation", None):
+                logger.warning(
+                    "[Backtester] max_volume_participation is enabled but the "
+                    "dataset has no 'volume' feature; bar volume is unknown "
+                    "(NaN) and volume-capped orders cannot fill."
+                )
 
         nav_series = pd.Series(index=all_dates, dtype=float)
         positions_df = pd.DataFrame(0.0, index=all_dates, columns=instruments)
@@ -1194,7 +1254,7 @@ class Backtester(SDKClientMixin, ReportingMixin):
                     high=float(high_prices.loc[date, inst]),
                     low=float(low_prices.loc[date, inst]),
                     close=float(close_prices.loc[date, inst]),
-                    volume=float(volume_data.loc[date, inst]) if inst in volume_data.columns else 0.0,
+                    volume=float(volume_data.loc[date, inst]) if inst in volume_data.columns else float("nan"),
                 )
 
             # 2) Process pending orders against this bar
@@ -1216,10 +1276,15 @@ class Backtester(SDKClientMixin, ReportingMixin):
                         fill_price=float(fill.fill_price),
                     )
                     cost = self._trade_notional(fill.instrument, fill.quantity, fill.fill_price)
+                    # Inverse contracts: mirror the trade cash flow so that,
+                    # together with the negated position value in
+                    # _signed_position_value, the daily NAV delta equals
+                    # ContractSpec.pnl = qty*mult*(1/p_entry - 1/p_exit).
+                    signed_cost = -cost if self._contract_spec(fill.instrument).inverse else cost
                     if fill.side == OrderSide.BUY:
-                        cash -= cost + fill.commission
+                        cash -= signed_cost + fill.commission
                     else:
-                        cash += cost - fill.commission
+                        cash += signed_cost - fill.commission
                     self.blotter.record_trade(
                         order_id=fill.order_id,
                         instrument=fill.instrument,
@@ -1290,7 +1355,9 @@ class Backtester(SDKClientMixin, ReportingMixin):
         self.portfolio_data.update_positions(positions_df)
         position_values_df = self._position_values_from_units(positions_df, close_prices)
         self.portfolio_data.position_values = position_values_df
-        self.portfolio_data.update_weights(position_values_df.divide(nav_series, axis=0).fillna(0.0))
+        self.portfolio_data.update_weights(
+            self._weights_from_position_values(position_values_df, nav_series)
+        )
         raw_returns = nav_series.pct_change()
         daily_returns = raw_returns.fillna(0.0)
         self.portfolio_data.returns = daily_returns
@@ -1314,10 +1381,27 @@ class Backtester(SDKClientMixin, ReportingMixin):
             returns.loc[first_idx, first_available] = 0.0
         return returns
 
+    @staticmethod
+    def _weights_from_position_values(
+        position_values: pd.DataFrame, nav: pd.Series
+    ) -> pd.DataFrame:
+        """Weights = position value / NAV, with ±inf (NAV ~ 0) cleaned to 0."""
+        return (
+            position_values.divide(nav, axis=0)
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
+        )
+
     def _signed_position_value(self, instrument: str, quantity: float, price: float) -> float:
         spec = self._contract_spec(instrument)
         if spec.inverse:
-            return float(np.sign(quantity) * spec.notional(quantity, price))
+            # Convention: an inverse position is marked at the NEGATIVE coin
+            # notional (-qty*mult/price). A long inverse contract gains when
+            # price rises (1/price falls), so combined with the mirrored trade
+            # cash flow in the fill loop the per-bar NAV delta equals
+            # qty*mult*(1/p_prev - 1/p_curr) — same sign and magnitude as
+            # ContractSpec.pnl and calc/pnl_multi_asset.compute_position_pnl.
+            return float(-np.sign(quantity) * spec.notional(quantity, price))
         return float(quantity) * float(price) * float(spec.multiplier) * float(spec.lot_size)
 
     def _position_values_from_units(self, positions: pd.DataFrame, prices: pd.DataFrame) -> pd.DataFrame:
@@ -1325,7 +1409,8 @@ class Backtester(SDKClientMixin, ReportingMixin):
         for inst in positions.columns:
             spec = self._contract_spec(inst)
             if spec.inverse:
-                values[inst] = np.sign(positions[inst]) * positions[inst].abs().multiply(
+                # Same negative-coin-notional convention as _signed_position_value.
+                values[inst] = -positions[inst].multiply(
                     spec.multiplier / prices[inst].replace(0.0, np.nan)
                 )
             else:
@@ -1401,9 +1486,17 @@ class Backtester(SDKClientMixin, ReportingMixin):
 
         all_dates = target_weights.index
 
-        cash_buffer = float(self.portfolio_data.cash_buffer) if isinstance(
-            self.portfolio_data.cash_buffer, float
-        ) else 0.05
+        raw_cash_buffer = self.portfolio_data.cash_buffer
+        # Accept int as well as float (e.g. cash_buffer=0 means "no buffer").
+        # bool is an int subclass but True/False are never a valid buffer
+        # fraction (True would mean a nonsensical 100% buffer), so bools fall
+        # through to the 5% default like any other unsupported type.
+        cash_buffer = (
+            float(raw_cash_buffer)
+            if isinstance(raw_cash_buffer, (int, float))
+            and not isinstance(raw_cash_buffer, bool)
+            else 0.05
+        )
 
         # Apply cash buffer to target weights
         target_weights_inv = target_weights * (1.0 - cash_buffer)
@@ -1478,7 +1571,7 @@ class Backtester(SDKClientMixin, ReportingMixin):
         self.portfolio_data.update_net_asset_value(nav_series)
         self.portfolio_data.update_positions(positions)
         self.portfolio_data.update_weights(
-            positions.multiply(close).divide(nav_series, axis=0)
+            self._weights_from_position_values(positions.multiply(close), nav_series)
         )
 
         daily_returns = nav_series.pct_change().fillna(0.0)

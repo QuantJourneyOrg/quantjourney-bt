@@ -12,6 +12,7 @@ Licensed under the Apache License 2.0.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Dict, List, Literal, Optional
 
@@ -53,12 +54,15 @@ _THRESHOLDS = {
         "yellow_desc": "-0.01 to -0.05/fold — moderate decay",
         "red_desc":    "< -0.05/fold — alpha decaying",
     },
+    # DSR is a probability Φ(z) ∈ [0, 1] per Bailey & López de Prado (2014):
+    # ≥ 0.95 → the Sharpe survives multiple-testing deflation at 95%
+    # confidence; 0.80–0.95 marginal; < 0.80 likely false positive.
     "deflated_sharpe": {
-        "green": lambda v: v > 2.0,
-        "yellow": lambda v: 1.0 <= v <= 2.0,
-        "green_desc":  "> 2.0 — robust vs multiple testing",
-        "yellow_desc": "1.0–2.0 — marginal",
-        "red_desc":    "< 1.0 — likely false positive",
+        "green": lambda v: v >= 0.95,
+        "yellow": lambda v: 0.80 <= v < 0.95,
+        "green_desc":  ">= 0.95 — robust vs multiple testing",
+        "yellow_desc": "0.80–0.95 — marginal",
+        "red_desc":    "< 0.80 — likely false positive",
     },
     "pbo": {
         "green": lambda v: v < 0.15,
@@ -102,12 +106,17 @@ def interpret_metrics(
 
     Returns:
         List of ``MetricVerdict`` (one per metric that has a threshold).
+        Metrics that are ``None`` or NaN (unavailable — e.g. PBO without
+        per-trial OOS evaluation) are skipped and must be rendered as
+        "n/a" by callers, never as a green verdict.
     """
     verdicts = []
     for name, value in metrics.items():
         if name not in _THRESHOLDS:
             continue
         if value is None:
+            continue
+        if isinstance(value, float) and math.isnan(value):
             continue
         signal, desc = _classify(name, value)
         verdicts.append(MetricVerdict(name=name, value=value, signal=signal, description=desc))

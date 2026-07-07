@@ -18,6 +18,8 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 
+from backtester.utils.logger import logger
+
 
 def aggregate_oos_returns(
     fold_oos_returns: List[pd.Series],
@@ -38,6 +40,12 @@ def aggregate_oos_returns(
 
     # Handle overlapping dates by averaging
     if combined.index.duplicated().any():
+        logger.warning(
+            "Overlapping OOS windows detected (step < test): duplicated dates are "
+            "averaged across folds. With per-fold refit this blends differently "
+            "parameterized strategies and biases the composite Sharpe upward; "
+            "prefer step_months >= test_months for a realized equity curve."
+        )
         combined = combined.groupby(combined.index).mean()
 
     combined = combined.sort_index()

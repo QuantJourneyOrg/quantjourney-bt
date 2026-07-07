@@ -22,8 +22,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from typing import Any, Callable, Optional
 
+import numpy as np
 import pandas as pd
 
 from backtester.utils.logger import logger
@@ -41,7 +43,7 @@ from backtester.walkforward.statistics.overfit import (
     sharpe_decay,
 )
 from backtester.walkforward.statistics.deflated_sharpe import deflated_sharpe
-from backtester.walkforward.statistics.pbo import probability_of_backtest_overfitting
+from backtester.walkforward.statistics.pbo import pbo_from_selected_ranks
 from backtester.walkforward.statistics.interpretation import interpret_metrics
 from backtester.walkforward.persistence import save_checkpoint, load_checkpoint
 
@@ -166,6 +168,7 @@ class WalkForwardEngine:
                 backtester_factory=self._backtester_factory,
                 optimizer=self._optimizer,
                 base_config=self._base_config,
+                pbo_trials=self._config.pbo_trials,
             )
             result = runner.run()
             fold_results.append(result)
@@ -262,6 +265,7 @@ class WalkForwardEngine:
                 backtester_factory=self._backtester_factory,
                 optimizer=self._optimizer,
                 base_config=self._base_config,
+                pbo_trials=self._config.pbo_trials,
             )
             result = await runner.run_async()
             fold_results.append(result)
@@ -308,27 +312,83 @@ class WalkForwardEngine:
         eff_val = aggregate_efficiency(is_cagrs, oos_cagrs)
         decay = sharpe_decay(oos_sharpes)
 
-        # ── Deflated Sharpe Ratio ─────────────────────────────────────
-        dsr_val = None
-        if self._config.compute_deflated_sharpe and len(is_sharpes) >= 2:
-            # n_trials = total optimizer evaluations (or n_folds if no optimizer)
-            optimizer_evals = [
-                fr.optimizer_n_evals
-                for fr in fold_results
-                if fr.optimizer_n_evals is not None and fr.optimizer_n_evals > 0
-            ]
-            n_trials = sum(optimizer_evals) if optimizer_evals else len(fold_results)
-            dsr_val = deflated_sharpe(is_sharpes, n_trials)
-
-        # ── Probability of Backtest Overfitting ───────────────────────
-        pbo_val = None
-        if self._config.compute_pbo and len(fold_results) >= 4:
-            pbo_val = probability_of_backtest_overfitting(
-                is_sharpes, oos_sharpes, seed=self._config.seed,
-            )
-
         # Collect warnings
         all_warnings = []
+
+        # ── Deflated Sharpe Ratio (Bailey & López de Prado 2014) ──────
+        # Candidate: the aggregated OOS daily return series (T, skew, raw
+        # kurtosis, and per-day Sharpe all come from the SAME series).
+        # Trial population: per-trial IS objective values pooled across
+        # folds — the same population defines both √V[SR] and N, so the
+        # E[max SR] deflation is internally consistent.  Objective values
+        # are annualized Sharpes, so they are de-annualized (√252) to the
+        # daily units of the candidate.  No optimizer → N = 1 → the DSR
+        # honestly reduces to the PSR of the OOS Sharpe.  Folds are NOT
+        # trials and are never used as the trial population.
+        dsr_val = None
+        if self._config.compute_deflated_sharpe and len(oos_returns) >= 3:
+            ret_std = float(oos_returns.std(ddof=1))
+            if ret_std > 0.0:
+                ann = math.sqrt(252.0)
+                rfr_daily = self._risk_free_rate / 252.0
+                sr_daily = (float(oos_returns.mean()) - rfr_daily) / ret_std
+                skew = float(oos_returns.skew())
+                kurt_raw = float(oos_returns.kurt()) + 3.0  # pandas kurt() is excess
+
+                pooled_trials = [
+                    v / ann
+                    for fr in fold_results
+                    for v in (fr.optimizer_trial_values or [])
+                    if v is not None and np.isfinite(v)
+                ]
+                optimizer_used = any(
+                    fr.optimizer_n_evals for fr in fold_results if fr.optimizer_n_evals
+                )
+                if optimizer_used and not pooled_trials:
+                    all_warnings.append(
+                        "DSR computed without multiple-testing deflation (N=1): "
+                        "optimizer was used but per-trial objective values are "
+                        "unavailable"
+                    )
+
+                dsr_val = deflated_sharpe(
+                    pooled_trials,
+                    n_trials=len(pooled_trials) if pooled_trials else 1,
+                    observed_sr=sr_daily,
+                    n_obs=len(oos_returns),
+                    skewness=skew,
+                    kurtosis=kurt_raw,
+                )
+
+        # ── Probability of Backtest Overfitting (rank-based) ──────────
+        # Real PBO needs the IS-selected trial's OOS rank among candidate
+        # trials per fold (WalkForwardConfig.pbo_trials).  Without that
+        # data PBO is reported as unavailable — never as a reassuring 0.
+        pbo_val = None
+        pbo_reason = None
+        if self._config.compute_pbo:
+            logits = [
+                fr.pbo_selected_logit
+                for fr in fold_results
+                if fr.pbo_selected_logit is not None
+            ]
+            if len(logits) >= 4:
+                pbo_val = pbo_from_selected_ranks(logits)
+                if math.isnan(pbo_val):
+                    pbo_val = None
+                    pbo_reason = "no finite selection-rank logits across folds"
+            elif logits:
+                pbo_reason = (
+                    f"only {len(logits)} folds have per-trial OOS ranks (need >= 4)"
+                )
+            else:
+                pbo_reason = (
+                    "requires per-trial OOS evaluation; set "
+                    "WalkForwardConfig.pbo_trials=K (>=2) with an optimizer to "
+                    "evaluate top-K trials OOS per fold"
+                )
+            if pbo_val is None and pbo_reason:
+                all_warnings.append(f"PBO unavailable: {pbo_reason}")
         if self._backtester_factory is None:
             all_warnings.append(
                 "Walk-forward mode=slice_diagnostics: metrics are computed from "
@@ -378,6 +438,8 @@ class WalkForwardEngine:
             sharpe_decay=decay,
             deflated_sharpe=dsr_val,
             pbo=pbo_val,
+            pbo_available=pbo_val is not None,
+            pbo_reason=pbo_reason,
             fingerprint=fingerprint,
             warnings=all_warnings,
             mode=self.mode,
