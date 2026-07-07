@@ -97,9 +97,9 @@ returns heatmaps, drawdowns, risk and rolling statistics, and walk-forward /
 optimization summaries (see [Reports](#reports) for the exact file list).
 A few examples:
 
-**Cumulative returns with regime overlay**
+**Cumulative returns vs benchmark**
 
-![Cumulative returns with regime overlay](https://backtester.quantjourney.cloud/plots/cumulative_returns_with_regime.png)
+![Cumulative returns vs benchmark](https://backtester.quantjourney.cloud/plots/cumulative_returns.png)
 
 **Monthly returns heatmap**
 
