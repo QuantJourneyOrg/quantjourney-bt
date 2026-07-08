@@ -55,6 +55,3 @@ build/
 *.csr
 *.p12
 *.pfx
-
-# Internal engineering notes — never publish.
-/_docs/
