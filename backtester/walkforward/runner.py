@@ -8,12 +8,7 @@ Design: The runner operates on a *lightweight* metric-extraction path.
 It uses ``PortfolioCalculations`` directly on sliced data rather than
 going through the full report pipeline (which generates plots, PDFs, etc.).
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
@@ -503,16 +498,28 @@ class FoldRunner:
         """λ of the IS-selected trial (top_k[0]) among candidate OOS scores."""
         if not oos_scores:
             return None
-        if not any(np.isfinite(s) for s in oos_scores):
-            # ALL candidate backtests failed (-inf): the selection "rank"
-            # would be pure noise — mark loudly as NaN, never a rank.
-            logger.warning(
-                f"[WalkForward] Fold {self._fold.fold_id}: ALL "
-                f"{len(oos_scores)} PBO candidate backtests failed — "
-                "selection rank meaningless; logit set to NaN"
-            )
+        selected = oos_scores[0]
+        finite_scores = [float(s) for s in oos_scores if np.isfinite(s)]
+        if not np.isfinite(selected) or len(finite_scores) < 2:
+            # Failed candidate backtests are not real OOS ranks. Including
+            # them as -inf would make any surviving selected trial look
+            # artificially strong.
+            if not finite_scores:
+                message = (
+                    f"[WalkForward] Fold {self._fold.fold_id}: ALL "
+                    f"{len(oos_scores)} PBO candidate backtests failed — "
+                    "selection rank meaningless; logit set to NaN"
+                )
+            else:
+                message = (
+                    f"[WalkForward] Fold {self._fold.fold_id}: only "
+                    f"{len(finite_scores)}/{len(oos_scores)} PBO candidate "
+                    "backtests produced finite OOS scores — selection rank "
+                    "not computable; logit set to NaN"
+                )
+            logger.warning(message)
             return float("nan")
-        return selected_trial_logit(oos_scores[0], oos_scores)
+        return selected_trial_logit(float(selected), finite_scores)
 
     def _oos_score_for_params(self, pdata: Any) -> float:
         """OOS Sharpe of a candidate backtest (higher = better rank)."""

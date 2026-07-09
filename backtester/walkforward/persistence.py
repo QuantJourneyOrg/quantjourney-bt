@@ -4,12 +4,7 @@ Walk-Forward Persistence — checkpoint save/load for resumable runs.
 Stores completed FoldResult objects as JSON (without heavy Series data)
 so that a crashed run can resume from the last completed fold.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 

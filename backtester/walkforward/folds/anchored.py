@@ -5,12 +5,7 @@ Same as expanding, but IS starts at a fixed anchor date (data start).
 IS width grows from ``train_months`` onward — first fold has exactly
 ``train_months`` of IS, subsequent folds add ``step_months`` each.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 

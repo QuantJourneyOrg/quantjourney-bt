@@ -7,10 +7,7 @@ target weights, realized weights, returns, costs, drawdowns, and derived
 analytics. It is designed for deterministic backtest replay, portfolio
 accounting, and institutional-grade report generation.
 
-Institutional-grade QuantJourney Backtester component.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 

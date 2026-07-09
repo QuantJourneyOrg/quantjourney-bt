@@ -5,12 +5,7 @@ OCO, Bracket.
 All types are pure dataclasses with no side-effects.
 The FillEngine is responsible for matching orders against bars.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 

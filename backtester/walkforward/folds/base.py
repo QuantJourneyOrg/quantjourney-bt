@@ -4,12 +4,7 @@ Base types for walk-forward fold generation.
 ``Fold`` is the immutable data contract describing one IS/OOS split.
 ``FoldScheme`` is the Protocol that all fold generators implement.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 

@@ -21,12 +21,7 @@ Or as a dict for programmatic access::
     from backtester.walkforward.optimization.summary import optimization_summary_dict
     data = optimization_summary_dict(result)
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 

@@ -19,12 +19,7 @@ Supports rolling, expanding, anchored, and purged/embargoed fold schemes,
 grid-search and Optuna parameter optimization, and overfitting diagnostics
 (deflated Sharpe ratio, PBO). See strategies/example_wf_*.py for usage.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 

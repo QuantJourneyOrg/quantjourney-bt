@@ -37,10 +37,6 @@ Interpretation (for the real, rank-based PBO):
     0.15 – 0.40 → moderate
     PBO > 0.40 → likely overfit
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
 Updated: 07.2026.
 Licensed under the Apache License 2.0.
@@ -85,6 +81,7 @@ def selected_trial_logit(
         statistic is not computable (K < 2 or non-finite selection).
     """
     vals = np.asarray(list(candidate_values), dtype=np.float64)
+    vals = vals[np.isfinite(vals)]
     if vals.size < 2 or not np.isfinite(selected_value):
         return None
 

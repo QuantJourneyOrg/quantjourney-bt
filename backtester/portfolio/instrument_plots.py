@@ -5,12 +5,7 @@ InstrumentPlots — Institutional-quality instrument-level visualisations.
 All charts use the unified QuantJourney style engine from ``plot_compat.py``.
 Every public method is ``@staticmethod`` and returns ``plt.Figure``.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 

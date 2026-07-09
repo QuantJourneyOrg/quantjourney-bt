@@ -1,5 +1,13 @@
 # QuantJourney Backtester Changelog
 
+## 0.9.1 - 2026-07-09
+
+### Changed
+- Hardened missing-data accounting with frozen/held semantics so portfolio NAV, risk triggers and reported weights stay consistent through temporary price gaps.
+- Normalized timezone alignment before reindexing benchmark and cash-buffer inputs.
+- Improved order-mode idempotency and bracket/OCA lifecycle handling.
+- Tightened circuit-breaker re-entry, weekly holiday scheduling and PBO failed-candidate handling.
+
 ## 0.8.9 - 2026-07-08
 
 ### Changed

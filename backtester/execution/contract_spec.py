@@ -13,12 +13,7 @@ Usage:
     spec = ContractSpec.fx("EURUSD", lot_size=100_000, pip_size=0.0001)
     spec = ContractSpec.crypto("BTCUSD")
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 

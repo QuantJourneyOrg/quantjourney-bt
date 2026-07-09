@@ -17,12 +17,7 @@ Style contract
 6. Legends use ``Line2D`` handles (no leaking artists).
 7. ``fig.tight_layout()`` is called before ``add_watermark``.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 

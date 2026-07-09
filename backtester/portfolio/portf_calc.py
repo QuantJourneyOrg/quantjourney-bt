@@ -6,12 +6,7 @@ This module provides a thin facade over PortfolioData, delegating analytics
 to pure functions in quantjourney.portfolio.calc. It keeps orchestration
 and config handling near data containers and leaves math to the calc layer.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 

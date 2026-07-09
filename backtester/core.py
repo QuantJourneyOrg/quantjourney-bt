@@ -23,12 +23,7 @@
         )
         asyncio.run(strategy.run_strategy())
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
@@ -48,6 +43,7 @@ from backtester.version import __version__ as BACKTESTER_VERSION
 from backtester.mixins.reporting import ReportingMixin
 from backtester.mixins.sdk_client import SDKClientMixin
 from backtester.execution.contract_spec import ContractSpec, get_contract_spec
+from backtester.portfolio._time import normalize_time_index_like
 
 # ---------------------------------------------------------------------------
 # Lightweight logger — avoid importing quantjourney.logger which may pull
@@ -200,15 +196,50 @@ def _env_int(name: str, default: int) -> int:
 
 class Backtester(SDKClientMixin, ReportingMixin):
     """
-    Cloud-aware strategy backtester that fetches data from the QuantJourney
-    API and runs local strategy logic.
+    Strategy backtester: fetches market data (QuantJourney API, yfinance, or a
+    bundled sample dataset) and runs user-defined strategy logic locally.
 
-    Subclass this base class by implementing:
-        - implement _compute_signals() -> pd.DataFrame
-        - implement _compute_weights() -> pd.DataFrame
-        - implement _compute_positions() (can be a no-op)
+    Write a strategy by subclassing and implementing the hooks:
 
-    All performance computation, reporting, and archiving works as before.
+    * ``_compute_signals() -> pd.DataFrame`` — raw alpha signals per instrument.
+    * ``_compute_weights() -> pd.DataFrame`` — target portfolio weights (weights
+      mode), or override ``_compute_orders()`` to emit explicit orders (orders mode).
+    * ``_compute_positions()`` — optional; usually a no-op.
+
+    Example
+    -------
+    A long/cash SMA(50/200) trend strategy, rebalanced daily::
+
+        import asyncio, pandas as pd
+        from backtester import Backtester
+        from backtester.portfolio.rebalance import RebalancePolicy
+
+        class SMATrend(Backtester):
+            def _compute_signals(self) -> pd.DataFrame:
+                fast = self.instruments_data.get_feature("SMA_50_close")
+                slow = self.instruments_data.get_feature("SMA_200_close")
+                return (fast > slow).astype(float)
+
+            def _compute_weights(self) -> pd.DataFrame:
+                active = self.signals == 1.0
+                return active.div(active.sum(axis=1), axis=0).fillna(0.0)
+
+        async def main():
+            bt = SMATrend(
+                strategy_name="sma_trend",
+                instruments=["AAPL", "MSFT", "NVDA"],
+                backtest_period={"start": "2015-01-01", "end": "2025-01-01"},
+                source="sample",                      # bundled data, no API key
+                execution_mode="weights",
+                rebalance_policy=RebalancePolicy(frequency="D"),
+                indicators_config=[
+                    {"function": "SMA", "price_cols": ["close"],
+                     "params": {"periods": [50, 200]}},
+                ],
+            )
+            await bt.run_strategy()
+
+        asyncio.run(main())
     """
 
     def __init__(
@@ -1309,6 +1340,15 @@ class Backtester(SDKClientMixin, ReportingMixin):
         self.fill_engine.reset()
         if self.blotter is not None:
             self.blotter.reset()
+        self._order_context = {}
+        self.average_entry_price = {}
+        self.current_positions_meta = {}
+        self._protective_exit_ids = {}
+        if self.portfolio_data is not None:
+            self.portfolio_data.average_entry_price = {}
+            self.portfolio_data.current_positions_meta = {}
+            if hasattr(self.portfolio_data, "_protective_exit_ids"):
+                self.portfolio_data._protective_exit_ids = {}
 
         def _is_valid_price(value: Any) -> bool:
             try:
@@ -1651,7 +1691,10 @@ class Backtester(SDKClientMixin, ReportingMixin):
             # Per-date buffer: align to the run dates, forward-fill between
             # provided dates, default 5% before the series starts.
             cash_buffer = (
-                pd.to_numeric(raw_cash_buffer, errors="coerce")
+                normalize_time_index_like(
+                    pd.to_numeric(raw_cash_buffer, errors="coerce"),
+                    all_dates,
+                )
                 .reindex(all_dates)
                 .ffill()
                 .fillna(0.05)
@@ -1672,16 +1715,9 @@ class Backtester(SDKClientMixin, ReportingMixin):
         else:
             target_weights_inv = target_weights * (1.0 - cash_buffer)
 
-        # Asset returns, two views of the same closes:
-        #   asset_returns      — gap-preserving (NaN through NaN-price gaps AND
-        #                        on the resume bar); used to detect gaps.
-        #   accounting_returns — NaN only INSIDE a gap, with the resume-bar
-        #                        return bridged across it
-        #                        (price[resume] / last_valid_price - 1).
-        # The accounting view is what NAV/PnL must book: a position frozen
-        # through a data gap realises the whole gap move on the resume bar,
-        # matching the orders-mode last-valid-price convention.
-        asset_returns = self._compute_returns_preserve_gaps(close)
+        # Asset returns for NAV/PnL accounting: NaN only INSIDE a gap, with
+        # the resume-bar return bridged across it. The rebalance engine treats
+        # in-gap NaN bars as untradeable and keeps existing positions frozen.
         accounting_returns = self._compute_accounting_returns(close)
 
         # Benchmark returns for tracking-error trigger (if available)
@@ -1728,21 +1764,11 @@ class Backtester(SDKClientMixin, ReportingMixin):
         # RebalanceEngine.actual_weights is the realised/end-of-bar exposure
         # state. return_weights is the beginning-of-bar exposure used for P&L.
         return_weights = getattr(engine, "return_weights", actual_weights)
-
-        # Resume-bar correction: the engine's availability masking zeroes a
-        # gapped instrument's carried weight while its price is NaN, so the
-        # bridged resume return would otherwise apply to weight 0 and the
-        # whole gap move would vanish from NAV. Economically the position is
-        # frozen through the gap, so the weight held INTO the resume bar is
-        # the last end-of-bar weight before the gap.
-        resume_bars = accounting_returns.notna() & asset_returns.isna()
-        if bool(resume_bars.to_numpy().any()):
-            frozen_weights = (
-                actual_weights.mask(close.isna() | resume_bars).ffill().fillna(0.0)
-            )
-            return_weights = return_weights.mask(resume_bars, frozen_weights)
-
-        portfolio_returns = (return_weights * accounting_returns.fillna(0.0)).sum(axis=1)
+        portfolio_returns = getattr(engine, "portfolio_returns", None)
+        if portfolio_returns is None or len(portfolio_returns) == 0:
+            portfolio_returns = (
+                return_weights * accounting_returns.fillna(0.0)
+            ).sum(axis=1)
 
         # ── Transaction costs: implied trades, only on rebalance days ──
         # Weight mode has no explicit orders, so the accounting layer infers
@@ -1764,8 +1790,9 @@ class Backtester(SDKClientMixin, ReportingMixin):
         nav_series.iloc[0] = self.initial_capital
 
         # ── Positions (shares) = weight × NAV / price ──
+        marked_close = close.ffill()
         positions = actual_weights.multiply(nav_series, axis=0).divide(
-            close.replace(0.0, np.nan), axis=1
+            marked_close.replace(0.0, np.nan), axis=1
         ).fillna(0.0)
         position_changes = positions.diff().fillna(positions)
         # Zero out position changes on non-rebalance days for trade recording
@@ -1776,7 +1803,9 @@ class Backtester(SDKClientMixin, ReportingMixin):
         self.portfolio_data.update_net_asset_value(nav_series)
         self.portfolio_data.update_positions(positions)
         self.portfolio_data.update_weights(
-            self._weights_from_position_values(positions.multiply(close), nav_series)
+            self._weights_from_position_values(
+                positions.multiply(marked_close), nav_series
+            )
         )
 
         daily_returns = nav_series.pct_change().fillna(0.0)

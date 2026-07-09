@@ -1,5 +1,5 @@
 """
-    Conditional Rebalancing Engine  v2
+    Conditional Rebalancing Engine
     ───────────────────────────────────
     Composable rebalancing rules for weight-based strategies.
 
@@ -18,17 +18,6 @@
     Default policy (frequency="D", rebalance_at=CLOSE) reproduces the
     legacy daily-rebalance behaviour exactly.
 
-    Changes from v1
-    ────────────────
-    • FIX  circuit-breaker cooldown exit → force_rebal_next flag
-    • FIX  turnover calc cached (was computed twice)
-    • ADD  rebalance_at enum (OPEN / CLOSE / VWAP_WINDOW)
-    • ADD  rolling 252-day turnover window (replaces naïve annual reset)
-    • ADD  tracking_error_threshold trigger (L2b, alongside drift)
-    • ADD  partial_rebalance implementation (only drifted positions trade)
-    • ADD  avoid_short_term_gains flag (basic tax-lot awareness)
-    • DOC  _signal_change_flags operates on target_weights, not raw signals
-
     Calendar convention sensitivity
     ───────────────────────────────
     The calendar anchor is not a formality: on the same strategy we measured
@@ -37,12 +26,8 @@
     rebalance calendar convention alone. Treat the frequency anchor as a
     parameter to sensitivity-test, not a fixed detail.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
 
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
@@ -55,6 +40,8 @@ import pandas as pd
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Optional
+
+from backtester.portfolio._time import reindex_time_like
 
 # One-time warning guards (per process) for known no-op policy fields.
 _WARNED_REBALANCE_AT = False
@@ -290,6 +277,12 @@ class RebalanceEngine:
         self.policy = policy
         self.stats: dict = {}
         self.rebalance_at: RebalanceAt = policy.rebalance_at
+        self.actual_weights: pd.DataFrame = pd.DataFrame()
+        self.return_weights: pd.DataFrame = pd.DataFrame()
+        self.rebalance_flags: pd.Series = pd.Series(dtype=bool)
+        self.accounting_returns: pd.DataFrame = pd.DataFrame()
+        self.portfolio_returns: pd.Series = pd.Series(dtype=float)
+        self.relative_nav: pd.Series = pd.Series(dtype=float)
         self._warn_unsupported_policy_fields(policy)
 
     @staticmethod
@@ -330,6 +323,31 @@ class RebalanceEngine:
             and not p.avoid_short_term_gains
         )
 
+    def _set_accounting_outputs(
+        self,
+        actual_weights: pd.DataFrame,
+        return_weights: pd.DataFrame,
+        rebal_flags: pd.Series,
+        returns: np.ndarray,
+    ) -> None:
+        """Publish the accounting basis shared by reporting and triggers."""
+        accounting_returns = pd.DataFrame(
+            returns,
+            index=actual_weights.index,
+            columns=actual_weights.columns,
+        )
+        portfolio_returns = (
+            return_weights.astype(float) * accounting_returns.astype(float)
+        ).sum(axis=1)
+        portfolio_returns.name = "portfolio_return"
+
+        self.actual_weights = actual_weights
+        self.return_weights = return_weights
+        self.rebalance_flags = rebal_flags
+        self.accounting_returns = accounting_returns
+        self.portfolio_returns = portfolio_returns
+        self.relative_nav = (1.0 + portfolio_returns).cumprod()
+
     def _run_vectorized(
         self,
         target_weights: pd.DataFrame,
@@ -356,8 +374,8 @@ class RebalanceEngine:
         rebal_mask = cal_flags.values  # bool array
 
         # Asset returns as numpy. Missing returns mark an instrument as
-        # unavailable for that bar; weights are reassigned only across
-        # available instruments before NaNs are converted to 0 for math.
+        # untradeable for that bar; existing weights are frozen and earn 0
+        # until a bridged resume-bar return arrives.
         target_w, ret, available = self._prepare_target_and_returns(
             target_weights,
             asset_returns,
@@ -378,9 +396,12 @@ class RebalanceEngine:
             start = rebal_indices[seg_idx]
             end = rebal_indices[seg_idx + 1] if seg_idx + 1 < len(rebal_indices) else n
 
-            # Snap to target on rebalance day (held from the close onward)
-            w0 = target_w[start]
-            return_w[start] = self._mask_unavailable_vector(carry_w, available[start])
+            # Snap to feasible target on rebalance day (held from the close
+            # onward). Unavailable assets keep their carried weight.
+            w0 = self._rebalance_with_frozen_unavailable(
+                target_w[start], carry_w, available[start]
+            )
+            return_w[start] = self._clean_vector(carry_w)
             actual_w[start] = w0
 
             if end - start <= 1:
@@ -390,7 +411,7 @@ class RebalanceEngine:
             if not available[start + 1: end].all():
                 current = w0.copy()
                 for pos in range(start + 1, end):
-                    period_w = self._mask_unavailable_vector(current, available[pos])
+                    period_w = self._clean_vector(current)
                     return_w[pos] = period_w
                     current = self._drift_with_cash(period_w, ret[pos])
                     actual_w[pos] = current
@@ -415,8 +436,9 @@ class RebalanceEngine:
                 carry_w = drifted[-1]
 
         actual_weights = pd.DataFrame(actual_w, index=dates, columns=instruments)
-        self.return_weights = pd.DataFrame(return_w, index=dates, columns=instruments)
+        return_weights = pd.DataFrame(return_w, index=dates, columns=instruments)
         rebal_flags = pd.Series(rebal_mask, index=dates, name="rebalance")
+        self._set_accounting_outputs(actual_weights, return_weights, rebal_flags, ret)
 
         rebal_count = int(rebal_mask.sum())
         self.stats = {
@@ -466,27 +488,44 @@ class RebalanceEngine:
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         dates = target_weights.index
         instruments = target_weights.columns
-        returns = asset_returns.reindex(index=dates, columns=instruments).astype(float)
+        returns = reindex_time_like(
+            asset_returns, dates, columns=instruments
+        ).astype(float)
         available = returns.notna().to_numpy()
-        target = target_weights.to_numpy(dtype=float, copy=True)
-        for i in range(len(target)):
-            target[i] = cls._mask_unavailable_vector(target[i], available[i])
+        target = np.nan_to_num(
+            target_weights.to_numpy(dtype=float, copy=True),
+            nan=0.0,
+            posinf=0.0,
+            neginf=0.0,
+        )
         ret = returns.fillna(0.0).to_numpy(dtype=float)
         return target, ret, available
 
     @staticmethod
-    def _mask_unavailable_vector(weights: np.ndarray, available: np.ndarray) -> np.ndarray:
-        clean = np.nan_to_num(weights, nan=0.0, posinf=0.0, neginf=0.0).astype(float, copy=True)
+    def _clean_vector(weights: np.ndarray) -> np.ndarray:
+        return np.nan_to_num(
+            weights, nan=0.0, posinf=0.0, neginf=0.0
+        ).astype(float, copy=True)
+
+    @classmethod
+    def _rebalance_with_frozen_unavailable(
+        cls,
+        target_w: np.ndarray,
+        current_w: np.ndarray,
+        available: np.ndarray,
+    ) -> np.ndarray:
+        """Apply target weights without trading instruments lacking a price."""
+        target = cls._clean_vector(target_w)
+        current = cls._clean_vector(current_w)
         if available.all():
-            return clean
-        original_gross = float(np.abs(clean).sum())
-        clean[~available] = 0.0
-        remaining_gross = float(np.abs(clean).sum())
-        if original_gross <= 1e-12:
-            return clean
-        if remaining_gross <= 1e-12:
-            return np.zeros_like(clean)
-        return clean * (original_gross / remaining_gross)
+            return target
+
+        new_w = target.copy()
+        keep_mask = ~available
+        new_w[keep_mask] = current[keep_mask]
+        if keep_mask.any():
+            new_w = cls._renormalize_traded_sleeve(new_w, target, keep_mask)
+        return new_w
 
     @staticmethod
     def _renormalize_traded_sleeve(
@@ -501,21 +540,28 @@ class RebalanceEngine:
         target_traded = target_w[traded_mask]
         target_total = target_w.sum()
         kept_total = new_w[keep_mask].sum()
-        if abs(target_total) > 1e-12 and abs(target_traded.sum()) > 1e-12:
-            # Clamp the scale at 0: when kept (drifted) weights already sum
-            # above the target total, the traded sleeve gets 0 — a negative
-            # scale would flip the sign of the traded targets (long → short).
-            scale = max((target_total - kept_total) / target_traded.sum(), 0.0)
-            new_w[traded_mask] = target_traded * scale
-            return new_w
-
         target_gross = np.abs(target_w).sum()
         kept_gross = np.abs(new_w[keep_mask]).sum()
         traded_gross = np.abs(target_traded).sum()
+        # Gross budget the traded sleeve may occupy — never lever the book
+        # beyond the target's own gross exposure.
+        max_gross = max(target_gross - kept_gross, 0.0)
+        if abs(target_total) > 1e-12 and abs(target_traded.sum()) > 1e-12:
+            # Net-preserving scale keeps the book fully deployed to target_total.
+            # Clamp at 0 so a kept sleeve above target_total cannot flip the
+            # traded targets' sign (long → short).
+            scale = max((target_total - kept_total) / target_traded.sum(), 0.0)
+            # Gross cap: for a near-market-neutral traded sleeve, target_traded
+            # nets ≈ 0 while its members are large, so the net scale can blow
+            # gross up without bound. Cap the scale so the traded sleeve never
+            # exceeds its gross budget. No-op for long-only books (net == gross).
+            if traded_gross > 1e-12 and scale * traded_gross > max_gross + 1e-12:
+                scale = max_gross / traded_gross
+            new_w[traded_mask] = target_traded * scale
+            return new_w
+
         if traded_gross > 1e-12:
-            new_w[traded_mask] = target_traded * (
-                max(target_gross - kept_gross, 0.0) / traded_gross
-            )
+            new_w[traded_mask] = target_traded * (max_gross / traded_gross)
         return new_w
 
     def run(
@@ -543,7 +589,44 @@ class RebalanceEngine:
             Realised weights (drifted between rebalances).
         rebal_flags : pd.Series[bool]
             True on days when a rebalance occurred.
+
+        Notes
+        -----
+        Two execution paths produce identical NAV (verified to machine
+        precision by the vectorized-vs-loop parity tests):
+
+        * a vectorized fast-path (``_is_simple_policy``) for calendar-only
+          policies, which segments the timeline and applies drift via cumprod;
+        * a per-bar loop for policies using drift, tracking-error, signal,
+          circuit-breaker or turnover triggers.
+
+        The loop is ~10-20x slower but supports the full trigger cascade; both
+        share the same accounting primitives, so results agree exactly.
         """
+        # Empty input: nothing to simulate (guard both paths — the vectorized
+        # fast-path indexes bar 0 unconditionally and would raise).
+        if len(target_weights.index) == 0:
+            empty_w = pd.DataFrame(index=target_weights.index, columns=target_weights.columns, dtype=float)
+            return empty_w, pd.Series(dtype=bool, name="rebalance")
+
+        # Observability: warn when an asset goes dark and never resumes — a
+        # likely delisting rather than a transient gap. Its weight is held
+        # frozen at the last valid mark for the rest of the sample (NAV stays
+        # correct, but a permanent stale-mark should not be silent).
+        _avail = asset_returns.reindex(
+            index=target_weights.index, columns=target_weights.columns
+        ).notna()
+        if len(_avail) > 1:
+            _ever = _avail.any()
+            _last = _avail.iloc[-1]
+            _frozen_tail = [c for c in _avail.columns if bool(_ever[c]) and not bool(_last[c])]
+            if _frozen_tail:
+                warnings.warn(
+                    f"Rebalance: {_frozen_tail} have no price through the end of the "
+                    "sample; weight held frozen at the last valid mark (possible delisting).",
+                    stacklevel=2,
+                )
+
         # Fast-path for simple calendar-only policies
         if self._is_simple_policy():
             return self._run_vectorized(target_weights, asset_returns)
@@ -570,13 +653,13 @@ class RebalanceEngine:
         # Benchmark returns for tracking-error trigger
         bench_ret: Optional[np.ndarray] = None
         if benchmark_returns is not None:
-            bench_ret = benchmark_returns.reindex(dates).fillna(0.0).values
+            bench_ret = reindex_time_like(benchmark_returns, dates).fillna(0.0).values
 
         current_w = np.zeros(m, dtype=np.float64)
         peak_nav = 1.0
         cb_active = False
         cb_cooldown_left = 0
-        force_rebal_next = False    # ← FIX: set True when exiting cooldown
+        force_rebal_next = False   # set True when cooldown ends, to re-enter next bar
 
         # Rolling 252-day turnover window (replaces annual reset)
         _ROLLING_WINDOW = 252
@@ -634,7 +717,7 @@ class RebalanceEngine:
                 cb_cooldown_left -= 1
                 if cb_cooldown_left <= 0:
                     cb_active = False
-                    force_rebal_next = True   # ← FIX: force rebalance next bar
+                    force_rebal_next = True   # re-enter on the next bar
                 return_w[i] = current_w
                 actual_w[i] = current_w
                 turnover_ring.append(0.0)
@@ -647,8 +730,6 @@ class RebalanceEngine:
             if force_rebal_next:
                 should_rebal = True
                 trigger = "post_cooldown"
-                cal_count += 1          # count as calendar-equivalent
-                force_rebal_next = False
                 # Reset the drawdown reference at re-entry so the breaker
                 # only re-triggers on a NEW drawdown from the new peak.
                 peak_nav = nav[i - 1] if i > 0 else 1.0
@@ -657,13 +738,11 @@ class RebalanceEngine:
             if not should_rebal and cal_flags.iloc[i]:
                 should_rebal = True
                 trigger = "calendar"
-                cal_count += 1
 
             # ── L3: Signal change ──
             if not should_rebal and sig_flags.iloc[i]:
                 should_rebal = True
                 trigger = "signal"
-                sig_count += 1
 
             # ── L2a: Drift (in-loop, depends on current_w) ──
             if not should_rebal and self.policy.drift_threshold is not None and i > 0:
@@ -681,7 +760,6 @@ class RebalanceEngine:
                 if max_drift > self.policy.drift_threshold:
                     should_rebal = True
                     trigger = "drift"
-                    drift_count += 1
 
             # ── L2b: Tracking-error trigger ──
             if (
@@ -704,7 +782,6 @@ class RebalanceEngine:
                 if te_ann > self.policy.tracking_error_threshold:
                     should_rebal = True
                     trigger = "tracking_error"
-                    te_count += 1
 
             # ── Apply rebalance or drift ──
             # Weights actually held INTO this bar: trades execute at the
@@ -713,8 +790,11 @@ class RebalanceEngine:
             pre_rebal_w = current_w.copy()
 
             if should_rebal or i == 0:
+                feasible_target = self._rebalance_with_frozen_unavailable(
+                    target_w[i], current_w, available[i]
+                )
                 # L5: Rolling turnover budget check
-                trade_turnover = float(np.abs(target_w[i] - current_w).sum())
+                trade_turnover = float(np.abs(feasible_target - current_w).sum())
 
                 if (
                     should_rebal
@@ -726,7 +806,7 @@ class RebalanceEngine:
                         should_rebal = False
 
                 if should_rebal or i == 0:
-                    new_w = target_w[i].copy()
+                    new_w = feasible_target.copy()
 
                     # ── Partial rebalance: only snap drifted positions ──
                     if (
@@ -748,8 +828,11 @@ class RebalanceEngine:
                     if self.policy.avoid_short_term_gains and i > 0:
                         keep_mask = np.zeros(m, dtype=bool)
                         for j in range(m):
-                            if new_w[j] < current_w[j]:
-                                # Reducing position — check holding period
+                            if abs(new_w[j]) < abs(current_w[j]) - 1e-12:
+                                # Reducing position magnitude (selling a long or
+                                # covering a short). Deepening a short (-0.3 to
+                                # -0.6) is an increase, so the test is on
+                                # magnitude, not signed value.
                                 bars_held = i - entry_bar[j]
                                 if bars_held < self.policy.short_term_days:
                                     # Keep current weight (don't sell young lots)
@@ -771,16 +854,28 @@ class RebalanceEngine:
 
                     current_w = new_w
                     rebal[i] = True
+                    # Count the trigger only when the rebalance actually
+                    # executes (survives the L5 turnover veto), so the
+                    # sub-counters reconcile with rebalance_count.
+                    if trigger in ("calendar", "post_cooldown"):
+                        cal_count += 1
+                    elif trigger == "signal":
+                        sig_count += 1
+                    elif trigger == "drift":
+                        drift_count += 1
+                    elif trigger == "tracking_error":
+                        te_count += 1
+                    if trigger == "post_cooldown":
+                        force_rebal_next = False
                 else:
                     turnover_ring.append(0.0)
             else:
                 turnover_ring.append(0.0)
 
-            current_w = self._mask_unavailable_vector(current_w, available[i])
             if rebal[i]:
-                period_w = self._mask_unavailable_vector(pre_rebal_w, available[i])
+                period_w = self._clean_vector(pre_rebal_w)
             else:
-                period_w = current_w.copy()
+                period_w = self._clean_vector(current_w)
             return_w[i] = period_w
             day_ret = (period_w * ret[i]).sum()
             nav[i] = nav[i - 1] * (1.0 + day_ret) if i > 0 else 1.0
@@ -794,8 +889,9 @@ class RebalanceEngine:
 
         # Build output DataFrames
         actual_weights = pd.DataFrame(actual_w, index=dates, columns=instruments)
-        self.return_weights = pd.DataFrame(return_w, index=dates, columns=instruments)
+        return_weights = pd.DataFrame(return_w, index=dates, columns=instruments)
         rebal_flags = pd.Series(rebal, index=dates, name="rebalance")
+        self._set_accounting_outputs(actual_weights, return_weights, rebal_flags, ret)
 
         # Stats
         rebal_count = int(rebal.sum())
@@ -835,15 +931,26 @@ class RebalanceEngine:
 
         if freq == "W":
             # Weekly schedule with holiday snap: a scheduled rebalance
-            # weekday (e.g. Friday) falling on an exchange holiday is
-            # snapped to the last actual trading date on or before it —
-            # the same treatment as the BME/BQE path below — instead of
-            # silently dropping that week's rebalance.
+            # weekday falling on an exchange holiday is snapped inside the
+            # same calendar week. Prefer the previous trading day; if the
+            # anchor is Monday and closed, use the next trading day instead
+            # of leaking the rebalance into the prior week.
             _ANCHORS = ("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
             anchor = _ANCHORS[self.policy.weekday % 7]
             scheduled = pd.date_range(dates[0], dates[-1], freq=f"W-{anchor}")
-            pos = np.searchsorted(dates.values, scheduled.values, side="right") - 1
-            pos = np.unique(pos[pos >= 0])
+            positions = []
+            date_values = dates.values
+            for sched in scheduled:
+                week_start = sched - pd.Timedelta(days=sched.weekday())
+                week_end = week_start + pd.Timedelta(days=6)
+                left = np.searchsorted(date_values, sched.to_datetime64(), side="right") - 1
+                if left >= 0 and dates[left] >= week_start:
+                    positions.append(left)
+                    continue
+                right = np.searchsorted(date_values, sched.to_datetime64(), side="left")
+                if right < len(dates) and dates[right] <= week_end:
+                    positions.append(right)
+            pos = np.unique(np.asarray(positions, dtype=int))
             flags = np.zeros(len(dates), dtype=bool)
             flags[pos] = True
             return pd.Series(flags, index=dates)

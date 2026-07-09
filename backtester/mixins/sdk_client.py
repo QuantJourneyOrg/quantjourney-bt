@@ -9,12 +9,7 @@ All methods expect the host class to have the attributes set by
 Backtester.__init__ (api_url, _email, _password, _api_key, _sdk_client,
 _source, _granularity, backtest_period, instruments, etc.).
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 

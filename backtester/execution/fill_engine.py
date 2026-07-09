@@ -23,12 +23,7 @@ Usage:
     bar = BarData(timestamp=..., open=149.5, high=152.0, low=148.0, close=151.0, volume=1e6)
     fills = engine.process_bar("AAPL", bar)
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
@@ -208,6 +203,8 @@ class FillEngine:
         )
 
         self._oco_pairs[oco_id] = [tp.order_id, sl.order_id]
+        tp._bracket_parent_order_id = entry.order_id  # type: ignore[attr-defined]
+        sl._bracket_parent_order_id = entry.order_id  # type: ignore[attr-defined]
 
         # Submit entry immediately; TP + SL are parked until entry fills
         self._orders[order.instrument].append(entry)
@@ -292,6 +289,9 @@ class FillEngine:
                 # OCO: any fill (partial or full) cancels the sibling leg.
                 if order.oco_pair_id:
                     self._cancel_oco_pair(order.oco_pair_id, except_id=order.order_id)
+                parent_id = getattr(order, "_bracket_parent_order_id", None)
+                if parent_id is not None:
+                    self.cancel(parent_id)
 
                 if order.is_active:
                     self._expire_after_bar(order, bar, filled_this_bar=True)

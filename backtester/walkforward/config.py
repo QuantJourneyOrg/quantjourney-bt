@@ -4,12 +4,7 @@ Walk-Forward Configuration — frozen, validated config for WF engine.
 Uses a plain frozen dataclass with __post_init__ validation (no Pydantic
 dependency required). Serializable via to_dict() for fingerprinting.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 

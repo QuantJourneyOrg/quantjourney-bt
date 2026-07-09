@@ -5,12 +5,7 @@ If Pandera is installed, these can be extended to use pa.DataFrameSchema,
 but current implementation uses pragmatic runtime checks to avoid
 dependency constraints in tight environments.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 

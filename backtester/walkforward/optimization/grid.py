@@ -4,10 +4,6 @@ Grid Search Optimizer — exhaustive Cartesian-product parameter sweep.
 Evaluates all combinations in ``param_grid``, optionally capped at
 ``max_combinations`` (random subsample when the grid is too large).
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
 Updated: 07.2026.
 Licensed under the Apache License 2.0.
