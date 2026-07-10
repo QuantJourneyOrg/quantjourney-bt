@@ -29,7 +29,7 @@ import pandas as pd
 
 from backtester import Backtester
 from backtester.portfolio.rebalance import RebalancePolicy
-from backtester.risk import RiskParityModel, PositionLimitModel, RiskModelChain
+from backtester.risk import PositionLimitModel, RiskModelChain, RiskParityModel
 
 
 def _credentials() -> dict:
@@ -49,7 +49,7 @@ class RiskParityCapped(Backtester):
     def _compute_signals(self) -> pd.DataFrame:
         close = self.instruments_data.get_feature("adj_close")
         signals = pd.DataFrame(0.0, index=close.index, columns=close.columns)
-        signals.iloc[self.WARMUP:] = 1.0
+        signals.iloc[self.WARMUP :] = 1.0
         return signals
 
     def _compute_weights(self) -> pd.DataFrame:
@@ -70,10 +70,12 @@ async def main() -> None:
         execution_mode="weights",
         max_position_size=1.0,
         rebalance_policy=RebalancePolicy(frequency="BME"),
-        risk_model=RiskModelChain([
-            RiskParityModel(lookback=126),
-            PositionLimitModel(max_weight=0.25),
-        ]),
+        risk_model=RiskModelChain(
+            [
+                RiskParityModel(lookback=126),
+                PositionLimitModel(max_weight=0.25),
+            ]
+        ),
         indicators_config=[],
         benchmark_symbol="SPY",
         benchmark_name="S&P 500 ETF",

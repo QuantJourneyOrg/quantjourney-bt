@@ -105,7 +105,7 @@ async def main() -> None:
 
     config = WalkForwardConfig(
         scheme="expanding",
-        train_months=24,       # minimum initial training window
+        train_months=24,  # minimum initial training window
         test_months=6,
         step_months=6,
         purge_days=5,
@@ -113,6 +113,7 @@ async def main() -> None:
     )
     engine_kwargs = {}
     if mode == "per_fold_refit":
+
         def factory(*, fold, train_start, train_end, oos_start, oos_end, **_) -> SMATrendForWF:
             return _build_strategy(
                 strategy_name=f"ExampleWF02_ExpandingWalkForward_Fold{fold.fold_id:02d}",
@@ -129,15 +130,17 @@ async def main() -> None:
 
     print(result.summary())
 
-    verdicts = interpret_metrics({
-        "overfit_ratio": result.overfit_ratio,
-        "efficiency": result.efficiency,
-        "sharpe_decay": result.sharpe_decay,
-        # Context keys (no verdicts of their own): gate the lights so a
-        # losing strategy or a tiny fold count never renders green.
-        "composite_sharpe": result.oos_sharpe,
-        "n_folds": result.n_folds,
-    })
+    verdicts = interpret_metrics(
+        {
+            "overfit_ratio": result.overfit_ratio,
+            "efficiency": result.efficiency,
+            "sharpe_decay": result.sharpe_decay,
+            # Context keys (no verdicts of their own): gate the lights so a
+            # losing strategy or a tiny fold count never renders green.
+            "composite_sharpe": result.oos_sharpe,
+            "n_folds": result.n_folds,
+        }
+    )
     if result.mode == "slice_diagnostics":
         print(
             "\nNOTE: slice_diagnostics mode — the metrics above are IN-SAMPLE"

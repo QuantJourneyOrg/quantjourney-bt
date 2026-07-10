@@ -134,18 +134,24 @@ def main() -> None:
     # Validate the winner out-of-sample with rolling walk-forward.
     best = _run(best_fast, best_slow)
     config = WalkForwardConfig(
-        scheme="rolling", train_months=24, test_months=6,
-        step_months=6, purge_days=5, embargo_pct=0.01,
+        scheme="rolling",
+        train_months=24,
+        test_months=6,
+        step_months=6,
+        purge_days=5,
+        embargo_pct=0.01,
     )
     wf = WalkForwardEngine(config=config, initial_capital=100_000).run(best.portfolio_data)
     print("\nWalk-forward validation of the Optuna-best params:")
     print(wf.summary())
 
-    verdicts = interpret_metrics({
-        "overfit_ratio": wf.overfit_ratio,
-        "efficiency": wf.efficiency,
-        "sharpe_decay": wf.sharpe_decay,
-    })
+    verdicts = interpret_metrics(
+        {
+            "overfit_ratio": wf.overfit_ratio,
+            "efficiency": wf.efficiency,
+            "sharpe_decay": wf.sharpe_decay,
+        }
+    )
     for v in verdicts:
         print(f"  {v}")
 

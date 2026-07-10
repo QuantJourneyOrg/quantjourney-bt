@@ -42,7 +42,9 @@ class LimitTrendPullback(Backtester):
     """Trend-following entry that waits for a passive pullback fill."""
 
     def _has_pending(self, instrument: str) -> bool:
-        return any(o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders)
+        return any(
+            o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders
+        )
 
     def _compute_orders(self, date, bars, current_positions, nav) -> None:
         sma = self.instruments_data.get_feature("SMA_50_close")
@@ -61,27 +63,31 @@ class LimitTrendPullback(Backtester):
             if pos == 0 and not pending and bar.close > trend:
                 shares = int(nav * 0.12 / bar.close)
                 if shares > 0:
-                    self.fill_engine.submit(Order(
-                        inst,
-                        OrderSide.BUY,
-                        shares,
-                        OrderType.LIMIT,
-                        limit_price=round(bar.close * 0.99, 2),
-                        expires_after_bars=2,
-                    ))
+                    self.fill_engine.submit(
+                        Order(
+                            inst,
+                            OrderSide.BUY,
+                            shares,
+                            OrderType.LIMIT,
+                            limit_price=round(bar.close * 0.99, 2),
+                            expires_after_bars=2,
+                        )
+                    )
             elif pos > 0 and bar.close < trend:
                 self.fill_engine.cancel_all(instrument=inst)
                 self.fill_engine.submit(Order(inst, OrderSide.SELL, pos, OrderType.MARKET))
             elif pos > 0 and not pending:
                 entry = self.get_average_entry_price(inst) or bar.close
-                self.fill_engine.submit(Order(
-                    inst,
-                    OrderSide.SELL,
-                    pos,
-                    OrderType.LIMIT,
-                    limit_price=round(entry * 1.04, 2),
-                    expires_after_bars=5,
-                ))
+                self.fill_engine.submit(
+                    Order(
+                        inst,
+                        OrderSide.SELL,
+                        pos,
+                        OrderType.LIMIT,
+                        limit_price=round(entry * 1.04, 2),
+                        expires_after_bars=5,
+                    )
+                )
 
 
 async def main() -> None:

@@ -40,10 +40,9 @@ Licensed under the Apache License 2.0.
 from __future__ import annotations
 
 import math
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 import numpy as np
-
 
 # Euler–Mascheroni constant
 _GAMMA = 0.5772156649015329
@@ -114,9 +113,9 @@ def probabilistic_sharpe(
 
 def deflated_sharpe(
     trial_sharpes: Sequence[float],
-    n_trials: Optional[int] = None,
+    n_trials: int | None = None,
     *,
-    observed_sr: Optional[float] = None,
+    observed_sr: float | None = None,
     n_obs: int,
     skewness: float = 0.0,
     kurtosis: float = 3.0,

@@ -24,11 +24,11 @@ Licensed under the Apache License 2.0.
 
 from __future__ import annotations
 
-import pandas as pd
-import numpy as np
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Dict, Optional
+
+import numpy as np
+import pandas as pd
 
 
 @dataclass(frozen=False)
@@ -46,7 +46,7 @@ class Universe:
     """
 
     _close: pd.DataFrame
-    _sectors: Dict[str, str] = field(default_factory=dict)
+    _sectors: dict[str, str] = field(default_factory=dict)
 
     # ─────────────────────────────────────────────────────────────
     # Shape properties
@@ -177,12 +177,12 @@ class Universe:
     # ─────────────────────────────────────────────────────────────
 
     @property
-    def sectors(self) -> Dict[str, str]:
+    def sectors(self) -> dict[str, str]:
         """Instrument → sector map (e.g. for PositionLimitModel)."""
         return self._sectors
 
     @sectors.setter
-    def sectors(self, value: Dict[str, str]) -> None:
+    def sectors(self, value: dict[str, str]) -> None:
         self._sectors = value
 
     # ─────────────────────────────────────────────────────────────

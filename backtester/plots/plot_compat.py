@@ -12,14 +12,14 @@ from __future__ import annotations
 
 from enum import Enum
 from functools import lru_cache
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
+import matplotlib.colors as mcolors
 import matplotlib.dates as mdates
 import matplotlib.font_manager as fm
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
-import matplotlib.colors as mcolors
 import numpy as np
 import pandas as pd
 
@@ -82,6 +82,7 @@ def _resolve_font() -> str:
 # COLOUR SYSTEM — single source of truth
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class C:
     """Blue monochromatic institutional colour system.
 
@@ -90,25 +91,25 @@ class C:
     """
 
     # ── Blue scale (dark → light) ──
-    NAVY      = "#0A1F38"      # Deepest navy — primary lines, titles
-    DARK      = "#14395A"      # Dark blue
-    MID       = "#1A5276"      # Medium blue
-    BLUE      = "#2471A3"      # Standard blue — rich and vibrant
-    STEEL     = "#4A9BD9"      # Steel blue — brighter
-    LIGHT     = "#7CB9E8"      # Light blue — more saturated
-    PALE      = "#A7D2F0"      # Pale blue
-    ICE       = "#D4E9F7"      # Ice blue — lightest fills
+    NAVY = "#0A1F38"  # Deepest navy — primary lines, titles
+    DARK = "#14395A"  # Dark blue
+    MID = "#1A5276"  # Medium blue
+    BLUE = "#2471A3"  # Standard blue — rich and vibrant
+    STEEL = "#4A9BD9"  # Steel blue — brighter
+    LIGHT = "#7CB9E8"  # Light blue — more saturated
+    PALE = "#A7D2F0"  # Pale blue
+    ICE = "#D4E9F7"  # Ice blue — lightest fills
 
     # ── Warm accents (used for key annotations and highlights) ──
-    GOLD      = "#C49A3C"      # Rich gold — averages, highlights
-    AMBER     = "#E8A838"      # Bright amber — strong callouts
+    GOLD = "#C49A3C"  # Rich gold — averages, highlights
+    AMBER = "#E8A838"  # Bright amber — strong callouts
 
     # ── Semantic aliases ──
-    TEAL      = "#177E89"      # True teal — distinct hue for contrast
-    ORANGE    = "#D4842A"      # Warm orange — distinct from gold
-    RED       = "#C0392B"      # Vibrant red — negative elements (more visible)
-    GREEN     = "#27864B"      # Rich green — positive elements (more visible)
-    PURPLE    = "#6C3483"      # True purple — additional accent
+    TEAL = "#177E89"  # True teal — distinct hue for contrast
+    ORANGE = "#D4842A"  # Warm orange — distinct from gold
+    RED = "#C0392B"  # Vibrant red — negative elements (more visible)
+    GREEN = "#27864B"  # Rich green — positive elements (more visible)
+    PURPLE = "#6C3483"  # True purple — additional accent
 
     # ── Extended palette (15 colours with hue variation for multi-series) ──
     PALETTE = [
@@ -130,70 +131,70 @@ class C:
     ]
 
     # ── Chrome / UI ──
-    BG        = "#FAFBFC"      # Subtle warm-grey tint (not clinical white)
-    FIG_BG    = "#FAFBFC"
-    SPINE     = "#CBD2DA"      # Slightly stronger spine
-    GRID      = "#E2E7ED"      # More visible grid
-    TICK      = "#5A6577"      # Darker ticks for readability
-    LABEL     = "#2D3748"      # Darker labels
-    TITLE     = "#0F1724"      # Near-black titles
-    SUBTITLE  = "#4A5568"      # Clear subtitle
+    BG = "#FAFBFC"  # Subtle warm-grey tint (not clinical white)
+    FIG_BG = "#FAFBFC"
+    SPINE = "#CBD2DA"  # Slightly stronger spine
+    GRID = "#E2E7ED"  # More visible grid
+    TICK = "#5A6577"  # Darker ticks for readability
+    LABEL = "#2D3748"  # Darker labels
+    TITLE = "#0F1724"  # Near-black titles
+    SUBTITLE = "#4A5568"  # Clear subtitle
     WATERMARK = "#B0B8C4"
-    MUTED     = "#8896A7"      # Slightly darker muted
+    MUTED = "#8896A7"  # Slightly darker muted
 
     # ── Heatmap / diverging (red → white → navy) ──
-    HM_NEG    = "#C0392B"      # Brighter red for heatmaps
-    HM_ZERO   = "#FAFBFC"
-    HM_POS    = "#0A1F38"      # Deep navy for positive
+    HM_NEG = "#C0392B"  # Brighter red for heatmaps
+    HM_ZERO = "#FAFBFC"
+    HM_POS = "#0A1F38"  # Deep navy for positive
 
     # ── Up / Down ──
-    UP        = "#27864B"      # Green — brighter than before
-    DOWN      = "#C0392B"      # Red — brighter than before
+    UP = "#27864B"  # Green — brighter than before
+    DOWN = "#C0392B"  # Red — brighter than before
 
     # ── Drawdown severity gradient (light → dark blue) ──
-    DD_LIGHT  = "#A7D2F0"
-    DD_MED    = "#4A9BD9"
-    DD_HEAVY  = "#1A5276"
+    DD_LIGHT = "#A7D2F0"
+    DD_MED = "#4A9BD9"
+    DD_HEAVY = "#1A5276"
     DD_SEVERE = "#0A1F38"
 
     # ── Line width hierarchy ──
-    LW_MAIN       = 2.0       # Primary data lines
-    LW_SECONDARY  = 1.6       # Benchmark, MA lines
-    LW_THIN       = 1.0       # Reference/average lines
-    LW_HAIR       = 0.5       # Zone lines, subtle refs
-    LW_EDGE       = 0.5       # Bar/histogram edges
+    LW_MAIN = 2.0  # Primary data lines
+    LW_SECONDARY = 1.6  # Benchmark, MA lines
+    LW_THIN = 1.0  # Reference/average lines
+    LW_HAIR = 0.5  # Zone lines, subtle refs
+    LW_EDGE = 0.5  # Bar/histogram edges
 
     # ── Fill opacity hierarchy ──
-    FILL_MAIN     = 0.28      # Gradient under main line
-    FILL_LIGHT    = 0.18      # Rolling metric fills
-    FILL_HEAVY    = 0.80      # Stacked area, bars
-    FILL_HIST     = 0.65      # Histograms
+    FILL_MAIN = 0.28  # Gradient under main line
+    FILL_LIGHT = 0.18  # Rolling metric fills
+    FILL_HEAVY = 0.80  # Stacked area, bars
+    FILL_HIST = 0.65  # Histograms
 
     # ── Benchmark ──
-    BENCHMARK     = "#C49A3C"  # Same as GOLD default
-    BENCHMARK_LS  = "--"
+    BENCHMARK = "#C49A3C"  # Same as GOLD default
+    BENCHMARK_LS = "--"
 
     # ── Edge color (bars/histograms) ──
-    EDGE          = "white"
+    EDGE = "white"
 
     # ── Marker sizes ──
-    MARKER_SM     = 6
-    MARKER_LG     = 50
+    MARKER_SM = 6
+    MARKER_LG = 50
 
     # ── Font sizes ──
-    FONT_TITLE    = 15
-    FONT_LABEL    = 11
-    FONT_TICK     = 10
-    FONT_ANNOT    = 9
-    FONT_SMALL    = 7
+    FONT_TITLE = 15
+    FONT_LABEL = 11
+    FONT_TICK = 10
+    FONT_ANNOT = 9
+    FONT_SMALL = 7
 
     @staticmethod
-    def get(n: int) -> List[str]:
+    def get(n: int) -> list[str]:
         """Return *n* colours, cycling the palette if needed."""
         return [C.PALETTE[i % len(C.PALETTE)] for i in range(n)]
 
     @classmethod
-    def apply_theme(cls, config: "ThemeConfig") -> None:
+    def apply_theme(cls, config: ThemeConfig) -> None:
         """Bridge: update C class attributes from a ThemeConfig.
 
         This is the key mechanism that makes themes work without
@@ -286,23 +287,25 @@ C._DEFAULTS = {
 # Backward-compatible alias
 class ColorMap:
     """Legacy colour registry — delegates to C for consistency."""
-    PLOT_PRIMARY      = C.NAVY
-    PLOT_SECONDARY    = C.BENCHMARK
-    PLOT_BACKGROUND   = C.BG
+
+    PLOT_PRIMARY = C.NAVY
+    PLOT_SECONDARY = C.BENCHMARK
+    PLOT_BACKGROUND = C.BG
     FIGURE_BACKGROUND = C.FIG_BG
-    SPINE             = C.SPINE
-    GRID              = C.GRID
-    TITLE             = C.TITLE
-    LABEL             = C.LABEL
-    TICK              = C.TICK
-    WATERMARK         = C.WATERMARK
+    SPINE = C.SPINE
+    GRID = C.GRID
+    TITLE = C.TITLE
+    LABEL = C.LABEL
+    TICK = C.TICK
+    WATERMARK = C.WATERMARK
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # GLOBAL STYLE
 # ═══════════════════════════════════════════════════════════════════════════
 
-def apply_institutional_style(config: Optional["ThemeConfig"] = None) -> None:
+
+def apply_institutional_style(config: ThemeConfig | None = None) -> None:
     """Apply style to matplotlib rcParams.
 
     Reads colours from C (which may have been themed) and optionally
@@ -352,72 +355,74 @@ def apply_institutional_style(config: Optional["ThemeConfig"] = None) -> None:
         legend_edgecolor = C.SPINE
         hide_top_right = True
 
-    plt.rcParams.update({
-        # Typography
-        "font.family": font_family,
-        "font.sans-serif": [font, "Helvetica Neue", "Arial", "sans-serif"],
-        "font.size": font_size,
-        # Figure
-        "figure.facecolor": C.FIG_BG,
-        "figure.edgecolor": "none",
-        "figure.dpi": dpi,
-        "figure.figsize": figsize,
-        # Axes
-        "axes.facecolor": C.BG,
-        "axes.edgecolor": C.SPINE,
-        "axes.linewidth": spine_lw,
-        "axes.labelsize": label_size,
-        "axes.labelcolor": C.LABEL,
-        "axes.titlesize": title_size,
-        "axes.titleweight": "bold",
-        "axes.titlepad": title_pad,
-        "axes.labelpad": label_pad,
-        "axes.grid": True,
-        "axes.axisbelow": True,
-        "axes.spines.top": not hide_top_right,
-        "axes.spines.right": not hide_top_right,
-        # Grid
-        "grid.color": C.GRID,
-        "grid.linewidth": grid_lw,
-        "grid.alpha": grid_alpha,
-        "grid.linestyle": grid_ls,
-        # Ticks
-        "xtick.labelsize": tick_size,
-        "ytick.labelsize": tick_size,
-        "xtick.color": C.TICK,
-        "ytick.color": C.TICK,
-        "xtick.direction": "out",
-        "ytick.direction": "out",
-        "xtick.major.size": 4,
-        "ytick.major.size": 4,
-        "xtick.major.width": spine_lw,
-        "ytick.major.width": spine_lw,
-        "xtick.major.pad": tick_pad,
-        "ytick.major.pad": tick_pad,
-        # Legend
-        "legend.frameon": True,
-        "legend.framealpha": legend_framealpha,
-        "legend.edgecolor": legend_edgecolor,
-        "legend.fontsize": legend_size,
-        "legend.borderpad": 0.7,
-        "legend.labelspacing": 0.45,
-        "legend.handlelength": 2.0,
-        # Lines
-        "lines.linewidth": linewidth,
-        "lines.antialiased": True,
-        # Savefig
-        "savefig.dpi": 300,
-        "savefig.bbox": "tight",
-        "savefig.pad_inches": 0.15,
-        "savefig.facecolor": C.FIG_BG,
-    })
+    plt.rcParams.update(
+        {
+            # Typography
+            "font.family": font_family,
+            "font.sans-serif": [font, "Helvetica Neue", "Arial", "sans-serif"],
+            "font.size": font_size,
+            # Figure
+            "figure.facecolor": C.FIG_BG,
+            "figure.edgecolor": "none",
+            "figure.dpi": dpi,
+            "figure.figsize": figsize,
+            # Axes
+            "axes.facecolor": C.BG,
+            "axes.edgecolor": C.SPINE,
+            "axes.linewidth": spine_lw,
+            "axes.labelsize": label_size,
+            "axes.labelcolor": C.LABEL,
+            "axes.titlesize": title_size,
+            "axes.titleweight": "bold",
+            "axes.titlepad": title_pad,
+            "axes.labelpad": label_pad,
+            "axes.grid": True,
+            "axes.axisbelow": True,
+            "axes.spines.top": not hide_top_right,
+            "axes.spines.right": not hide_top_right,
+            # Grid
+            "grid.color": C.GRID,
+            "grid.linewidth": grid_lw,
+            "grid.alpha": grid_alpha,
+            "grid.linestyle": grid_ls,
+            # Ticks
+            "xtick.labelsize": tick_size,
+            "ytick.labelsize": tick_size,
+            "xtick.color": C.TICK,
+            "ytick.color": C.TICK,
+            "xtick.direction": "out",
+            "ytick.direction": "out",
+            "xtick.major.size": 4,
+            "ytick.major.size": 4,
+            "xtick.major.width": spine_lw,
+            "ytick.major.width": spine_lw,
+            "xtick.major.pad": tick_pad,
+            "ytick.major.pad": tick_pad,
+            # Legend
+            "legend.frameon": True,
+            "legend.framealpha": legend_framealpha,
+            "legend.edgecolor": legend_edgecolor,
+            "legend.fontsize": legend_size,
+            "legend.borderpad": 0.7,
+            "legend.labelspacing": 0.45,
+            "legend.handlelength": 2.0,
+            # Lines
+            "lines.linewidth": linewidth,
+            "lines.antialiased": True,
+            # Savefig
+            "savefig.dpi": 300,
+            "savefig.bbox": "tight",
+            "savefig.pad_inches": 0.15,
+            "savefig.facecolor": C.FIG_BG,
+        }
+    )
 
 
 _style_applied = False
-_current_theme_id: Optional[int] = None
+_current_theme_id: int | None = None
 
 
-def ensure_style(config: Optional["ThemeConfig"] = None) -> None:
+def ensure_style(config: ThemeConfig | None = None) -> None:
     """Apply style once, or re-apply if the theme changed."""
     global _style_applied, _current_theme_id
     theme_id = id(config) if config is not None else None
@@ -438,29 +443,41 @@ def reset_style() -> None:
 # WATERMARK
 # ═══════════════════════════════════════════════════════════════════════════
 
-def add_watermark(
-    fig: plt.Figure, text: str = "Source: QuantJourney Backtester"
-) -> None:
+
+def add_watermark(fig: plt.Figure, text: str = "Source: QuantJourney Backtester") -> None:
     """Add subtle source attribution and generation timestamp."""
     from datetime import datetime
 
     fig.text(
-        0.01, 0.01, text,
-        fontsize=7, color=C.MUTED, ha="left", va="bottom",
-        style="italic", alpha=0.6,
+        0.01,
+        0.01,
+        text,
+        fontsize=7,
+        color=C.MUTED,
+        ha="left",
+        va="bottom",
+        style="italic",
+        alpha=0.6,
         transform=fig.transFigure,
     )
     generated = datetime.now().astimezone().strftime("Generated: %Y-%m-%d %H:%M %Z")
     fig.text(
-        0.99, 0.01, generated,
-        fontsize=7, color=C.MUTED, ha="right", va="bottom",
-        alpha=0.6, transform=fig.transFigure,
+        0.99,
+        0.01,
+        generated,
+        fontsize=7,
+        color=C.MUTED,
+        ha="right",
+        va="bottom",
+        alpha=0.6,
+        transform=fig.transFigure,
     )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # AXIS STYLING HELPERS
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def style_ax(
     ax: plt.Axes,
@@ -472,22 +489,38 @@ def style_ax(
     """Apply institutional styling to an axes object."""
     if title:
         ax.set_title(
-            title, color=C.TITLE, fontsize=C.FONT_TITLE,
-            fontweight="bold", pad=14, loc="left",
+            title,
+            color=C.TITLE,
+            fontsize=C.FONT_TITLE,
+            fontweight="bold",
+            pad=14,
+            loc="left",
         )
     if subtitle:
         ax.text(
-            1.0, 1.03, subtitle, transform=ax.transAxes,
-            fontsize=C.FONT_ANNOT, color=C.SUBTITLE, ha="right", va="bottom",
-            clip_on=False, zorder=20,
+            1.0,
+            1.03,
+            subtitle,
+            transform=ax.transAxes,
+            fontsize=C.FONT_ANNOT,
+            color=C.SUBTITLE,
+            ha="right",
+            va="bottom",
+            clip_on=False,
+            zorder=20,
         )
     if ylabel:
         ax.set_ylabel(ylabel, color=C.LABEL, fontsize=C.FONT_LABEL, labelpad=10)
     if xlabel:
         ax.set_xlabel(xlabel, color=C.LABEL, fontsize=C.FONT_LABEL, labelpad=10)
     ax.tick_params(
-        axis="both", which="major", length=3, width=0.55,
-        colors=C.TICK, labelsize=C.FONT_TICK, pad=5,
+        axis="both",
+        which="major",
+        length=3,
+        width=0.55,
+        colors=C.TICK,
+        labelsize=C.FONT_TICK,
+        pad=5,
     )
     for spine in ("top", "right"):
         ax.spines[spine].set_visible(False)
@@ -560,7 +593,7 @@ def endpoint_annotation(
     label: str,
     color: str,
     fmt: str = "ratio",
-    offset: Tuple[int, int] = (8, 0),
+    offset: tuple[int, int] = (8, 0),
 ) -> None:
     """Add a labelled dot + text at the end of a time series."""
     clean = series.dropna()
@@ -577,18 +610,32 @@ def endpoint_annotation(
     else:
         txt = fmt_ratio(last_val)
 
-    ax.plot(last_date, last_val, "o", color=color, markersize=C.MARKER_SM, zorder=10,
-            markeredgecolor=C.EDGE, markeredgewidth=0.6)
+    ax.plot(
+        last_date,
+        last_val,
+        "o",
+        color=color,
+        markersize=C.MARKER_SM,
+        zorder=10,
+        markeredgecolor=C.EDGE,
+        markeredgewidth=0.6,
+    )
     ax.annotate(
         f"{label}: {txt}",
         xy=(last_date, last_val),
         xytext=(offset[0], offset[1]),
         textcoords="offset points",
-        fontsize=C.FONT_ANNOT, fontweight="bold", color=color,
-        ha="left", va="center",
+        fontsize=C.FONT_ANNOT,
+        fontweight="bold",
+        color=color,
+        ha="left",
+        va="center",
         bbox=dict(
-            boxstyle="round,pad=0.12", fc=C.FIG_BG,
-            ec="none", alpha=0.62, lw=0.0,
+            boxstyle="round,pad=0.12",
+            fc=C.FIG_BG,
+            ec="none",
+            alpha=0.62,
+            lw=0.0,
         ),
     )
 
@@ -597,8 +644,8 @@ def endpoint_annotations_pair(
     ax: plt.Axes,
     series: pd.Series,
     avg_value: float,
-    series_color: Optional[str] = None,
-    avg_color: Optional[str] = None,
+    series_color: str | None = None,
+    avg_color: str | None = None,
     series_label: str = "Current",
     avg_label: str = "Average",
     fmt: str = "ratio",
@@ -634,17 +681,23 @@ def endpoint_annotations_pair(
 def stats_box(ax: plt.Axes, text: str, loc: str = "upper left") -> None:
     """Place a semi-transparent stats box on *ax*."""
     x, y, ha, va = {
-        "upper left":   (0.02, 0.97, "left",  "top"),
-        "upper right":  (0.98, 0.97, "right", "top"),
-        "lower left":   (0.02, 0.03, "left",  "bottom"),
-        "lower right":  (0.98, 0.03, "right", "bottom"),
+        "upper left": (0.02, 0.97, "left", "top"),
+        "upper right": (0.98, 0.97, "right", "top"),
+        "lower left": (0.02, 0.03, "left", "bottom"),
+        "lower right": (0.98, 0.03, "right", "bottom"),
     }.get(loc, (0.02, 0.97, "left", "top"))
     ax.text(
-        x, y, text, transform=ax.transAxes, fontsize=C.FONT_ANNOT,
-        color=C.LABEL, ha=ha, va=va, linespacing=1.35,
+        x,
+        y,
+        text,
+        transform=ax.transAxes,
+        fontsize=C.FONT_ANNOT,
+        color=C.LABEL,
+        ha=ha,
+        va=va,
+        linespacing=1.35,
         fontfamily="monospace",
-        bbox=dict(boxstyle="round,pad=0.35", fc=C.FIG_BG, ec=C.SPINE,
-                  alpha=0.88, lw=0.55),
+        bbox=dict(boxstyle="round,pad=0.35", fc=C.FIG_BG, ec=C.SPINE, alpha=0.88, lw=0.55),
     )
 
 
@@ -661,8 +714,8 @@ def fmt_ratio(v: float, decimals: int = 2) -> str:
 
 
 def make_figure(
-    figsize: Optional[Tuple[float, float]] = None,
-) -> Tuple[plt.Figure, plt.Axes]:
+    figsize: tuple[float, float] | None = None,
+) -> tuple[plt.Figure, plt.Axes]:
     """Create a figure + axes with institutional styling pre-applied."""
     ensure_style()
     figsize = figsize or plt.rcParams.get("figure.figsize", (14, 7))
@@ -671,9 +724,9 @@ def make_figure(
 
 
 def diverging_cmap(
-    neg: Optional[str] = None,
-    zero: Optional[str] = None,
-    pos: Optional[str] = None,
+    neg: str | None = None,
+    zero: str | None = None,
+    pos: str | None = None,
 ) -> mcolors.LinearSegmentedColormap:
     """Create a diverging colormap for heatmaps."""
     neg = neg or C.HM_NEG
@@ -688,6 +741,7 @@ def diverging_cmap(
 # LEGACY COMPAT: LegendStats / ColorUtilities / LegendUtilities / PlotUtilities
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class LegendStats(Enum):
     TOTAL_CHANGE = "total_change"
     AVG_STD_SKEW_KURT = "avg_std_skew_kurt"
@@ -699,7 +753,7 @@ class ColorUtilities:
     _PALETTE = C.PALETTE
 
     @staticmethod
-    def get_n_colors(n: int = 5) -> List[str]:
+    def get_n_colors(n: int = 5) -> list[str]:
         return C.get(n)
 
 
@@ -708,7 +762,7 @@ class LegendUtilities:
     def get_legend_lines(
         data: Any,
         legend_stats: LegendStats = LegendStats.LAST,
-    ) -> List[str]:
+    ) -> list[str]:
         if isinstance(data, pd.Series):
             df = data.to_frame()
         elif isinstance(data, pd.DataFrame):
@@ -716,7 +770,7 @@ class LegendUtilities:
         else:
             return [str(data)]
 
-        lines: List[str] = []
+        lines: list[str] = []
         for col in df.columns:
             s = df[col].dropna()
             name = str(col)
@@ -740,21 +794,24 @@ class LegendUtilities:
     @staticmethod
     def set_legend(
         ax: plt.Axes,
-        labels: Optional[List[Any]] = None,
-        legend_loc: Optional[str] = None,
+        labels: list[Any] | None = None,
+        legend_loc: str | None = None,
         lines: Any = None,
         colors: Any = None,
         **kwargs,
     ) -> None:
         loc = legend_loc or "best"
         _kw = dict(
-            loc=loc, framealpha=0.92, fontsize=9,
-            edgecolor=C.GRID, borderpad=0.6,
+            loc=loc,
+            framealpha=0.92,
+            fontsize=9,
+            edgecolor=C.GRID,
+            borderpad=0.6,
         )
         if lines is not None and labels is not None:
-            ax.legend(lines, [str(l) for l in labels], **_kw)
+            ax.legend(lines, [str(label) for label in labels], **_kw)
         elif labels is not None:
-            str_labels = [str(l) for l in labels]
+            str_labels = [str(label) for label in labels]
             handles, _ = ax.get_legend_handles_labels()
             if handles:
                 ax.legend(handles, str_labels, **_kw)
@@ -766,19 +823,20 @@ class LegendUtilities:
     @staticmethod
     def set_legend_with_rectangles(
         ax: plt.Axes,
-        labels: List[str],
-        colors: List[str],
-        legend_color: Optional[str] = None,
-        legend_loc: Optional[str] = None,
-        bbox_to_anchor: Optional[Tuple] = None,
-        framealpha: Optional[float] = None,
+        labels: list[str],
+        colors: list[str],
+        legend_color: str | None = None,
+        legend_loc: str | None = None,
+        bbox_to_anchor: tuple | None = None,
+        framealpha: float | None = None,
         **kwargs,
     ) -> None:
         patches = [
-            mpatches.Patch(facecolor=c, label=l) for c, l in zip(colors, labels)
+            mpatches.Patch(facecolor=color, label=label)
+            for color, label in zip(colors, labels, strict=True)
         ]
         loc = legend_loc or "best"
-        kw: Dict[str, Any] = {
+        kw: dict[str, Any] = {
             "loc": loc,
             "framealpha": framealpha or 0.92,
             "fontsize": 9,
@@ -794,13 +852,13 @@ class LegendUtilities:
 class PlotUtilities:
     @staticmethod
     def create_figure(
-        figsize: Optional[Tuple[int, int]] = None,
-    ) -> Tuple[plt.Figure, plt.Axes]:
+        figsize: tuple[int, int] | None = None,
+    ) -> tuple[plt.Figure, plt.Axes]:
         return make_figure(figsize)
 
     @staticmethod
     def plot_line(ax, x_data=None, y_data=None, color=None, label=None, **kwargs):
-        kw: Dict[str, Any] = {"linewidth": C.LW_MAIN, "antialiased": True}
+        kw: dict[str, Any] = {"linewidth": C.LW_MAIN, "antialiased": True}
         if color:
             kw["color"] = color
         if label:
@@ -815,8 +873,12 @@ class PlotUtilities:
     @staticmethod
     def set_title(ax, title="", **kwargs):
         ax.set_title(
-            title, fontsize=C.FONT_TITLE, fontweight="bold",
-            color=C.TITLE, pad=18, loc="left",
+            title,
+            fontsize=C.FONT_TITLE,
+            fontweight="bold",
+            color=C.TITLE,
+            pad=18,
+            loc="left",
         )
 
     @staticmethod
@@ -838,8 +900,9 @@ class PlotUtilities:
             ax.spines[side].set_linewidth(0.7)
 
     @staticmethod
-    def set_date_on_axis(ax, data=None, x_date_freq=None, x_date_format=None,
-                         x_date_rotation=None, **kwargs):
+    def set_date_on_axis(
+        ax, data=None, x_date_freq=None, x_date_format=None, x_date_rotation=None, **kwargs
+    ):
         if data is not None:
             smart_date_axis(ax, data)
         else:
@@ -873,21 +936,32 @@ class PlotUtilities:
             return
         c = color or C.NAVY
         for lbl, (x, y) in label_x_y.items():
-            ax.scatter(x, y, color=c, marker=marker, zorder=5, s=C.MARKER_LG // 2,
-                       edgecolors=C.EDGE, linewidths=0.8)
+            ax.scatter(
+                x,
+                y,
+                color=c,
+                marker=marker,
+                zorder=5,
+                s=C.MARKER_LG // 2,
+                edgecolors=C.EDGE,
+                linewidths=0.8,
+            )
             if lbl:
                 ax.annotate(
-                    lbl, (x, y), fontsize=fontsize, color=c,
-                    xytext=(6, 6), textcoords="offset points",
-                    bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
-                              edgecolor=C.GRID, alpha=0.9),
+                    lbl,
+                    (x, y),
+                    fontsize=fontsize,
+                    color=c,
+                    xytext=(6, 6),
+                    textcoords="offset points",
+                    bbox=dict(
+                        boxstyle="round,pad=0.2", facecolor="white", edgecolor=C.GRID, alpha=0.9
+                    ),
                 )
 
     @staticmethod
     def format_y_axis_as_percentage(ax, decimals=0, **kwargs):
-        ax.yaxis.set_major_formatter(
-            mticker.FuncFormatter(lambda v, _: f"{v * 100:.{decimals}f}%")
-        )
+        ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"{v * 100:.{decimals}f}%"))
 
     @staticmethod
     def set_y_limits(ax, y_limits=None, **kwargs):

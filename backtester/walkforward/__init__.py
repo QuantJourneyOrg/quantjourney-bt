@@ -25,8 +25,8 @@ Licensed under the Apache License 2.0.
 
 from backtester.walkforward.config import WalkForwardConfig
 from backtester.walkforward.engine import WalkForwardEngine
-from backtester.walkforward.result import FoldResult, WalkForwardResult
 from backtester.walkforward.folds.base import Fold
+from backtester.walkforward.result import FoldResult, WalkForwardResult
 
 __all__ = [
     "WalkForwardConfig",

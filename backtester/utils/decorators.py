@@ -1,32 +1,35 @@
 """
-	QuantJourney Framework - Decorators for Timing Functions
-	------------------------------------------------------------
+        QuantJourney Framework - Decorators for Timing Functions
+        ------------------------------------------------------------
 
-	This module provides a set of decorators for the QuantJourney Framework, including
-	`timer`, `timefn`, and `asyn_timefn` for timing both synchronous and asynchronous
-	functions. These decorators are designed to aid in performance monitoring and
-	optimization within the framework.
+        This module provides a set of decorators for the QuantJourney Framework, including
+        `timer`, `timefn`, and `asyn_timefn` for timing both synchronous and asynchronous
+        functions. These decorators are designed to aid in performance monitoring and
+        optimization within the framework.
 
 Copyright (c) 2026 QuantJourney.
 Licensed under the Apache License 2.0.
 """
 
 import functools
-from functools import wraps
+import os
 import time
+from functools import wraps
+from typing import Any
+
 import numpy as np
 import pandas as pd
-import os
-from typing import Tuple, Dict, Any, Optional, List as PyList
 
 # Optional numba support: provide graceful fallbacks when unavailable
 try:
     from numba import njit  # type: ignore
     from numba.typed import List as NumbaList  # type: ignore
 except Exception:  # numba not installed or unsupported python version
+
     def njit(*args, **kwargs):  # type: ignore
         def _decorator(func):
             return func
+
         return _decorator
 
     # Fallback: use built-in list as a stand-in for numba.typed.List
@@ -35,12 +38,12 @@ except Exception:  # numba not installed or unsupported python version
 from backtester.utils.logger import logger
 
 
-def to_flat_np_array(input_list: PyList[np.ndarray]) -> np.ndarray:
+def to_flat_np_array(input_list: list[np.ndarray]) -> np.ndarray:
     return np.concatenate(input_list).ravel()
 
 
 @njit(cache=False, fastmath=False)
-def set_time_grid(ttm: float, nb_steps: int = 360) -> Tuple[int, float, np.ndarray]:
+def set_time_grid(ttm: float, nb_steps: int = 360) -> tuple[int, float, np.ndarray]:
     """
     Set daily steps
 
@@ -90,9 +93,7 @@ def compute_histogram_data(
     Returns:
         pd.Series: histogram data
     """
-    hist_data, bin_edges = np.histogram(
-        a=data, bins=len(x_grid) - 1, range=(x_grid[0], x_grid[-1])
-    )
+    hist_data, bin_edges = np.histogram(a=data, bins=len(x_grid) - 1, range=(x_grid[0], x_grid[-1]))
     hist_data = np.append(np.array(x_grid[0]), hist_data)
     hist_data = hist_data / len(data)
     hist_data = pd.Series(hist_data, index=bin_edges, name=name)
@@ -128,7 +129,7 @@ def loggertext(start_message, end_message=None):
 
     Args:
         start_message (str): The message to log at the start of the function.
-        end_message (str, optional): The message to log at the end of the function. Defaults to None.
+        end_message (str, optional): Message to log at the end. Defaults to None.
 
     Returns:
         wrapper_log_start_and_end: wrapper function
@@ -148,9 +149,7 @@ def loggertext(start_message, end_message=None):
     return decorator_log_start_and_end
 
 
-def update_kwargs(
-    kwargs: Dict[Any, Any], new_kwargs: Optional[Dict[Any, Any]]
-) -> Dict[Any, Any]:
+def update_kwargs(kwargs: dict[Any, Any], new_kwargs: dict[Any, Any] | None) -> dict[Any, Any]:
     """
     Update kwargs with optional kwargs dicts
 
@@ -216,11 +215,11 @@ def error_logger(message=None):
     Supports both sync and async functions.
     Note: __file__ captures the filename of this decorator module.
     """
-    import asyncio
     import inspect
 
     def decorator(func):
         if inspect.iscoroutinefunction(func):
+
             @wraps(func)
             async def async_wrapper(*args, **kwargs):
                 try:
@@ -241,6 +240,7 @@ def error_logger(message=None):
 
             return async_wrapper
         else:
+
             @wraps(func)
             def sync_wrapper(*args, **kwargs):
                 try:

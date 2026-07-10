@@ -73,13 +73,15 @@ class ProtectiveStopLoss(Backtester):
             elif pos > 0 and not self._has_stop.get(inst, False):
                 entry = self.get_average_entry_price(inst)
                 if entry is not None:
-                    self.fill_engine.submit(Order(
-                        inst,
-                        OrderSide.SELL,
-                        pos,
-                        OrderType.STOP,
-                        stop_price=round(entry * 0.95, 2),
-                    ))
+                    self.fill_engine.submit(
+                        Order(
+                            inst,
+                            OrderSide.SELL,
+                            pos,
+                            OrderType.STOP,
+                            stop_price=round(entry * 0.95, 2),
+                        )
+                    )
                     self._has_stop[inst] = True
             elif signal == 0 and prev == 1 and pos > 0:
                 self.fill_engine.cancel_all(instrument=inst)

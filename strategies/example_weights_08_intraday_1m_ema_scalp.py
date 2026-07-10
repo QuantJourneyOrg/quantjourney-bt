@@ -24,7 +24,7 @@ Usage:
 
 import asyncio
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
 
@@ -43,7 +43,7 @@ def _credentials() -> dict:
 
 def _recent_period(days: int = 5) -> dict[str, str]:
     # yfinance serves at most ~7 calendar days of 1-minute bars.
-    end = datetime.now(timezone.utc).date()
+    end = datetime.now(UTC).date()
     start = end - timedelta(days=days)
     return {"start": start.isoformat(), "end": end.isoformat()}
 

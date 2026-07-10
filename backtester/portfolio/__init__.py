@@ -23,6 +23,11 @@ __all__ = [
     "WeightCostBreakdown",
     "WeightCostModel",
     "FixedBpsWeightCostModel",
+    "LedgerResult",
+    "PortfolioLedger",
+    "PortfolioSnapshot",
+    "StrategyBook",
+    "StrategyBookResult",
 ]
 
 
@@ -45,4 +50,8 @@ def __getattr__(name: str) -> Any:
         return importlib.import_module("backtester.portfolio.weight_cost").WeightCostModel
     if name == "FixedBpsWeightCostModel":
         return importlib.import_module("backtester.portfolio.weight_cost").FixedBpsWeightCostModel
+    if name in {"LedgerResult", "PortfolioLedger", "PortfolioSnapshot"}:
+        return getattr(importlib.import_module("backtester.portfolio.accounting"), name)
+    if name in {"StrategyBook", "StrategyBookResult"}:
+        return getattr(importlib.import_module("backtester.portfolio.book"), name)
     raise AttributeError(name)

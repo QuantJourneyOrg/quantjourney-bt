@@ -42,7 +42,9 @@ class MarketRSIReversion(Backtester):
     """RSI entry/exit strategy implemented with market orders."""
 
     def _has_pending(self, instrument: str) -> bool:
-        return any(o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders)
+        return any(
+            o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders
+        )
 
     def _compute_orders(self, date, bars, current_positions, nav) -> None:
         rsi = self.instruments_data.get_feature("RSI_14_close")

@@ -5,7 +5,7 @@ Copyright (c) 2026 QuantJourney.
 Licensed under the Apache License 2.0.
 """
 
-from . import returns, risk, rolling_stats, metrics
+from . import metrics, returns, risk, rolling_stats
 
 __all__ = [
     "returns",

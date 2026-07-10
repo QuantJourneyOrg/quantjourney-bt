@@ -42,5 +42,7 @@ def reindex_time_like(
 ) -> pd.Series | pd.DataFrame:
     """Timezone-normalize ``obj`` before reindexing to ``target_index``."""
     return normalize_time_index_like(obj, target_index).reindex(
-        index=target_index, *args, **kwargs
+        index=target_index,
+        *args,  # noqa: B026
+        **kwargs,
     )

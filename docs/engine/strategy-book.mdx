@@ -1,0 +1,76 @@
+---
+title: "Strategy Book"
+description: "Allocate capital across independently backtested strategies with point-in-time allocations, rebalancing and book-level costs."
+---
+
+# Strategy Book
+
+<code>StrategyBook</code> is a portfolio of strategy sleeves. Each sleeve is an
+already simulated NAV or return stream. The book allocates capital among those
+streams using the same <code>RebalancePolicy</code> and weight-cost contracts as
+the fast portfolio engine.
+
+```python
+from backtester import StrategyBook
+from backtester.portfolio.rebalance import RebalancePolicy
+from backtester.portfolio.weight_cost import FixedBpsWeightCostModel
+
+book = StrategyBook(
+    sleeves={
+        "quality": quality.portfolio_data,
+        "trend": trend.portfolio_data,
+        "defensive": defensive_nav,
+    },
+    allocations={"quality": 0.40, "trend": 0.35, "defensive": 0.25},
+    rebalance_policy=RebalancePolicy(frequency="BME"),
+    weight_cost_model=FixedBpsWeightCostModel(total_bps=2.0),
+    initial_capital=1_000_000.0,
+).run()
+```
+
+The result contains book NAV and returns, target and actual allocations,
+sleeve values and units, cash, rebalance flags, turnover, costs, aligned sleeve
+NAV and summary statistics.
+
+## Point-In-Time Allocation Changes
+
+Pass a DataFrame to change allocations through time. Rows are forward-filled
+and never backfilled. Every sleeve needs a known allocation on or before the
+first book timestamp.
+
+```python
+allocations = pd.DataFrame(
+    {
+        "quality": [0.50, 0.30],
+        "trend": [0.30, 0.50],
+        "defensive": [0.20, 0.20],
+    },
+    index=[pd.Timestamp("2024-01-01"), pd.Timestamp("2024-07-01")],
+)
+```
+
+An allocation observed at t is applied at that close and can earn sleeve
+returns only from the next interval.
+
+## Input Contract
+
+- A sleeve may be a <code>PortfolioData</code>-like object with
+  <code>net_asset_value</code>, or a <code>pd.Series</code>.
+- For Series inputs, set <code>series_kind="nav"</code> or
+  <code>series_kind="returns"</code>; the engine does not guess.
+- Sleeve timestamps must be unique and increasing.
+- The book uses the common observable lifetime and never carries values before
+  inception or after termination.
+- Missing observations inside the common lifetime are treated as zero sleeve
+  return by carrying the last NAV.
+
+## Accounting Boundary
+
+The book allocates capital sleeves. It does not merge or net underlying
+security orders across strategies. Opposing AAPL positions inside two sleeves
+remain separate, and sleeve-internal costs must already be present in each
+sleeve NAV. <code>result.stats["underlying_security_netting"]</code> is
+therefore always <code>False</code>.
+
+Security-level crossing, shared cash, coordinated margin and consolidated
+tax lots require a multi-strategy master account, which is a different engine.

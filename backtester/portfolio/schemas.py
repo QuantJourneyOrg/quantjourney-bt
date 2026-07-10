@@ -11,8 +11,8 @@ Licensed under the Apache License 2.0.
 
 from __future__ import annotations
 
-from typing import Iterable, Optional, Tuple
 import os
+from collections.abc import Iterable
 
 import pandas as pd
 
@@ -85,7 +85,7 @@ def validate_prices_frame(prices: pd.DataFrame) -> None:
             schema = pa.DataFrameSchema(columns=cols, coerce=True, strict=False)
             schema.validate(prices)
         except Exception as e:
-            raise ValueError(f"prices: Pandera validation failed: {e}")
+            raise ValueError(f"prices: Pandera validation failed: {e}") from e
 
 
 def validate_metrics_frame(metrics: pd.DataFrame) -> None:
@@ -98,7 +98,7 @@ def validate_metrics_frame(metrics: pd.DataFrame) -> None:
             schema = pa.DataFrameSchema(columns=cols, coerce=True, strict=False)
             schema.validate(metrics)
         except Exception as e:
-            raise ValueError(f"metrics: Pandera validation failed: {e}")
+            raise ValueError(f"metrics: Pandera validation failed: {e}") from e
 
 
 def validate_parameters_frame(parameters: pd.DataFrame) -> None:
@@ -108,7 +108,7 @@ def validate_parameters_frame(parameters: pd.DataFrame) -> None:
     lvl = parameters.columns.get_level_values(1)
     # Basic dtype sanity checks
     # Units numeric
-    if (parameters.loc[:, lvl == "units"].apply(pd.to_numeric, errors="coerce").isna().any().any()):
+    if parameters.loc[:, lvl == "units"].apply(pd.to_numeric, errors="coerce").isna().any().any():
         raise ValueError("parameters: 'units' must be numeric or castable to numeric")
     # Booleans not-null
     for flag in ("eligibility", "active", "is_trading_day"):
@@ -121,10 +121,10 @@ def validate_parameters_frame(parameters: pd.DataFrame) -> None:
             schema = pa.DataFrameSchema(columns=cols, coerce=True, strict=False)
             schema.validate(parameters)
         except Exception as e:
-            raise ValueError(f"parameters: Pandera validation failed: {e}")
+            raise ValueError(f"parameters: Pandera validation failed: {e}") from e
 
 
-def validate_strategies_frame(strategies: Optional[pd.DataFrame]) -> None:
+def validate_strategies_frame(strategies: pd.DataFrame | None) -> None:
     if strategies is None or strategies.empty:
         return
     if not isinstance(strategies.columns, pd.MultiIndex) or strategies.columns.nlevels != 3:
@@ -135,7 +135,7 @@ def validate_strategies_frame(strategies: Optional[pd.DataFrame]) -> None:
             schema = pa.DataFrameSchema(columns=cols, coerce=True, strict=False)
             schema.validate(strategies)
         except Exception as e:
-            raise ValueError(f"strategies: Pandera validation failed: {e}")
+            raise ValueError(f"strategies: Pandera validation failed: {e}") from e
 
 
 def validate_nav_series(nav: pd.Series) -> None:
@@ -146,7 +146,7 @@ def validate_nav_series(nav: pd.Series) -> None:
         try:
             pa.SeriesSchema(pa.Float, coerce=True).validate(nav)
         except Exception as e:
-            raise ValueError(f"nav: Pandera validation failed: {e}")
+            raise ValueError(f"nav: Pandera validation failed: {e}") from e
 
 
 def validate_weights_frame(weights: pd.DataFrame, instruments: Iterable[str]) -> None:
@@ -154,11 +154,16 @@ def validate_weights_frame(weights: pd.DataFrame, instruments: Iterable[str]) ->
     if not set(weights.columns) >= set(instruments):
         missing = set(instruments) - set(weights.columns)
         raise ValueError(f"weights: missing columns for instruments: {sorted(missing)}")
-    if not all(pd.api.types.is_float_dtype(weights[c]) or pd.api.types.is_numeric_dtype(weights[c]) for c in weights.columns):
+    if not all(
+        pd.api.types.is_float_dtype(weights[c]) or pd.api.types.is_numeric_dtype(weights[c])
+        for c in weights.columns
+    ):
         raise ValueError("weights: all columns must be numeric")
     if STRICT_PANDERA and pa is not None:
         try:
-            schema = pa.DataFrameSchema({str(col): pa.Column(float, nullable=False) for col in weights.columns}, coerce=True)
+            schema = pa.DataFrameSchema(
+                {str(col): pa.Column(float, nullable=False) for col in weights.columns}, coerce=True
+            )
             schema.validate(weights)
         except Exception as e:
-            raise ValueError(f"weights: Pandera validation failed: {e}")
+            raise ValueError(f"weights: Pandera validation failed: {e}") from e

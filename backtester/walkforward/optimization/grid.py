@@ -16,7 +16,8 @@ import itertools
 import logging
 import random
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -47,7 +48,7 @@ class GridSearchOptimizer:
 
     def __init__(
         self,
-        param_grid: Dict[str, list] | None = None,
+        param_grid: dict[str, list] | None = None,
         objective: str = "sharpe",
         max_combinations: int = 500,
         seed: int = 42,
@@ -60,7 +61,7 @@ class GridSearchOptimizer:
 
     # ── Combination builder ───────────────────────────────────────────
 
-    def _build_combos(self) -> Tuple[List[str], List[tuple]]:
+    def _build_combos(self) -> tuple[list[str], list[tuple]]:
         """Cartesian product, subsampled at max_combinations."""
         keys = list(self._param_grid.keys())
         values = list(self._param_grid.values())
@@ -74,8 +75,8 @@ class GridSearchOptimizer:
 
     def _finalize(
         self,
-        trials: List[TrialRecord],
-        best_params: Dict[str, Any],
+        trials: list[TrialRecord],
+        best_params: dict[str, Any],
         best_score: float,
         elapsed: float,
     ) -> OptimizationResult:
@@ -113,7 +114,7 @@ class GridSearchOptimizer:
 
     def optimize_fn(
         self,
-        evaluate_fn: Callable[[Dict[str, Any]], float],
+        evaluate_fn: Callable[[dict[str, Any]], float],
     ) -> OptimizationResult:
         """
         Run grid search using a synchronous evaluation function.
@@ -127,12 +128,12 @@ class GridSearchOptimizer:
         t0 = time.time()
         keys, all_combos = self._build_combos()
 
-        trials: List[TrialRecord] = []
+        trials: list[TrialRecord] = []
         best_score = -np.inf
-        best_params: Dict[str, Any] = {}
+        best_params: dict[str, Any] = {}
 
         for i, combo in enumerate(all_combos):
-            params = dict(zip(keys, combo))
+            params = dict(zip(keys, combo, strict=True))
             trial_t0 = time.time()
             try:
                 score = float(evaluate_fn(params))
@@ -142,13 +143,15 @@ class GridSearchOptimizer:
                 score = -np.inf
                 state = "FAIL"
 
-            trials.append(TrialRecord(
-                number=i,
-                params=params,
-                value=score,
-                duration_seconds=time.time() - trial_t0,
-                state=state,
-            ))
+            trials.append(
+                TrialRecord(
+                    number=i,
+                    params=params,
+                    value=score,
+                    duration_seconds=time.time() - trial_t0,
+                    state=state,
+                )
+            )
 
             if state == "COMPLETE" and score > best_score:
                 best_score = score
@@ -163,9 +166,9 @@ class GridSearchOptimizer:
         backtester_factory: Callable[..., Any],
         train_start: str,
         train_end: str,
-        base_config: Dict[str, Any],
+        base_config: dict[str, Any],
         *,
-        progress_callback: Callable[[Dict[str, Any]], None] | None = None,
+        progress_callback: Callable[[dict[str, Any]], None] | None = None,
         cancel_check: Callable[[], bool] | None = None,
     ) -> OptimizationResult:
         """
@@ -179,16 +182,16 @@ class GridSearchOptimizer:
         t0 = time.time()
         keys, all_combos = self._build_combos()
 
-        trials: List[TrialRecord] = []
+        trials: list[TrialRecord] = []
         best_score = -np.inf
-        best_params: Dict[str, Any] = {}
+        best_params: dict[str, Any] = {}
 
         for i, combo in enumerate(all_combos):
             if cancel_check and cancel_check():
                 logger.info("GridSearchOptimizer: cancelled after %d trials", i)
                 break
 
-            params = dict(zip(keys, combo))
+            params = dict(zip(keys, combo, strict=True))
             trial_t0 = time.time()
             try:
                 score = await self._evaluate_backtest(
@@ -200,37 +203,41 @@ class GridSearchOptimizer:
                 score = -np.inf
                 state = "FAIL"
 
-            trials.append(TrialRecord(
-                number=i,
-                params=params,
-                value=score,
-                duration_seconds=time.time() - trial_t0,
-                state=state,
-            ))
+            trials.append(
+                TrialRecord(
+                    number=i,
+                    params=params,
+                    value=score,
+                    duration_seconds=time.time() - trial_t0,
+                    state=state,
+                )
+            )
 
             if state == "COMPLETE" and score > best_score:
                 best_score = score
                 best_params = params.copy()
 
             if progress_callback:
-                progress_callback({
-                    "trial": i,
-                    "total": len(all_combos),
-                    "value": score,
-                    "best": best_score,
-                    "params": params,
-                    "elapsed": round(time.time() - t0, 1),
-                })
+                progress_callback(
+                    {
+                        "trial": i,
+                        "total": len(all_combos),
+                        "value": score,
+                        "best": best_score,
+                        "params": params,
+                        "elapsed": round(time.time() - t0, 1),
+                    }
+                )
 
         return self._finalize(trials, best_params, best_score, time.time() - t0)
 
     @staticmethod
     async def _evaluate_backtest(
         backtester_factory: Callable[..., Any],
-        params: Dict[str, Any],
+        params: dict[str, Any],
         train_start: str,
         train_end: str,
-        base_config: Dict[str, Any],
+        base_config: dict[str, Any],
     ) -> float:
         """Run one IS backtest for a param combo and return its Sharpe."""
         merged = {

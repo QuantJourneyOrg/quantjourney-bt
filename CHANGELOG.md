@@ -1,5 +1,38 @@
 # QuantJourney Backtester Changelog
 
+## 0.10.0 - 2026-07-10
+
+### Added
+- Added the shared execution simulator, contract-aware portfolio ledger,
+  portfolio-of-strategies book, and pre-trade risk controls to the explicitly
+  approved Apache-2.0 public scope.
+- Expanded the runnable catalog to 50 examples: 25 weight-based, 20
+  order-based, and 5 walk-forward/optimization strategies, including the new
+  FX and continuous-futures research examples.
+- Added a fail-closed release boundary: local commit/push guards, a reviewed
+  source manifest, clean-tag publishing, and exact wheel/sdist verification.
+
+### Fixed
+- Rejected unsupported cross-currency FX accounting in core and standalone
+  ledger paths instead of treating quote-currency PnL as portfolio currency;
+  incomplete or invalid external FX/futures contract metadata now fails closed.
+- Standardized strategy storage on `(strategy, field, instrument)`, rejected
+  silently misaligned strategy output, and preserved valid all-zero strategies.
+- Scoped ETag response caches to one immutable per-request tenant/principal
+  snapshot, including during concurrent context changes; cache keys are fully
+  opaque and invalidated whenever the security context changes.
+
+### Changed
+- Restored the public README and changelog boundary, then documented only the
+  approved public runtime and strategy additions.
+- Modernized Python 3.11 typing syntax, removed the Ruff backlog, and made full
+  lint/format checks blocking.
+- Added a locked full-package mypy baseline gate that fails on every
+  unreviewed diagnostic change while the existing typing debt is reduced.
+- Declared and continuously tests Python 3.11 through 3.14.
+- External PyPI artifacts are built only from a clean version-matched tag after
+  tests and artifact-manifest checks; local uploads are unsupported.
+
 ## 0.9.1 - 2026-07-09
 
 ### Changed

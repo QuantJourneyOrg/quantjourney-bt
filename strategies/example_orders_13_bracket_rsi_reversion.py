@@ -42,7 +42,9 @@ class BracketRSIReversion(Backtester):
     """RSI dip-buying with bracket exits."""
 
     def _has_pending(self, instrument: str) -> bool:
-        return any(o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders)
+        return any(
+            o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders
+        )
 
     def _compute_orders(self, date, bars, current_positions, nav) -> None:
         rsi = self.instruments_data.get_feature("RSI_14_close")
@@ -64,13 +66,15 @@ class BracketRSIReversion(Backtester):
                         take_profit_price=round(bar.close * 1.04, 2),
                         stop_loss_price=round(bar.close * 0.98, 2),
                     )
-                    self.fill_engine.submit(Order(
-                        inst,
-                        OrderSide.BUY,
-                        shares,
-                        OrderType.BRACKET,
-                        bracket=bracket,
-                    ))
+                    self.fill_engine.submit(
+                        Order(
+                            inst,
+                            OrderSide.BUY,
+                            shares,
+                            OrderType.BRACKET,
+                            bracket=bracket,
+                        )
+                    )
             elif pos > 0 and value > 70:
                 self.fill_engine.cancel_all(instrument=inst)
                 self.fill_engine.submit(Order(inst, OrderSide.SELL, pos, OrderType.MARKET))

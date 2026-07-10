@@ -32,10 +32,11 @@ Licensed under the Apache License 2.0.
 """
 
 from backtester.risk.base import RiskModel, RiskModelChain
-from backtester.risk.vol_target import VolTargetModel
 from backtester.risk.inverse_vol import InverseVolModel
-from backtester.risk.risk_parity import RiskParityModel
 from backtester.risk.position_limit import PositionLimitModel
+from backtester.risk.pre_trade import PreTradeDecision, PreTradeResult, PreTradeRisk
+from backtester.risk.risk_parity import RiskParityModel
+from backtester.risk.vol_target import VolTargetModel
 
 __all__ = [
     "RiskModel",
@@ -44,4 +45,7 @@ __all__ = [
     "InverseVolModel",
     "RiskParityModel",
     "PositionLimitModel",
+    "PreTradeDecision",
+    "PreTradeResult",
+    "PreTradeRisk",
 ]

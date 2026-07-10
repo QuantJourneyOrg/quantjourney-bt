@@ -1,0 +1,236 @@
+---
+title: "Order Lifecycle"
+description: "How order-mode strategies submit orders, how FillEngine processes bars, and how fills update cash, positions and NAV."
+---
+
+# Order Lifecycle
+
+The common order engine is a bar-by-bar execution simulation. Orders may come
+from a strategy's <code>_compute_orders(...)</code> hook or from the
+execution-aware target-weight controller. FillEngine stores them as pending,
+tests them against future bars, emits fills and updates the shared ledger.
+
+<div className="qj-contract">
+  <div><strong>Source</strong><code>execution/simulator.py + execution/fill_engine.py + portfolio/accounting/ledger.py + risk/pre_trade.py</code></div>
+  <div><strong>Layer</strong>Order execution state machine</div>
+  <div><strong>Mode</strong>direct orders and <code>weight_execution="orders"</code></div>
+  <div><strong>Input</strong><code>Order</code> objects, OHLCV bars, slippage model, commission model</div>
+  <div><strong>Output</strong>fills, order history, blotter trades, cash, positions and NAV</div>
+  <div><strong>Primary API</strong><code>execution_mode="orders"</code> or <code>weight_execution="orders"</code></div>
+  <div><strong>Main caveat</strong>With daily OHLCV, the engine knows touched levels but not exact intraday sequence.</div>
+</div>
+
+## Mental Model
+
+Order mode is for execution-aware research, not pure allocation research. Use it
+when the result depends on stops, limits, trailing stops, brackets, OCO,
+slippage, commission or current position state.
+
+<div className="qj-flow">
+for each bar:
+    build BarData(open, high, low, close, volume)
+    process pending orders through FillEngine
+    revalidate portfolio risk at the actual prospective fill price
+    apply fills through PortfolioLedger
+    mark NAV, margin and buying power at close
+    call _compute_orders(date, bars, current_positions, nav)
+    store positions and returns
+</div>
+
+<div className="qj-callout warning">
+  <div className="qj-callout-title">Order timing</div>
+  In the current loop, pending orders are processed before the strategy is
+  called for the current bar. Orders emitted by <code>_compute_orders(...)</code>
+  should be treated as pending for later bar processing, not same-bar hindsight fills.
+</div>
+
+## Lifecycle Steps
+
+| Step | Owner | What happens |
+|---|---|---|
+| 1. Strategy decision | strategy | <code>_compute_orders(date, bars, current_positions, nav)</code> evaluates state. |
+| 2. Pre-submit risk | PreTradeRisk | Account limits approve or reject the proposed order/trade list using current marks. Generated weight orders default to a 100% margin-utilization cap; direct orders remain pass-through unless configured. |
+| 3. Submit | strategy / FillEngine | Strategy calls <code>self.fill_engine.submit(Order(...))</code>. |
+| 4. Pending state | FillEngine | An approved order is stored by instrument until it fills, cancels or expires. Rejections remain in order history with a reason. |
+| 5. Bar trigger check | FillEngine | Market, stop, trailing, limit and OCO rules are tested against OHLC. |
+| 6. Theoretical price | FillEngine | A pre-slippage fill price is selected from open/stop/limit rules. |
+| 7. Slippage | slippage model | Fill price is adjusted by the configured slippage model. |
+| 8. Commission preview | commission model | Expected incremental fill commission is calculated without mutating state. |
+| 9. Pre-fill risk | ExecutionSimulator | Limits are rechecked using the actual prospective fill price and commission; gap/slippage breaches reject the remainder. |
+| 10. Fill record | FillEngine | A <code>Fill</code> object is returned. |
+| 11. Accounting | PortfolioLedger | Cash, positions, average entry, NAV, margin and buying power are updated. |
+| 12. Sibling logic | FillEngine | Bracket children activate; OCO siblings cancel. |
+
+## Pre-Trade Limits
+
+Direct order mode is intentionally backward-compatible and does not assume a
+brokerage account type. Configure its limits explicitly. Execution-aware
+weight mode creates <code>PreTradeRisk(max_margin_utilization=1.0)</code> by
+default and can also accept a custom policy:
+
+```python
+from backtester.risk import PreTradeRisk
+
+strategy = MyOrderStrategy(
+    execution_mode="orders",
+    pre_trade_risk=PreTradeRisk(
+        max_margin_utilization=1.0,
+        max_gross_leverage=2.0,
+        allow_short=False,
+        reserve_pending_orders=True,
+    ),
+    # ...
+)
+```
+
+Every run now publishes <code>margin_by_instrument</code>,
+<code>margin_used</code> and <code>buying_power</code> on
+<code>portfolio_data</code>. The calculation uses each instrument's
+<code>ContractSpec.margin_required(...)</code>.
+
+Generated rebalance trade lists use conservative cross-instrument semantics:
+planned reductions do not finance increases until the reduction fills. Risk
+increases across instruments accumulate during batch evaluation, and rejected
+dependent legs are retried from realized state.
+
+## Fill Priority
+
+The current fill priority is conservative for daily OHLC bars:
+
+```text
+STOP -> STOP_TRAIL -> LIMIT -> MARKET -> BRACKET -> OCO
+```
+
+This matters when both a protective stop and a take-profit could have been
+touched inside the same daily candle. Without intraday data, the exact sequence
+is unknown.
+
+## Level 1: Minimal Order Strategy
+
+<div className="qj-code-card">
+<div className="qj-code-card-title">One market entry</div>
+
+```python
+from backtester import Backtester
+from backtester.execution import Order, OrderSide, OrderType
+
+
+class OneEntry(Backtester):
+    def __init__(self, **kwargs):
+        super().__init__(execution_mode="orders", **kwargs)
+        self._submitted = False
+
+    def _compute_orders(self, date, bars, current_positions, nav):
+        if self._submitted:
+            return
+
+        inst = "SPY"
+        qty = int(nav * 0.10 / bars[inst].close)
+
+        self.fill_engine.submit(Order(
+            instrument=inst,
+            side=OrderSide.BUY,
+            quantity=qty,
+            order_type=OrderType.MARKET,
+        ))
+        self._submitted = True
+```
+</div>
+
+## Level 2: Position-Aware Entry And Exit
+
+<div className="qj-code-card">
+<div className="qj-code-card-title">Use current_positions to avoid duplicate orders</div>
+
+```python
+class PositionAwareEntryExit(Backtester):
+    def _compute_orders(self, date, bars, current_positions, nav):
+        inst = "AAPL"
+        bar = bars[inst]
+        pos = current_positions.get(inst, 0.0)
+
+        buy_signal = self._buy_signal(date, inst)
+        sell_signal = self._sell_signal(date, inst)
+
+        if pos == 0 and buy_signal:
+            qty = int(nav * 0.15 / bar.close)
+            self.fill_engine.submit(Order(inst, OrderSide.BUY, qty, OrderType.MARKET))
+
+        elif pos > 0 and sell_signal:
+            self.fill_engine.cancel_all(instrument=inst)
+            self.fill_engine.submit(Order(inst, OrderSide.SELL, pos, OrderType.MARKET))
+```
+</div>
+
+## Level 3: Attach Risk Exits
+
+Use bracket orders when an entry should always have a take-profit and stop-loss
+managed by the engine.
+
+<div className="qj-code-card">
+<div className="qj-code-card-title">Entry with bracket exits</div>
+
+```python
+self.fill_engine.submit(Order(
+    instrument=inst,
+    side=OrderSide.BUY,
+    quantity=qty,
+    order_type=OrderType.BRACKET,
+    bracket=BracketSpec(
+        take_profit_price=round(bar.close * 1.08, 2),
+        stop_loss_price=round(bar.close * 0.96, 2),
+    ),
+))
+```
+</div>
+
+## OHLC Assumptions
+
+With daily bars:
+
+- A sell stop triggers when <code>bar.low <= stop_price</code>.
+- A sell take-profit limit triggers when <code>bar.high >= limit_price</code>.
+- A buy limit triggers when <code>bar.low <= limit_price</code>.
+- A buy stop triggers when <code>bar.high >= stop_price</code>.
+- A market order fills at <code>bar.open</code> by default.
+
+Daily OHLC cannot prove whether the high or low came first. That is acceptable
+for EOD swing and portfolio research if the assumption is explicit. It is not
+enough for strategies whose edge depends on intraday path ordering.
+
+## What Is Not Modeled Yet
+
+- Queue position.
+- Exchange latency.
+- Broker-specific portfolio/cross-margin, maintenance calls, forced
+  liquidation, and point-in-time intraday margin schedules;
+  automatic margin-call liquidation. The current model is deterministic
+  per-instrument collateral.
+- Venue-specific compliance rules beyond the configurable pre-trade limits.
+- Intraday sequencing when only daily bars are provided.
+- An append-only order-state event journal. The blotter currently retains one
+  final-state row per order plus every fill, while `FillEngine.order_history`
+  retains the corresponding order objects.
+- Corporate-action processing for raw-price fills (splits, cash dividends,
+  mergers and delistings) and futures roll accounting.
+- Variation-margin futures cash accounting and multi-currency settlement. The
+  current common ledger is financing-adjusted/fully-funded.
+
+## Debug Checklist
+
+- Is <code>execution_mode="orders"</code> set?
+- Does <code>self.fill_engine</code> exist?
+- Are orders visible in <code>self.fill_engine.pending_orders</code>?
+- Did the order trigger level actually touch the bar high/low?
+- Did a stale order remain live after a signal invalidated?
+- Did an OCO sibling cancel after one leg filled?
+- Are fill prices open-aware in gap scenarios?
+
+## Related Guides
+
+- <a href="/engine/market-orders">Market Orders</a>
+- <a href="/engine/limit-orders">Limit Orders</a>
+- <a href="/engine/stop-loss">Stop Loss</a>
+- <a href="/engine/trailing-stops">Trailing Stops</a>
+- <a href="/engine/bracket-orders">Bracket Orders</a>
+- <a href="/engine/oco-orders">OCO Orders</a>

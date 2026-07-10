@@ -13,16 +13,15 @@ Licensed under the Apache License 2.0.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass, field
+from typing import Any
 
-import numpy as np
 import pandas as pd
 
 from backtester.walkforward.folds.base import Fold
 
-
 # ── Per-Fold Result ───────────────────────────────────────────────────
+
 
 @dataclass(frozen=True)
 class FoldResult:
@@ -53,13 +52,13 @@ class FoldResult:
     oos_turnover_ann: float
 
     # OOS data
-    oos_returns: pd.Series   # daily OOS returns
-    oos_nav: pd.Series       # OOS NAV (rebased to 1.0)
+    oos_returns: pd.Series  # daily OOS returns
+    oos_nav: pd.Series  # OOS NAV (rebased to 1.0)
 
     # Diagnostics
-    overfit_ratio: float     # IS Sharpe / OOS Sharpe
-    efficiency: float        # OOS CAGR / IS CAGR
-    sanity_warnings: List[str] = field(default_factory=list)
+    overfit_ratio: float  # IS Sharpe / OOS Sharpe
+    efficiency: float  # OOS CAGR / IS CAGR
+    sanity_warnings: list[str] = field(default_factory=list)
     fingerprint: str = ""
 
     # "ok" or "failed". A failed fold (empty NAV window, refit crash)
@@ -68,64 +67,65 @@ class FoldResult:
     fold_status: str = "ok"
 
     # Optimization (None when no optimizer is used)
-    best_params: Optional[Dict[str, Any]] = None
-    optimizer_n_evals: Optional[int] = None
-    optimizer_best_objective: Optional[float] = None
+    best_params: dict[str, Any] | None = None
+    optimizer_n_evals: int | None = None
+    optimizer_best_objective: float | None = None
     # Completed-trial objective values (IS, annualized Sharpe) — the trial
     # population used for DSR's E[max SR] deflation.
-    optimizer_trial_values: Optional[List[float]] = None
+    optimizer_trial_values: list[float] | None = None
 
     # PBO (opt-in via WalkForwardConfig.pbo_trials): top-K trials'
     # OOS objective values and the selected trial's rank logit λ.
-    pbo_candidate_oos: Optional[List[float]] = None
-    pbo_selected_logit: Optional[float] = None
+    pbo_candidate_oos: list[float] | None = None
+    pbo_selected_logit: float | None = None
 
     # Cost sensitivity (optional)
-    cost_sensitivity: Optional[Dict[int, Dict[str, float]]] = None
+    cost_sensitivity: dict[int, dict[str, float]] | None = None
 
 
 # ── Aggregate Result ──────────────────────────────────────────────────
+
 
 @dataclass
 class WalkForwardResult:
     """Aggregate walk-forward result across all folds."""
 
     # ── Per-fold ──
-    folds: List[FoldResult]
-    config_dict: Dict[str, Any]  # frozen copy of WalkForwardConfig.to_dict()
+    folds: list[FoldResult]
+    config_dict: dict[str, Any]  # frozen copy of WalkForwardConfig.to_dict()
 
     # ── Aggregate OOS ──
     oos_sharpe: float = 0.0
     oos_cagr: float = 0.0
     oos_max_dd: float = 0.0
-    oos_returns: Optional[pd.Series] = None
-    oos_nav: Optional[pd.Series] = None
+    oos_returns: pd.Series | None = None
+    oos_nav: pd.Series | None = None
     # Stationary-block-bootstrap CI for the composite Sharpe
     # (seeded from WalkForwardConfig.seed; see statistics.aggregation).
-    sharpe_ci_5pct: Optional[float] = None
-    sharpe_ci_95pct: Optional[float] = None
+    sharpe_ci_5pct: float | None = None
+    sharpe_ci_95pct: float | None = None
 
     # ── Overfitting diagnostics ──
     overfit_ratio: float = 0.0
     efficiency: float = 0.0
     sharpe_decay: float = 0.0
-    deflated_sharpe: Optional[float] = None  # probability in [0, 1]
-    deflated_sharpe_reason: Optional[str] = None  # why DSR is unavailable (when None)
-    pbo: Optional[float] = None
+    deflated_sharpe: float | None = None  # probability in [0, 1]
+    deflated_sharpe_reason: str | None = None  # why DSR is unavailable (when None)
+    pbo: float | None = None
     pbo_available: bool = False
-    pbo_reason: Optional[str] = None  # why PBO is unavailable (when None)
+    pbo_reason: str | None = None  # why PBO is unavailable (when None)
 
     # ── Parameter stability ──
-    param_stability: Optional[Dict[str, float]] = None
-    param_trajectory: Optional[pd.DataFrame] = None
-    param_jaccard: Optional[float] = None
+    param_stability: dict[str, float] | None = None
+    param_trajectory: pd.DataFrame | None = None
+    param_jaccard: float | None = None
 
     # ── Cost sensitivity ──
-    cost_sensitivity: Optional[pd.DataFrame] = None
+    cost_sensitivity: pd.DataFrame | None = None
 
     # ── Meta ──
     fingerprint: str = ""
-    warnings: List[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
     mode: str = "slice_diagnostics"
 
     # ── Derived properties ──
@@ -139,22 +139,24 @@ class WalkForwardResult:
         """DataFrame with fold_id, train_start, train_end, oos_start, oos_end."""
         records = []
         for fr in self.folds:
-            records.append({
-                "fold_id": fr.fold.fold_id,
-                "train_start": fr.fold.train_start.strftime("%Y-%m-%d"),
-                "train_end": fr.fold.train_end.strftime("%Y-%m-%d"),
-                "oos_start": fr.fold.oos_start.strftime("%Y-%m-%d"),
-                "oos_end": fr.fold.oos_end.strftime("%Y-%m-%d"),
-                "is_sharpe": fr.is_sharpe,
-                "oos_sharpe": fr.oos_sharpe,
-            })
+            records.append(
+                {
+                    "fold_id": fr.fold.fold_id,
+                    "train_start": fr.fold.train_start.strftime("%Y-%m-%d"),
+                    "train_end": fr.fold.train_end.strftime("%Y-%m-%d"),
+                    "oos_start": fr.fold.oos_start.strftime("%Y-%m-%d"),
+                    "oos_end": fr.fold.oos_end.strftime("%Y-%m-%d"),
+                    "is_sharpe": fr.is_sharpe,
+                    "oos_sharpe": fr.oos_sharpe,
+                }
+            )
         return pd.DataFrame(records)
 
     # ── Serialisation ─────────────────────────────────────────────────
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialise to a JSON-safe dict (for archival / fingerprinting)."""
-        d: Dict[str, Any] = {
+        d: dict[str, Any] = {
             "n_folds": self.n_folds,
             "oos_sharpe": self.oos_sharpe,
             "oos_cagr": self.oos_cagr,
@@ -177,22 +179,24 @@ class WalkForwardResult:
         # Per-fold summary (no heavy Series)
         fold_summaries = []
         for fr in self.folds:
-            fold_summaries.append({
-                "fold_id": fr.fold.fold_id,
-                "scheme": fr.fold.scheme,
-                "train_start": str(fr.fold.train_start.date()),
-                "train_end": str(fr.fold.train_end.date()),
-                "oos_start": str(fr.fold.oos_start.date()),
-                "oos_end": str(fr.fold.oos_end.date()),
-                "is_sharpe": fr.is_sharpe,
-                "oos_sharpe": fr.oos_sharpe,
-                "is_cagr": fr.is_cagr,
-                "oos_cagr": fr.oos_cagr,
-                "overfit_ratio": fr.overfit_ratio,
-                "efficiency": fr.efficiency,
-                "best_params": fr.best_params,
-                "fold_status": fr.fold_status,
-            })
+            fold_summaries.append(
+                {
+                    "fold_id": fr.fold.fold_id,
+                    "scheme": fr.fold.scheme,
+                    "train_start": str(fr.fold.train_start.date()),
+                    "train_end": str(fr.fold.train_end.date()),
+                    "oos_start": str(fr.fold.oos_start.date()),
+                    "oos_end": str(fr.fold.oos_end.date()),
+                    "is_sharpe": fr.is_sharpe,
+                    "oos_sharpe": fr.oos_sharpe,
+                    "is_cagr": fr.is_cagr,
+                    "oos_cagr": fr.oos_cagr,
+                    "overfit_ratio": fr.overfit_ratio,
+                    "efficiency": fr.efficiency,
+                    "best_params": fr.best_params,
+                    "fold_status": fr.fold_status,
+                }
+            )
         d["folds"] = fold_summaries
 
         if self.cost_sensitivity is not None:
@@ -215,17 +219,14 @@ class WalkForwardResult:
             lines.append("=" * 80)
             lines.append("IN-SAMPLE SLICE DIAGNOSTICS (not out-of-sample)")
             lines.append(
-                "All metrics below are slices of ONE full-period run — NOT "
-                "out-of-sample evidence."
+                "All metrics below are slices of ONE full-period run — NOT out-of-sample evidence."
             )
             lines.append(
-                "Pass backtester_factory to WalkForwardEngine for honest "
-                "per-fold refit OOS."
+                "Pass backtester_factory to WalkForwardEngine for honest per-fold refit OOS."
             )
             lines.append("=" * 80)
         lines.append(
-            f"Walk-Forward Analysis — {self.n_folds} folds "
-            f"({scheme}, {train_m}m/{test_m}m)"
+            f"Walk-Forward Analysis — {self.n_folds} folds ({scheme}, {train_m}m/{test_m}m)"
         )
         lines.append(f"Fingerprint: {self.fingerprint[:12]}")
         lines.append(f"Mode: {self.mode}")
@@ -246,12 +247,10 @@ class WalkForwardResult:
 
         for fr in self.folds:
             is_period = (
-                f"{fr.fold.train_start.strftime('%Y-%m')} → "
-                f"{fr.fold.train_end.strftime('%Y-%m')}"
+                f"{fr.fold.train_start.strftime('%Y-%m')} → {fr.fold.train_end.strftime('%Y-%m')}"
             )
             oos_period = (
-                f"{fr.fold.oos_start.strftime('%Y-%m')} → "
-                f"{fr.fold.oos_end.strftime('%Y-%m')}"
+                f"{fr.fold.oos_start.strftime('%Y-%m')} → {fr.fold.oos_end.strftime('%Y-%m')}"
             )
             failed_tag = "  ← FAILED" if fr.fold_status != "ok" else ""
             lines.append(
@@ -273,15 +272,14 @@ class WalkForwardResult:
             dd_label = "OOS Max DD:         "
         ci_str = ""
         if self.sharpe_ci_5pct is not None and self.sharpe_ci_95pct is not None:
-            ci_str = (
-                f" [5%: {self.sharpe_ci_5pct:.2f}, "
-                f"95%: {self.sharpe_ci_95pct:.2f}]"
-            )
+            ci_str = f" [5%: {self.sharpe_ci_5pct:.2f}, 95%: {self.sharpe_ci_95pct:.2f}]"
         lines.append(f"  {sr_label} {self.oos_sharpe:.2f}{ci_str}")
-        lines.append(f"  {cagr_label}  {self.oos_cagr:>7.1%}    "
-                      f"Overfit Ratio: {self.overfit_ratio:.2f}")
-        lines.append(f"  {dd_label}  {self.oos_max_dd:>7.1%}    "
-                      f"Efficiency:    {self.efficiency:.2f}")
+        lines.append(
+            f"  {cagr_label}  {self.oos_cagr:>7.1%}    Overfit Ratio: {self.overfit_ratio:.2f}"
+        )
+        lines.append(
+            f"  {dd_label}  {self.oos_max_dd:>7.1%}    Efficiency:    {self.efficiency:.2f}"
+        )
         lines.append(f"  Sharpe Decay:         {self.sharpe_decay:+.3f}/fold")
 
         if self.deflated_sharpe is not None:

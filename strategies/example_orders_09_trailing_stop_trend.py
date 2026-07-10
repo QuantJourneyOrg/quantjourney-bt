@@ -71,13 +71,15 @@ class TrailingStopTrend(Backtester):
                 if shares > 0:
                     self.fill_engine.submit(Order(inst, OrderSide.BUY, shares, OrderType.MARKET))
             elif pos > 0 and not self._has_trail.get(inst, False):
-                self.fill_engine.submit(Order(
-                    inst,
-                    OrderSide.SELL,
-                    pos,
-                    OrderType.STOP_TRAIL,
-                    trail_percent=0.04,
-                ))
+                self.fill_engine.submit(
+                    Order(
+                        inst,
+                        OrderSide.SELL,
+                        pos,
+                        OrderType.STOP_TRAIL,
+                        trail_percent=0.04,
+                    )
+                )
                 self._has_trail[inst] = True
             elif signal == 0 and prev == 1 and pos > 0:
                 self.fill_engine.cancel_all(instrument=inst)

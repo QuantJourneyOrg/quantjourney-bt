@@ -50,9 +50,11 @@ def optimizer_factory(method: str, **kwargs) -> Optimizer:
     """Create an optimizer instance by method name."""
     if method == "grid":
         from backtester.walkforward.optimization.grid import GridSearchOptimizer
+
         return GridSearchOptimizer(**kwargs)
     elif method == "optuna":
         from backtester.walkforward.optimization.optuna_ import OptunaOptimizer
+
         return OptunaOptimizer(**kwargs)
     else:
         raise ValueError(f"Unknown optimization method: {method!r}")

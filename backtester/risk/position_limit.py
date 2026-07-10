@@ -23,7 +23,6 @@ Licensed under the Apache License 2.0.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -53,14 +52,14 @@ class PositionLimitModel(RiskModel):
     max_weight: float = 0.40
     min_weight: float = 0.0
     max_total_leverage: float = 2.0
-    sector_limits: Dict[str, float] = field(default_factory=dict)
+    sector_limits: dict[str, float] = field(default_factory=dict)
 
     def adjust(
         self,
         weights: pd.DataFrame,
         returns: pd.DataFrame,
         *,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> pd.DataFrame:
         out = weights.copy()
 
@@ -97,6 +96,9 @@ class PositionLimitModel(RiskModel):
     def _apply_cap(self, row: pd.Series) -> pd.Series:
         """Cap each weight at max_weight, redistributing until no cap is breached."""
         capped = row.astype(float).copy()
+        # A risk overlay may resize an existing position, but it must never
+        # create exposure in an instrument the strategy left inactive.
+        active = capped.abs() > 1e-10
         target_abs_total = float(capped.abs().sum())
         if target_abs_total < 1e-10:
             return capped
@@ -110,7 +112,7 @@ class PositionLimitModel(RiskModel):
             if excess <= 1e-10:
                 break
             room = (self.max_weight - capped.abs()).clip(lower=0.0)
-            candidates = room > 1e-10
+            candidates = active & (room > 1e-10)
             if not candidates.any():
                 break
             weights = capped[candidates].abs()
@@ -132,14 +134,10 @@ class PositionLimitModel(RiskModel):
 
         return row
 
-    def _apply_sector_limits(
-        self, row: pd.Series, sectors: Dict[str, str]
-    ) -> pd.Series:
+    def _apply_sector_limits(self, row: pd.Series, sectors: dict[str, str]) -> pd.Series:
         """Cap aggregate weight per sector."""
         for sector, limit in self.sector_limits.items():
-            sector_instruments = [
-                inst for inst, s in sectors.items() if s == sector
-            ]
+            sector_instruments = [inst for inst, s in sectors.items() if s == sector]
             sector_mask = row.index.isin(sector_instruments)
             sector_total = row[sector_mask].abs().sum()
 

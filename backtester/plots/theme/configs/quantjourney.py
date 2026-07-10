@@ -1,13 +1,18 @@
 """
     QuantJourney Framework - QuantJourney Theme Configuration
-	------------------------------------------------------------
+        ------------------------------------------------------------
 
 Copyright (c) 2026 QuantJourney.
 Licensed under the Apache License 2.0.
 """
 
-from backtester.plots.theme.types import ThemeConfig, ColorScheme, PlotLineConfig, PlotLabelConfig, LegendConfig
-
+from backtester.plots.theme.types import (
+    ColorScheme,
+    LegendConfig,
+    PlotLabelConfig,
+    PlotLineConfig,
+    ThemeConfig,
+)
 
 QUANTJOURNEY_THEME = ThemeConfig(
     colors=ColorScheme(

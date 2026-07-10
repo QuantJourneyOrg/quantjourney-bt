@@ -17,9 +17,10 @@ import json
 import math
 import numbers
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 import matplotlib
 
@@ -39,7 +40,6 @@ from backtester.portfolio import (
 )
 from backtester.utils.logger import logger
 
-
 RESULTS_PATH = Path("./reports")
 
 
@@ -57,7 +57,9 @@ class StrategyPerformanceConfig:
     show_instrument_plots: bool = field(default=False)
     theme_plots: PlotTheme = field(default=PlotTheme.QUANTJOURNEY)
     reports_directory: Path = field(default_factory=lambda: Path("./reports"))
-    benchmark: Dict[str, str] = field(default_factory=lambda: {"symbol": "SPY", "name": "S&P 500 Index"})
+    benchmark: dict[str, str] = field(
+        default_factory=lambda: {"symbol": "SPY", "name": "S&P 500 Index"}
+    )
     reporting_frequency: str = field(default="daily")
 
     def __post_init__(self) -> None:
@@ -73,16 +75,16 @@ class StrategyPerformanceAnalysis:
 
     def __init__(
         self,
-        config: Dict[str, Any],
-        portfolio_data: Optional[Any] = None,
-        instruments_data: Optional[Any] = None,
-        data_connector: Optional[Any] = None,
+        config: dict[str, Any],
+        portfolio_data: Any | None = None,
+        instruments_data: Any | None = None,
+        data_connector: Any | None = None,
         strategy_name: str = "default_strategy",
         strategy_type: str = "Long-Short",
         base_currency: str = "USD",
-        backtest_period: Optional[Any] = None,
+        backtest_period: Any | None = None,
         initial_capital: float = 100_000,
-        sdk_client: Optional[Any] = None,
+        sdk_client: Any | None = None,
     ) -> None:
         self.config = StrategyPerformanceConfig(**(config or {}))
         self.strategy_name = strategy_name
@@ -98,9 +100,9 @@ class StrategyPerformanceAnalysis:
 
         self.portfolio_data = portfolio_data
         self.instruments_data = instruments_data
-        self.portfolio_calc: Optional[PortfolioCalculations] = None
-        self.instrument_calc: Optional[InstrumentCalculations] = None
-        self._performance_results: Dict[str, Any] = {}
+        self.portfolio_calc: PortfolioCalculations | None = None
+        self.instrument_calc: InstrumentCalculations | None = None
+        self._performance_results: dict[str, Any] = {}
         self._plot_paths: list[Path] = []
 
         self._setup_strategy_folder()
@@ -115,7 +117,9 @@ class StrategyPerformanceAnalysis:
 
     def _setup_strategy_folder(self) -> None:
         reports_dir = Path(self.config.reports_directory)
-        self.save_folder = (RESULTS_PATH if reports_dir == Path("reports") else reports_dir) / self.strategy_name
+        self.save_folder = (
+            RESULTS_PATH if reports_dir == Path("reports") else reports_dir
+        ) / self.strategy_name
         self.save_folder.mkdir(parents=True, exist_ok=True)
         logger.info(f"Strategy folder set to: {self.save_folder}")
 
@@ -131,13 +135,13 @@ class StrategyPerformanceAnalysis:
 
     async def generate_strategy_performance_analysis(
         self,
-        portfolio_data: Optional[Any] = None,
-        instruments_data: Optional[Any] = None,
-        blotter: Optional[Any] = None,
-        strategy_parameters: Optional[Dict[str, Any]] = None,
+        portfolio_data: Any | None = None,
+        instruments_data: Any | None = None,
+        blotter: Any | None = None,
+        strategy_parameters: dict[str, Any] | None = None,
         strategy_code: str = "",
-        fill_engine: Optional[Any] = None,
-    ) -> Dict[str, Any]:
+        fill_engine: Any | None = None,
+    ) -> dict[str, Any]:
         self._blotter = blotter
         self._strategy_parameters = strategy_parameters or {}
         self._strategy_code = strategy_code
@@ -189,7 +193,10 @@ class StrategyPerformanceAnalysis:
             self._plot_paths = self._generate_public_plot_pack(plots_folder)
             self._write_dashboard_html(results, self._plot_paths)
             logger.info(f"[Backtester] Dashboard saved to {self.save_folder / 'dashboard.html'}")
-            logger.info(f"[Backtester] Plot pack saved to {plots_folder} ({len(self._plot_paths)} PNG files)")
+            logger.info(
+                f"[Backtester] Plot pack saved to {plots_folder} "
+                f"({len(self._plot_paths)} PNG files)"
+            )
 
         return results
 
@@ -207,11 +214,11 @@ class StrategyPerformanceAnalysis:
             logger.warning(f"[Backtester] Metric skipped: {name}: {exc}")
             return name, None
 
-    def _compute_public_metric_results(self) -> Dict[str, Any]:
+    def _compute_public_metric_results(self) -> dict[str, Any]:
         pc = self.portfolio_calc
         assert pc is not None
 
-        metric_definitions: Dict[str, Callable[[], Any]] = {
+        metric_definitions: dict[str, Callable[[], Any]] = {
             "compute_annualized_return": lambda: pc.compute_annualized_return(),
             "cumulative_returns": lambda: pc.compute_cumulative_returns(),
             "compute_periodic_returns": lambda: pc.compute_periodic_returns(),
@@ -221,16 +228,25 @@ class StrategyPerformanceAnalysis:
             "compute_max_drawdown": lambda: pc.compute_max_drawdown(),
             "compute_recovery_factor": lambda: pc.compute_recovery_factor(),
             "compute_advanced_calmar_ratio": lambda: pc.compute_advanced_calmar_ratio(),
-            "compute_advanced_annualized_volatility": lambda: pc.compute_advanced_annualized_volatility(
-                short_window=30,
-                long_window=252,
+            "compute_advanced_annualized_volatility": lambda: (
+                pc.compute_advanced_annualized_volatility(
+                    short_window=30,
+                    long_window=252,
+                )
             ),
             "compute_advanced_turnover": lambda: pc.compute_advanced_turnover(
-                trades_df=self._blotter.get_trades_dataframe() if self._blotter is not None else None,
+                trades_df=self._blotter.get_trades_dataframe()
+                if self._blotter is not None
+                else None,
             ),
         }
 
-        results = {name: value for name, value in (self._safe_metric(name, func) for name, func in metric_definitions.items())}
+        results = {
+            name: value
+            for name, value in (
+                self._safe_metric(name, func) for name, func in metric_definitions.items()
+            )
+        }
         results.update(
             {
                 "self.start_date": self.start_date,
@@ -239,13 +255,16 @@ class StrategyPerformanceAnalysis:
                 "base_currency": self.base_currency,
                 "risk_free_rate": self.config.risk_free_rate,
                 "returns_index": self.returns.index,
-                "config": {"risk_free_rate": self.config.risk_free_rate, "reporting_frequency": "daily"},
+                "config": {
+                    "risk_free_rate": self.config.risk_free_rate,
+                    "reporting_frequency": "daily",
+                },
                 "edition": "open_source",
             }
         )
         return results
 
-    def _create_public_report_table(self, results: Dict[str, Any]) -> str:
+    def _create_public_report_table(self, results: dict[str, Any]) -> str:
         try:
             sections = generate_report_sections(results)
         except Exception as exc:
@@ -257,7 +276,9 @@ class StrategyPerformanceAnalysis:
             if not metrics or section_name == "Definitions":
                 continue
             metric_paths = [
-                PORTFOLIO_PERF_METRICS.get(section_name, {}).get(metric_name, ("", ""))[0].split(".")[0]
+                PORTFOLIO_PERF_METRICS.get(section_name, {})
+                .get(metric_name, ("", ""))[0]
+                .split(".")[0]
                 for metric_name in metrics.keys()
             ]
             if metric_paths and not any(results.get(path) is not None for path in metric_paths):
@@ -271,7 +292,11 @@ class StrategyPerformanceAnalysis:
 
         if not rows:
             rows = [
-                ("Summary", "Annualized Return", str(results.get("compute_annualized_return", "n/a"))),
+                (
+                    "Summary",
+                    "Annualized Return",
+                    str(results.get("compute_annualized_return", "n/a")),
+                ),
                 ("", "Sharpe Ratio", str(results.get("compute_sharpe_ratio", "n/a"))),
                 ("", "Max Drawdown", str(results.get("compute_max_drawdown", "n/a"))),
             ]
@@ -287,12 +312,17 @@ class StrategyPerformanceAnalysis:
             f"{header[0]:<{widths[0]}}  {header[1]:<{widths[1]}}  {header[2]:>{widths[2]}}",
             sep,
         ]
-        lines.extend(f"{section:<{widths[0]}}  {metric:<{widths[1]}}  {value:>{widths[2]}}" for section, metric, value in rows)
+        lines.extend(
+            f"{section:<{widths[0]}}  {metric:<{widths[1]}}  {value:>{widths[2]}}"
+            for section, metric, value in rows
+        )
         return "\n".join(lines) + "\n"
 
-    def _write_json(self, filename: str, data: Dict[str, Any]) -> None:
+    def _write_json(self, filename: str, data: dict[str, Any]) -> None:
         with open(self.save_folder / filename, "w", encoding="utf-8") as f:
-            json.dump(self._json_safe(data), f, indent=2, sort_keys=True, default=str, allow_nan=False)
+            json.dump(
+                self._json_safe(data), f, indent=2, sort_keys=True, default=str, allow_nan=False
+            )
 
     @classmethod
     def _json_safe(cls, value: Any) -> Any:
@@ -322,13 +352,19 @@ class StrategyPerformanceAnalysis:
             rows.append({"metric": prefix, "value": data})
         return rows
 
-    def _write_metrics_csv(self, results: Dict[str, Any]) -> None:
-        pd.DataFrame(self._public_metric_rows(results)).to_csv(self.save_folder / "metrics.csv", index=False)
+    def _write_metrics_csv(self, results: dict[str, Any]) -> None:
+        pd.DataFrame(self._public_metric_rows(results)).to_csv(
+            self.save_folder / "metrics.csv", index=False
+        )
 
     def _write_equity_curve_csv(self) -> None:
         nav = self.portfolio_data.net_asset_value.astype(float)
         returns = self.returns.reindex(nav.index).fillna(0.0)
-        drawdown = self.portfolio_calc.drawdowns if self.portfolio_calc is not None else pd.Series(index=nav.index, dtype=float)
+        drawdown = (
+            self.portfolio_calc.drawdowns
+            if self.portfolio_calc is not None
+            else pd.Series(index=nav.index, dtype=float)
+        )
         pd.DataFrame(
             {
                 "net_asset_value": nav,
@@ -345,31 +381,93 @@ class StrategyPerformanceAnalysis:
         ic = self.instrument_calc
         assert pc is not None
         plots: list[tuple[str, Callable[[], Any]]] = [
-            ("cumulative_returns", lambda: PortfolioPlots.plot_cumulative_returns(portfolio_calc=pc, instrument_calc=ic)),
-            ("cumulative_log_returns", lambda: PortfolioPlots.plot_cumulative_log_returns(portfolio_calc=pc)),
+            (
+                "cumulative_returns",
+                lambda: PortfolioPlots.plot_cumulative_returns(
+                    portfolio_calc=pc, instrument_calc=ic
+                ),
+            ),
+            (
+                "cumulative_log_returns",
+                lambda: PortfolioPlots.plot_cumulative_log_returns(portfolio_calc=pc),
+            ),
             ("annual_returns", lambda: PortfolioPlots.plot_annual_returns(portfolio_calc=pc)),
-            ("monthly_returns_heatmap", lambda: PortfolioPlots.plot_monthly_returns_heatmap(portfolio_calc=pc)),
+            (
+                "monthly_returns_heatmap",
+                lambda: PortfolioPlots.plot_monthly_returns_heatmap(portfolio_calc=pc),
+            ),
             ("return_quantiles", lambda: PortfolioPlots.plot_return_quantiles(portfolio_calc=pc)),
             ("portfolio_drawdown", lambda: PortfolioPlots.plot_drawdown(portfolio_calc=pc)),
-            ("drawdown_recovery", lambda: PortfolioPlots.plot_drawdown_recovery_analysis(portfolio_calc=pc)),
+            (
+                "drawdown_recovery",
+                lambda: PortfolioPlots.plot_drawdown_recovery_analysis(portfolio_calc=pc),
+            ),
             ("time_underwater", lambda: PortfolioPlots.plot_time_underwater(portfolio_calc=pc)),
-            ("monthly_returns_distribution", lambda: PortfolioPlots.plot_distribution_of_monthly_returns(portfolio_calc=pc)),
-            ("rolling_sortino_ratio", lambda: PortfolioPlots.plot_rolling_sortino_ratio(portfolio_calc=pc, window=252)),
-            ("rolling_var_cvar", lambda: PortfolioPlots.plot_rolling_var_cvar(portfolio_calc=pc, window=252, confidence=0.95)),
-            ("portfolio_weights", lambda: PortfolioPlots.plot_portfolio_weights(portfolio_calc=pc, instrument_calc=ic)),
-            ("percentage_weights", lambda: PortfolioPlots.plot_percentage_weights(portfolio_calc=pc, instrument_calc=ic)),
+            (
+                "monthly_returns_distribution",
+                lambda: PortfolioPlots.plot_distribution_of_monthly_returns(portfolio_calc=pc),
+            ),
+            (
+                "rolling_sortino_ratio",
+                lambda: PortfolioPlots.plot_rolling_sortino_ratio(portfolio_calc=pc, window=252),
+            ),
+            (
+                "rolling_var_cvar",
+                lambda: PortfolioPlots.plot_rolling_var_cvar(
+                    portfolio_calc=pc, window=252, confidence=0.95
+                ),
+            ),
+            (
+                "portfolio_weights",
+                lambda: PortfolioPlots.plot_portfolio_weights(
+                    portfolio_calc=pc, instrument_calc=ic
+                ),
+            ),
+            (
+                "percentage_weights",
+                lambda: PortfolioPlots.plot_percentage_weights(
+                    portfolio_calc=pc, instrument_calc=ic
+                ),
+            ),
             ("latest_holdings", lambda: PortfolioPlots.plot_composition(portfolio_calc=pc)),
-            ("rolling_weights", lambda: PortfolioPlots.plot_rolling_weights(portfolio_calc=pc, instrument_calc=ic)),
+            (
+                "rolling_weights",
+                lambda: PortfolioPlots.plot_rolling_weights(portfolio_calc=pc, instrument_calc=ic),
+            ),
         ]
         if ic is not None:
             plots.extend(
                 [
-                    ("instrument_cumulative_returns", lambda: InstrumentPlots.plot_cumulative_returns(instrument_calc=ic)),
-                    ("instrument_rolling_volatility", lambda: InstrumentPlots.plot_rolling_volatility(instrument_calc=ic, window=126)),
-                    ("instrument_return_distribution", lambda: InstrumentPlots.plot_return_distribution(instrument_calc=ic)),
-                    ("correlation_heatmap", lambda: PortfolioPlots.plot_correlation_heatmap(instrument_calc=ic)),
-                    ("correlation_snapshot", lambda: PortfolioPlots.plot_correlation_snapshot(instrument_calc=ic, trailing_window=252)),
-                    ("rolling_asset_correlations", lambda: PortfolioPlots.plot_rolling_asset_correlations(instrument_calc=ic, window=126)),
+                    (
+                        "instrument_cumulative_returns",
+                        lambda: InstrumentPlots.plot_cumulative_returns(instrument_calc=ic),
+                    ),
+                    (
+                        "instrument_rolling_volatility",
+                        lambda: InstrumentPlots.plot_rolling_volatility(
+                            instrument_calc=ic, window=126
+                        ),
+                    ),
+                    (
+                        "instrument_return_distribution",
+                        lambda: InstrumentPlots.plot_return_distribution(instrument_calc=ic),
+                    ),
+                    (
+                        "correlation_heatmap",
+                        lambda: PortfolioPlots.plot_correlation_heatmap(instrument_calc=ic),
+                    ),
+                    (
+                        "correlation_snapshot",
+                        lambda: PortfolioPlots.plot_correlation_snapshot(
+                            instrument_calc=ic, trailing_window=252
+                        ),
+                    ),
+                    (
+                        "rolling_asset_correlations",
+                        lambda: PortfolioPlots.plot_rolling_asset_correlations(
+                            instrument_calc=ic, window=126
+                        ),
+                    ),
                 ]
             )
         return plots
@@ -393,16 +491,44 @@ class StrategyPerformanceAnalysis:
             shutil.copyfile(cumulative, self.save_folder / "equity_curve.png")
         return generated
 
-    def _dashboard_cards(self, results: Dict[str, Any]) -> list[tuple[str, str]]:
+    def _dashboard_cards(self, results: dict[str, Any]) -> list[tuple[str, str]]:
         return [
-            ("Annualized Return", self._format_public_value(results.get("compute_annualized_return"), "percentage")),
+            (
+                "Annualized Return",
+                self._format_public_value(results.get("compute_annualized_return"), "percentage"),
+            ),
             ("Sharpe", self._format_public_value(results.get("compute_sharpe_ratio"), "ratio")),
             ("Sortino", self._format_public_value(results.get("compute_sortino_ratio"), "ratio")),
-            ("Max Drawdown", self._format_public_value(results.get("compute_max_drawdown"), "percentage")),
-            ("Calmar", self._format_public_value(self._get_nested(results, "compute_advanced_calmar_ratio.base_calmar"), "ratio")),
-            ("Volatility", self._format_public_value(self._get_nested(results, "compute_advanced_annualized_volatility.standard"), "percentage_raw")),
-            ("Win Days", self._format_public_value(self._get_nested(results, "compute_period_stats.win_days"), "percentage_raw")),
-            ("Avg Turnover", self._format_public_value(self._get_nested(results, "compute_advanced_turnover.average_turnover"), "percentage_raw")),
+            (
+                "Max Drawdown",
+                self._format_public_value(results.get("compute_max_drawdown"), "percentage"),
+            ),
+            (
+                "Calmar",
+                self._format_public_value(
+                    self._get_nested(results, "compute_advanced_calmar_ratio.base_calmar"), "ratio"
+                ),
+            ),
+            (
+                "Volatility",
+                self._format_public_value(
+                    self._get_nested(results, "compute_advanced_annualized_volatility.standard"),
+                    "percentage_raw",
+                ),
+            ),
+            (
+                "Win Days",
+                self._format_public_value(
+                    self._get_nested(results, "compute_period_stats.win_days"), "percentage_raw"
+                ),
+            ),
+            (
+                "Avg Turnover",
+                self._format_public_value(
+                    self._get_nested(results, "compute_advanced_turnover.average_turnover"),
+                    "percentage_raw",
+                ),
+            ),
         ]
 
     def _public_metric_specs(self) -> list[tuple[str, str, str, str]]:
@@ -420,15 +546,35 @@ class StrategyPerformanceAnalysis:
             ("Risk", "compute_max_drawdown", "Max drawdown", "percentage"),
             ("Risk", "compute_advanced_calmar_ratio.base_calmar", "Calmar ratio", "ratio"),
             ("Risk", "compute_recovery_factor", "Recovery factor", "ratio"),
-            ("Risk", "compute_advanced_annualized_volatility.standard", "Annualized volatility", "percentage_raw"),
+            (
+                "Risk",
+                "compute_advanced_annualized_volatility.standard",
+                "Annualized volatility",
+                "percentage_raw",
+            ),
             ("Consistency", "compute_period_stats.win_days", "Winning days", "percentage_raw"),
             ("Consistency", "compute_period_stats.win_month", "Winning months", "percentage_raw"),
-            ("Trading", "compute_advanced_turnover.average_turnover", "Average daily turnover", "percentage_raw"),
-            ("Trading", "compute_advanced_turnover.annualized_turnover", "Annualized turnover", "percentage_raw"),
-            ("Trading", "compute_advanced_turnover.total_traded_notional", "Total traded notional", "currency0"),
+            (
+                "Trading",
+                "compute_advanced_turnover.average_turnover",
+                "Average daily turnover",
+                "percentage_raw",
+            ),
+            (
+                "Trading",
+                "compute_advanced_turnover.annualized_turnover",
+                "Annualized turnover",
+                "percentage_raw",
+            ),
+            (
+                "Trading",
+                "compute_advanced_turnover.total_traded_notional",
+                "Total traded notional",
+                "currency0",
+            ),
         ]
 
-    def _public_metric_rows(self, results: Dict[str, Any]) -> list[dict[str, str]]:
+    def _public_metric_rows(self, results: dict[str, Any]) -> list[dict[str, str]]:
         rows: list[dict[str, str]] = []
         for section, path, label, formatter_type in self._public_metric_specs():
             value = self._get_nested(results, path) if "." in path else results.get(path)
@@ -442,7 +588,7 @@ class StrategyPerformanceAnalysis:
         return rows
 
     @staticmethod
-    def _get_nested(data: Dict[str, Any], path: str) -> Any:
+    def _get_nested(data: dict[str, Any], path: str) -> Any:
         value: Any = data
         for part in path.split("."):
             if not isinstance(value, dict) or part not in value:
@@ -451,7 +597,7 @@ class StrategyPerformanceAnalysis:
         return value
 
     @staticmethod
-    def _as_finite_float(value: Any) -> Optional[float]:
+    def _as_finite_float(value: Any) -> float | None:
         try:
             number = float(value)
         except Exception:
@@ -488,17 +634,27 @@ class StrategyPerformanceAnalysis:
             return f"{number:.2f}"
         return str(value)
 
-    def _write_dashboard_html(self, results: Dict[str, Any], plot_paths: list[Path]) -> None:
+    def _write_dashboard_html(self, results: dict[str, Any], plot_paths: list[Path]) -> None:
         cards = "\n".join(
-            f"<div class='card'><span>{html.escape(label)}</span><strong>{html.escape(value)}</strong></div>"
+            "<div class='card'>"
+            f"<span>{html.escape(label)}</span>"
+            f"<strong>{html.escape(value)}</strong>"
+            "</div>"
             for label, value in self._dashboard_cards(results)
         )
         metrics_rows = "\n".join(
-            f"<tr><td>{html.escape(row['section'])}</td><td>{html.escape(row['metric'])}</td><td>{html.escape(row['value'])}</td></tr>"
+            "<tr>"
+            f"<td>{html.escape(row['section'])}</td>"
+            f"<td>{html.escape(row['metric'])}</td>"
+            f"<td>{html.escape(row['value'])}</td>"
+            "</tr>"
             for row in self._public_metric_rows(results)
         )
         figures = "\n".join(
-            f"<figure><img src='plots/{html.escape(path.name)}' alt='{html.escape(path.stem)}'><figcaption>{html.escape(path.stem.replace('_', ' ').title())}</figcaption></figure>"
+            "<figure>"
+            f"<img src='plots/{html.escape(path.name)}' alt='{html.escape(path.stem)}'>"
+            f"<figcaption>{html.escape(path.stem.replace('_', ' ').title())}</figcaption>"
+            "</figure>"
             for path in plot_paths
         )
         content = f"""<!doctype html>
@@ -508,21 +664,57 @@ class StrategyPerformanceAnalysis:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{html.escape(self.strategy_name)} Dashboard</title>
   <style>
-    body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #101828; background: #f6f7f9; }}
+    body {{
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #101828;
+      background: #f6f7f9;
+    }}
     main {{ max-width: 1220px; margin: 0 auto; padding: 32px 20px 48px; }}
     h1 {{ margin: 0 0 6px; font-size: 28px; letter-spacing: 0; }}
     p {{ margin: 0; color: #475467; }}
-    .cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 24px 0; }}
-    .card {{ background: #fff; border: 1px solid #eaecf0; border-radius: 8px; padding: 14px 16px; }}
+    .cards {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 24px 0;
+    }}
+    .card {{
+      background: #fff;
+      border: 1px solid #eaecf0;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }}
     .card span {{ display: block; color: #667085; font-size: 13px; margin-bottom: 6px; }}
     .card strong {{ display: block; color: #155EEF; font-size: 22px; }}
-    .table-wrap {{ margin: 24px 0; background: #fff; border: 1px solid #eaecf0; border-radius: 8px; overflow: hidden; }}
+    .table-wrap {{
+      margin: 24px 0;
+      background: #fff;
+      border: 1px solid #eaecf0;
+      border-radius: 8px;
+      overflow: hidden;
+    }}
     table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
-    th, td {{ padding: 10px 12px; border-bottom: 1px solid #eaecf0; text-align: left; vertical-align: top; }}
+    th, td {{
+      padding: 10px 12px;
+      border-bottom: 1px solid #eaecf0;
+      text-align: left;
+      vertical-align: top;
+    }}
     th {{ background: #f2f4f7; color: #344054; }}
     td:last-child {{ color: #155EEF; font-weight: 650; }}
-    .plots {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 18px; }}
-    figure {{ margin: 0; background: #fff; border: 1px solid #eaecf0; border-radius: 8px; padding: 12px; }}
+    .plots {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 18px;
+    }}
+    figure {{
+      margin: 0;
+      background: #fff;
+      border: 1px solid #eaecf0;
+      border-radius: 8px;
+      padding: 12px;
+    }}
     img {{ display: block; width: 100%; height: auto; }}
     figcaption {{ color: #475467; font-size: 13px; margin-top: 8px; }}
     @media (max-width: 520px) {{ .plots {{ grid-template-columns: 1fr; }} }}
@@ -532,7 +724,11 @@ class StrategyPerformanceAnalysis:
   <main>
     <header>
       <h1>{html.escape(self.strategy_name)}</h1>
-      <p>{html.escape(self.strategy_type)} | {html.escape(self.start_date)} to {html.escape(self.end_date)} | QuantJourney Backtester Dashboard</p>
+      <p>
+        {html.escape(self.strategy_type)} |
+        {html.escape(self.start_date)} to {html.escape(self.end_date)} |
+        QuantJourney Backtester Dashboard
+      </p>
     </header>
     <section class="cards">{cards}</section>
     <section class="table-wrap">

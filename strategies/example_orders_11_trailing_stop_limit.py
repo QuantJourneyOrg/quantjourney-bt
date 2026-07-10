@@ -71,14 +71,16 @@ class TrailingStopLimitTrend(Backtester):
                 if shares > 0:
                     self.fill_engine.submit(Order(inst, OrderSide.BUY, shares, OrderType.MARKET))
             elif pos > 0 and not self._has_trail_limit.get(inst, False):
-                self.fill_engine.submit(Order(
-                    inst,
-                    OrderSide.SELL,
-                    pos,
-                    OrderType.STOP_TRAIL_LIMIT,
-                    trail_amount=round(bar.close * 0.04, 2),
-                    limit_offset=round(bar.close * 0.005, 2),
-                ))
+                self.fill_engine.submit(
+                    Order(
+                        inst,
+                        OrderSide.SELL,
+                        pos,
+                        OrderType.STOP_TRAIL_LIMIT,
+                        trail_amount=round(bar.close * 0.04, 2),
+                        limit_offset=round(bar.close * 0.005, 2),
+                    )
+                )
                 self._has_trail_limit[inst] = True
             elif signal == 0 and prev == 1 and pos > 0:
                 self.fill_engine.cancel_all(instrument=inst)

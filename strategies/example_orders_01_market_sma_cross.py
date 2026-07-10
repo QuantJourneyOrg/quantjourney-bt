@@ -46,7 +46,9 @@ class MarketSMACrossover(Backtester):
         self._prev_signal = {}
 
     def _has_pending(self, instrument: str) -> bool:
-        return any(o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders)
+        return any(
+            o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders
+        )
 
     def _compute_orders(self, date, bars, current_positions, nav) -> None:
         sma_fast = self.instruments_data.get_feature("SMA_20_close")

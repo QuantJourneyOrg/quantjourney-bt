@@ -22,7 +22,6 @@ Licensed under the Apache License 2.0.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -51,7 +50,7 @@ class InverseVolModel(RiskModel):
     """
 
     lookback: int = 63
-    ann_factor: float = np.sqrt(252)
+    ann_factor: float | None = None
     min_vol: float = 0.01
     blend_alpha: bool = True
 
@@ -60,13 +59,19 @@ class InverseVolModel(RiskModel):
         weights: pd.DataFrame,
         returns: pd.DataFrame,
         *,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> pd.DataFrame:
         n = len(weights)
         if n == 0:
             return weights
 
         out = weights.copy()
+        periods_per_year = int((metadata or {}).get("periods_per_year", 252))
+        ann_factor = (
+            float(self.ann_factor)
+            if self.ann_factor is not None
+            else float(np.sqrt(max(periods_per_year, 1)))
+        )
 
         for i in range(self.lookback, n):
             row_w = weights.iloc[i]
@@ -77,8 +82,8 @@ class InverseVolModel(RiskModel):
                 continue
 
             # Per-asset realised vol
-            window = returns.iloc[max(0, i - self.lookback):i]
-            vols = window.std() * self.ann_factor
+            window = returns.iloc[max(0, i - self.lookback) : i]
+            vols = window.std() * ann_factor
             vols = vols.clip(lower=self.min_vol)
 
             inv_vol = 1.0 / vols

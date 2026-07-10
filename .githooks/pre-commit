@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+
+root="$(git rev-parse --show-toplevel)"
+if [ -e "$root/RELEASE_BLOCKED" ]; then
+    if ! git -C "$root" ls-files --error-unmatch RELEASE_BLOCKED >/dev/null 2>&1 \
+       && ! git -C "$root" diff --cached --name-only --diff-filter=ACMR \
+            | grep -qx RELEASE_BLOCKED; then
+        echo "Commit blocked: stage RELEASE_BLOCKED with the hardening changes." >&2
+        echo "This preserves the release freeze in the reviewed commit." >&2
+        exit 1
+    fi
+fi
+
+if [ -x "$root/.venv/bin/python" ]; then
+    exec "$root/.venv/bin/python" "$root/tools/verify_public_release.py"
+fi
+exec python3 "$root/tools/verify_public_release.py"

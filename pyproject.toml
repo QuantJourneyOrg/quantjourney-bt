@@ -1,14 +1,15 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "quantjourney-bt"
-version = "0.9.1"
+version = "0.10.0"
 description = "Python-native backtesting engine for reproducible portfolio and order-based strategy research"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {file = "LICENSE"}
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{name = "QuantJourney", email = "hello@quantjourney.pro"}]
 keywords = [
     "backtesting",
@@ -22,11 +23,11 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Financial and Insurance Industry",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Office/Business :: Financial :: Investment",
     "Typing :: Typed",
 ]
@@ -49,9 +50,14 @@ dev = [
     "pytest>=8",
     "pytest-asyncio",
     "hypothesis",
-    "ruff>=0.5",
+    "ruff==0.15.21",
     "build>=1.2",
     "twine>=5",
+]
+typecheck = [
+    "mypy==2.2.0",
+    "pandas-stubs==2.3.3.260113",
+    "types-python-dateutil==2.9.0.20260518",
 ]
 data = ["yfinance>=0.2"]
 reports = ["scipy>=1.11", "seaborn>=0.13"]
@@ -65,10 +71,11 @@ Source = "https://github.com/QuantJourneyOrg/quantjourney-bt"
 Issues = "https://github.com/QuantJourneyOrg/quantjourney-bt/issues"
 
 [tool.setuptools.packages.find]
-include = ["backtester*"]
+include = ["backtester", "backtester.*"]
 
 [tool.setuptools.package-data]
 backtester = [
+    "py.typed",
     "plots/theme/configs/*.py",
 ]
 
@@ -81,3 +88,19 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["backtester"]
+check_untyped_defs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_any_generics = true
+no_implicit_optional = true
+strict_optional = true
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+show_error_codes = true
+pretty = false

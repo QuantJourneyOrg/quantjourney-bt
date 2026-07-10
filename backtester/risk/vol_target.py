@@ -19,7 +19,6 @@ Licensed under the Apache License 2.0.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -53,20 +52,26 @@ class VolTargetModel(RiskModel):
     lookback: int = 63
     max_leverage: float = 2.0
     rebalance_freq: str = "BMS"
-    ann_factor: float = np.sqrt(252)
+    ann_factor: float | None = None
 
     def adjust(
         self,
         weights: pd.DataFrame,
         returns: pd.DataFrame,
         *,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> pd.DataFrame:
         n = len(weights)
         if n == 0:
             return weights
 
         out = weights.copy()
+        periods_per_year = int((metadata or {}).get("periods_per_year", 252))
+        ann_factor = (
+            float(self.ann_factor)
+            if self.ann_factor is not None
+            else float(np.sqrt(max(periods_per_year, 1)))
+        )
 
         # Detect rescoring dates
         if self.rebalance_freq == "D":
@@ -74,9 +79,7 @@ class VolTargetModel(RiskModel):
         else:
             periods = pd.Series(
                 weights.index.to_period(
-                    {"BMS": "M", "W-MON": "W", "MS": "M", "QS": "Q"}.get(
-                        self.rebalance_freq, "M"
-                    )
+                    {"BMS": "M", "W-MON": "W", "MS": "M", "QS": "Q"}.get(self.rebalance_freq, "M")
                 ),
                 index=weights.index,
             )
@@ -96,9 +99,9 @@ class VolTargetModel(RiskModel):
             norm_w = row_w / total_w
 
             if is_rescore.iloc[i]:
-                window = returns.iloc[max(0, i - self.lookback):i]
+                window = returns.iloc[max(0, i - self.lookback) : i]
                 port_rets = (window * norm_w).sum(axis=1)
-                realised_vol = port_rets.std() * self.ann_factor
+                realised_vol = port_rets.std() * ann_factor
 
                 if realised_vol > 0.01:
                     prev_scale = min(

@@ -54,8 +54,8 @@ class CrossSectionalReversal(Backtester):
             ret = (close.iloc[i] / close.iloc[i - self.LOOKBACK] - 1.0).dropna()
             if len(ret) < 2 * self.N_SIDE:
                 continue
-            longs = ret.nsmallest(self.N_SIDE).index    # buy the losers
-            shorts = ret.nlargest(self.N_SIDE).index     # short the winners
+            longs = ret.nsmallest(self.N_SIDE).index  # buy the losers
+            shorts = ret.nlargest(self.N_SIDE).index  # short the winners
             signals.iloc[i, signals.columns.isin(longs)] = 1.0
             signals.iloc[i, signals.columns.isin(shorts)] = -1.0
         return signals
@@ -74,8 +74,20 @@ async def main() -> None:
         strategy_name="ExampleWeights16_CrossSectionalReversal",
         strategy_type="Market Neutral",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META",
-                     "JPM", "XOM", "JNJ", "PG", "WMT", "KO"],
+        instruments=[
+            "AAPL",
+            "MSFT",
+            "NVDA",
+            "GOOGL",
+            "AMZN",
+            "META",
+            "JPM",
+            "XOM",
+            "JNJ",
+            "PG",
+            "WMT",
+            "KO",
+        ],
         backtest_period={"start": "2015-01-01", "end": "2025-01-01"},
         source="yfinance",
         execution_mode="weights",

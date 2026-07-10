@@ -1,23 +1,82 @@
-name: Publish to PyPI
+name: Publish verified tag to PyPI
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*.*.*"
+
+concurrency:
+  group: public-pypi-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
+      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require a tagged commit from main
+        run: |
+          git fetch origin main:refs/remotes/origin/main --no-tags
+          git merge-base --is-ancestor HEAD origin/main
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Build distributions
+
+      - name: Install pinned uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.28"
+          enable-cache: true
+
+      - name: Sync locked release environment
+        run: >-
+          uv sync --frozen
+          --extra dev --extra data --extra wf --extra typecheck
+
+      - name: Verify clean source, version, tag, and release approval
+        run: >-
+          uv run --no-sync python tools/verify_public_release.py
+          --require-clean
+          --require-tag
+          --tag "${GITHUB_REF_NAME}"
+          --require-unblocked
+
+      - name: Blocking full-tree lint
         run: |
-          python -m pip install --upgrade build
-          python -m build
-      - name: Publish to PyPI
+          uv run --no-sync ruff check .
+          uv run --no-sync ruff format --check .
+
+      - name: Blocking full-package type-check baseline
+        run: uv run --no-sync python tools/check_mypy_baseline.py
+
+      - name: Full tests
+        run: uv run --no-sync pytest -q
+
+      - name: Build fresh distributions
+        run: uv run --no-sync python -m build
+
+      - name: Verify exact wheel and sdist payloads
+        run: |
+          uv run --no-sync python -m twine check dist/*
+          uv run --no-sync python tools/verify_public_release.py --wheel dist/*.whl --sdist dist/*.tar.gz
+
+      - name: Upload verified distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: quantjourney-bt-${{ github.ref_name }}
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Publish to PyPI through trusted publishing
         uses: pypa/gh-action-pypi-publish@release/v1

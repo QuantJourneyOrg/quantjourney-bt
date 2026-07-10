@@ -26,8 +26,6 @@ Usage:
 import asyncio
 import os
 
-import pandas as pd
-
 from backtester import Backtester
 from backtester.execution.commission import PerShareCommission
 from backtester.execution.order_types import Order, OrderSide, OrderType

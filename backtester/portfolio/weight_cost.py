@@ -1,13 +1,12 @@
-# QuantJourney Backtester
-# Copyright (c) 2026 QuantJourney.
-# Licensed under the Apache License 2.0.
-
 """
 Weight-mode transaction cost models.
 
 Weight-based strategies do not submit explicit orders, but a rebalance still
 implies trades.  This module converts target portfolio weights into implied
 share deltas, then computes costs from the resulting trade values.
+
+Copyright (c) 2026 QuantJourney.
+Licensed under the Apache License 2.0.
 """
 
 from __future__ import annotations
@@ -76,18 +75,25 @@ class FixedBpsWeightCostModel:
         nav_aligned = nav.reindex(weights.index).ffill().fillna(0.0).astype(float)
         flags = rebalance_flags.reindex(weights.index).fillna(False).astype(bool)
 
-        safe_prices = px.replace(0.0, np.nan)
+        # Implied quantities are a reporting approximation, not executable
+        # contracts. Preserve the last quantity through data gaps and use an
+        # absolute mark so legal negative futures prices cannot create a
+        # negative trade value (and therefore a transaction-cost credit).
+        safe_prices = px.abs().replace(0.0, np.nan).ffill()
         target_values = weights.multiply(nav_aligned, axis=0)
         target_quantities = (
-            target_values.divide(safe_prices)
-            .replace([np.inf, -np.inf], np.nan)
-            .fillna(0.0)
+            target_values.divide(safe_prices).replace([np.inf, -np.inf], np.nan).fillna(0.0)
         )
 
         quantity_deltas = target_quantities.diff().fillna(target_quantities)
         quantity_deltas.loc[~flags, :] = 0.0
+        # A missing raw mark is not a tradeable bar. Keeping the inferred
+        # quantity above prevents a phantom full re-entry cost on resume.
+        quantity_deltas = quantity_deltas.mask(px.isna(), 0.0)
 
-        trade_values = quantity_deltas.abs().multiply(px).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+        trade_values = (
+            quantity_deltas.abs().multiply(px.abs()).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+        )
         if self.min_trade_value > 0:
             trade_values = trade_values.mask(trade_values < self.min_trade_value, 0.0)
             quantity_deltas = quantity_deltas.mask(trade_values == 0.0, 0.0)
@@ -97,11 +103,7 @@ class FixedBpsWeightCostModel:
         total_cost.name = "transaction_cost"
 
         nav_safe = nav_aligned.replace(0.0, np.nan)
-        total_cost_pct = (
-            total_cost.divide(nav_safe)
-            .replace([np.inf, -np.inf], np.nan)
-            .fillna(0.0)
-        )
+        total_cost_pct = total_cost.divide(nav_safe).replace([np.inf, -np.inf], np.nan).fillna(0.0)
         total_cost_pct.name = "transaction_cost_pct"
 
         return WeightCostBreakdown(

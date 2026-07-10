@@ -25,7 +25,7 @@ Usage:
 
 import asyncio
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
 
@@ -46,7 +46,7 @@ def _credentials() -> dict:
 
 def _recent_period(days: int = 55) -> dict[str, str]:
     # yfinance serves at most ~60 calendar days of 30-minute bars.
-    end = datetime.now(timezone.utc).date()
+    end = datetime.now(UTC).date()
     start = end - timedelta(days=days)
     return {"start": start.isoformat(), "end": end.isoformat()}
 
@@ -97,14 +97,16 @@ class IntradayStopBreakout30m(Backtester):
 
             shares = int(nav * 0.20 / close)
             if shares > 0:
-                self.fill_engine.submit(Order(
-                    inst,
-                    OrderSide.BUY,
-                    shares,
-                    OrderType.STOP,
-                    stop_price=round(prior_high * 1.001, 2),
-                    expires_after_bars=3,
-                ))
+                self.fill_engine.submit(
+                    Order(
+                        inst,
+                        OrderSide.BUY,
+                        shares,
+                        OrderType.STOP,
+                        stop_price=round(prior_high * 1.001, 2),
+                        expires_after_bars=3,
+                    )
+                )
                 self._entry_bar[inst] = self._bar_count[inst]
 
 

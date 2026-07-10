@@ -11,16 +11,15 @@ Licensed under the Apache License 2.0.
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from backtester.utils.logger import logger
 
 
 def save_checkpoint(
     checkpoint_dir: str,
-    completed_results: Dict[int, Any],  # Dict[fold_id, FoldResult]
+    completed_results: dict[int, Any],  # Dict[fold_id, FoldResult]
 ) -> None:
     """
     Save completed fold results to a checkpoint file.
@@ -51,7 +50,7 @@ def save_checkpoint(
 
 def load_checkpoint(
     checkpoint_dir: str,
-) -> Dict[int, Any]:
+) -> dict[int, Any]:
     """
     Load checkpoint. Returns dict of fold_id → checkpoint data.
 

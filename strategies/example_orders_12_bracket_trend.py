@@ -73,13 +73,15 @@ class BracketTrend(Backtester):
                         take_profit_price=round(bar.close * 1.06, 2),
                         stop_loss_price=round(bar.close * 0.97, 2),
                     )
-                    self.fill_engine.submit(Order(
-                        inst,
-                        OrderSide.BUY,
-                        shares,
-                        OrderType.BRACKET,
-                        bracket=bracket,
-                    ))
+                    self.fill_engine.submit(
+                        Order(
+                            inst,
+                            OrderSide.BUY,
+                            shares,
+                            OrderType.BRACKET,
+                            bracket=bracket,
+                        )
+                    )
                     self._has_bracket[inst] = True
             elif signal == 0 and prev == 1 and pos > 0:
                 self.fill_engine.cancel_all(instrument=inst)

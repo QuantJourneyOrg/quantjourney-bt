@@ -47,8 +47,8 @@ from __future__ import annotations
 import logging
 import math
 import warnings as _warnings
+from collections.abc import Sequence
 from itertools import combinations
-from typing import Optional, Sequence
 
 import numpy as np
 
@@ -62,10 +62,11 @@ def _n_choose_k(n: int, k: int) -> int:
 
 # ── Rank-based PBO (the computable, honest statistic) ─────────────────
 
+
 def selected_trial_logit(
     selected_value: float,
     candidate_values: Sequence[float],
-) -> Optional[float]:
+) -> float | None:
     """
     Logit of the IS-selected trial's relative OOS rank among candidates.
 
@@ -86,9 +87,9 @@ def selected_trial_logit(
         return None
 
     # Average-tie rank: 1 = worst … K = best
-    rank = float((vals < selected_value).sum()) + (
-        float((vals == selected_value).sum()) + 1.0
-    ) / 2.0
+    rank = (
+        float((vals < selected_value).sum()) + (float((vals == selected_value).sum()) + 1.0) / 2.0
+    )
     omega = rank / (vals.size + 1.0)
     if not (0.0 < omega < 1.0):
         return None
@@ -107,13 +108,14 @@ def pbo_from_selected_ranks(logits: Sequence[float]) -> float:
         trial ranked in the bottom half OOS).  ``nan`` when no logits
         are available.
     """
-    finite = [float(l) for l in logits if l is not None and np.isfinite(l)]
+    finite = [float(logit) for logit in logits if logit is not None and np.isfinite(logit)]
     if not finite:
         return float("nan")
-    return sum(1.0 for l in finite if l <= 0.0) / len(finite)
+    return sum(1.0 for logit in finite if logit <= 0.0) / len(finite)
 
 
 # ── Deprecated fold-level pseudo-PBO ──────────────────────────────────
+
 
 def probability_of_backtest_overfitting(
     is_sharpes: Sequence[float],
@@ -157,6 +159,7 @@ def probability_of_backtest_overfitting(
 
 
 # ── Diagnostic transfer-ratio distribution (plotting only) ────────────
+
 
 def pbo_logit_distribution(
     is_sharpes: Sequence[float],

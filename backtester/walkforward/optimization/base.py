@@ -7,7 +7,8 @@ Licensed under the Apache License 2.0.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Optional, Protocol, runtime_checkable
+from collections.abc import Callable
+from typing import Any, Protocol, runtime_checkable
 
 from backtester.walkforward.optimization.result import OptimizationResult
 
@@ -21,9 +22,9 @@ class Optimizer(Protocol):
         backtester_factory: Callable[..., Any],
         train_start: str,
         train_end: str,
-        base_config: Dict[str, Any],
+        base_config: dict[str, Any],
         *,
-        progress_callback: Callable[[Dict[str, Any]], None] | None = None,
+        progress_callback: Callable[[dict[str, Any]], None] | None = None,
         cancel_check: Callable[[], bool] | None = None,
     ) -> OptimizationResult:
         """

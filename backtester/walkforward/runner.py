@@ -14,19 +14,21 @@ Licensed under the Apache License 2.0.
 
 from __future__ import annotations
 
-import hashlib
-import json
-from typing import Any, Callable, Dict, Optional
 import asyncio
+import hashlib
 import inspect
+import json
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from backtester.reporting_frequency import infer_periods_per_year
 from backtester.utils.logger import logger
 from backtester.walkforward.folds.base import Fold
 from backtester.walkforward.result import FoldResult
-from backtester.walkforward.statistics.overfit import overfit_ratio, efficiency
+from backtester.walkforward.statistics.overfit import efficiency, overfit_ratio
 from backtester.walkforward.statistics.pbo import selected_trial_logit
 
 
@@ -54,9 +56,9 @@ class FoldRunner:
         blotter: Any = None,
         initial_capital: float = 100_000.0,
         risk_free_rate: float = 0.0,
-        backtester_factory: Optional[Callable[..., Any]] = None,
+        backtester_factory: Callable[..., Any] | None = None,
         optimizer: Any = None,
-        base_config: Optional[Dict[str, Any]] = None,
+        base_config: dict[str, Any] | None = None,
         pbo_trials: int = 0,
     ) -> None:
         self._fold = fold
@@ -72,21 +74,17 @@ class FoldRunner:
     def run(self) -> FoldResult:
         """Execute fold and return FoldResult (fold_status='failed' on refit crash)."""
         portfolio_data = self._portfolio_data
-        opt_meta: Dict[str, Any] = {}
+        opt_meta: dict[str, Any] = {}
         if self._backtester_factory is not None:
             try:
                 portfolio_data, opt_meta = self._run_fold_refit()
             except RuntimeError as exc:
                 if "active event loop" in str(exc):
                     raise  # usage error — caller must use run_async()
-                logger.error(
-                    f"[WalkForward] Fold {self._fold.fold_id} refit FAILED: {exc}"
-                )
+                logger.error(f"[WalkForward] Fold {self._fold.fold_id} refit FAILED: {exc}")
                 return self._failed_result(f"refit failed: {exc}")
             except Exception as exc:
-                logger.error(
-                    f"[WalkForward] Fold {self._fold.fold_id} refit FAILED: {exc}"
-                )
+                logger.error(f"[WalkForward] Fold {self._fold.fold_id} refit FAILED: {exc}")
                 return self._failed_result(f"refit failed: {exc}")
 
         return self._build_result(portfolio_data, opt_meta)
@@ -94,19 +92,17 @@ class FoldRunner:
     async def run_async(self) -> FoldResult:
         """Execute fold from an active event loop and return FoldResult."""
         portfolio_data = self._portfolio_data
-        opt_meta: Dict[str, Any] = {}
+        opt_meta: dict[str, Any] = {}
         if self._backtester_factory is not None:
             try:
                 portfolio_data, opt_meta = await self._run_fold_refit_async()
             except Exception as exc:
-                logger.error(
-                    f"[WalkForward] Fold {self._fold.fold_id} refit FAILED: {exc}"
-                )
+                logger.error(f"[WalkForward] Fold {self._fold.fold_id} refit FAILED: {exc}")
                 return self._failed_result(f"refit failed: {exc}")
 
         return self._build_result(portfolio_data, opt_meta)
 
-    def _build_result(self, portfolio_data: Any, opt_meta: Dict[str, Any]) -> FoldResult:
+    def _build_result(self, portfolio_data: Any, opt_meta: dict[str, Any]) -> FoldResult:
         best_params = opt_meta.get("best_params")
         optimizer_n_evals = opt_meta.get("optimizer_n_evals")
         optimizer_best_objective = opt_meta.get("optimizer_best_objective")
@@ -140,11 +136,7 @@ class FoldRunner:
         # Failed fold: empty/too-short NAV window → NaN metrics, never
         # silent zeros (Sharpe 0.0 would be indistinguishable from a
         # genuinely flat strategy).
-        fold_failed = (
-            oos_returns.empty
-            or not np.isfinite(oos_sr)
-            or not np.isfinite(is_sr)
-        )
+        fold_failed = oos_returns.empty or not np.isfinite(oos_sr) or not np.isfinite(is_sr)
         if fold_failed:
             or_val = float("nan")
             eff = float("nan")
@@ -171,13 +163,9 @@ class FoldRunner:
                 "fold ran with base config (unoptimized)"
             )
         if oos_sr < 0:
-            warnings.append(
-                f"Fold {self._fold.fold_id}: OOS Sharpe {oos_sr:.2f} is negative"
-            )
+            warnings.append(f"Fold {self._fold.fold_id}: OOS Sharpe {oos_sr:.2f} is negative")
         if or_val > 2.5:
-            warnings.append(
-                f"Fold {self._fold.fold_id}: overfit ratio {or_val:.1f} > 2.5"
-            )
+            warnings.append(f"Fold {self._fold.fold_id}: overfit ratio {or_val:.1f} > 2.5")
 
         # Fingerprint for this fold
         fp = self._compute_fold_fingerprint(is_metrics, oos_metrics)
@@ -230,14 +218,28 @@ class FoldRunner:
         empty = pd.Series(dtype=float)
         return FoldResult(
             fold=self._fold,
-            is_sharpe=nan, is_cagr=nan, is_max_dd=nan, is_volatility=nan,
-            is_n_trades=0, is_win_rate=nan, is_profit_factor=nan,
-            is_avg_holding_days=nan, is_turnover_ann=nan,
-            oos_sharpe=nan, oos_cagr=nan, oos_max_dd=nan, oos_volatility=nan,
-            oos_n_trades=0, oos_win_rate=nan, oos_profit_factor=nan,
-            oos_avg_holding_days=nan, oos_turnover_ann=nan,
-            oos_returns=empty, oos_nav=empty,
-            overfit_ratio=nan, efficiency=nan,
+            is_sharpe=nan,
+            is_cagr=nan,
+            is_max_dd=nan,
+            is_volatility=nan,
+            is_n_trades=0,
+            is_win_rate=nan,
+            is_profit_factor=nan,
+            is_avg_holding_days=nan,
+            is_turnover_ann=nan,
+            oos_sharpe=nan,
+            oos_cagr=nan,
+            oos_max_dd=nan,
+            oos_volatility=nan,
+            oos_n_trades=0,
+            oos_win_rate=nan,
+            oos_profit_factor=nan,
+            oos_avg_holding_days=nan,
+            oos_turnover_ann=nan,
+            oos_returns=empty,
+            oos_nav=empty,
+            overfit_ratio=nan,
+            efficiency=nan,
             sanity_warnings=[f"Fold {self._fold.fold_id}: FAILED — {reason}"],
             fingerprint=self._compute_fold_fingerprint({}, {}),
             fold_status="failed",
@@ -265,7 +267,7 @@ class FoldRunner:
         end: pd.Timestamp,
         *,
         portfolio_data: Any = None,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         Compute key metrics for a date window using PortfolioCalculations.
 
@@ -279,27 +281,41 @@ class FoldRunner:
             # Sharpe of 0.0 is indistinguishable from a flat strategy.
             nan = float("nan")
             return {
-                "sharpe": nan, "cagr": nan, "max_dd": nan,
-                "volatility": nan, "n_trades": 0, "win_rate": nan,
-                "profit_factor": nan, "avg_holding_days": nan,
+                "sharpe": nan,
+                "cagr": nan,
+                "max_dd": nan,
+                "volatility": nan,
+                "n_trades": 0,
+                "win_rate": nan,
+                "profit_factor": nan,
+                "avg_holding_days": nan,
                 "turnover_ann": nan,
             }
 
         n_days = len(returns)
-        trading_days = 252
-        years = n_days / trading_days
+        periods_per_year = max(
+            int(
+                getattr(
+                    pdata,
+                    "periods_per_year",
+                    infer_periods_per_year(pdata.net_asset_value.index),
+                )
+            ),
+            1,
+        )
+        years = n_days / periods_per_year
 
         # CAGR
         total_return = (1.0 + returns).prod() - 1.0
         cagr = (1.0 + total_return) ** (1.0 / max(years, 1e-9)) - 1.0
 
         # Volatility
-        vol = returns.std() * np.sqrt(trading_days)
+        vol = returns.std() * np.sqrt(periods_per_year)
 
         # Sharpe
-        rfr_daily = self._risk_free_rate / trading_days
+        rfr_daily = self._risk_free_rate / periods_per_year
         excess = returns.mean() - rfr_daily
-        sharpe = (excess / returns.std() * np.sqrt(trading_days)) if returns.std() > 0 else 0.0
+        sharpe = excess / returns.std() * np.sqrt(periods_per_year) if returns.std() > 0 else 0.0
 
         # Max drawdown
         nav = (1.0 + returns).cumprod()
@@ -323,39 +339,63 @@ class FoldRunner:
                 trades_df = self._blotter.get_trades_dataframe()
                 if trades_df is not None and not trades_df.empty:
                     # Filter trades within window
-                    if "timestamp" in trades_df.columns:
-                        ts_col = pd.to_datetime(trades_df["timestamp"])
-                        mask = (ts_col >= start) & (ts_col <= end)
+                    timestamp_col = next(
+                        (c for c in ("Timestamp", "timestamp") if c in trades_df.columns),
+                        None,
+                    )
+                    if timestamp_col is not None:
+                        ts_col = pd.to_datetime(trades_df[timestamp_col], utc=True)
+                        start_utc = pd.Timestamp(start)
+                        end_utc = pd.Timestamp(end)
+                        start_utc = (
+                            start_utc.tz_localize("UTC")
+                            if start_utc.tzinfo is None
+                            else start_utc.tz_convert("UTC")
+                        )
+                        end_utc = (
+                            end_utc.tz_localize("UTC")
+                            if end_utc.tzinfo is None
+                            else end_utc.tz_convert("UTC")
+                        )
+                        mask = (ts_col >= start_utc) & (ts_col <= end_utc)
                         window_trades = trades_df[mask]
                         n_trades = len(window_trades)
                         turnover_ann = 0.0  # no trades → genuinely zero turnover
 
                         if n_trades > 0:
                             # Win rate from positive PnL trades
-                            if "pnl" in window_trades.columns:
-                                wins = (window_trades["pnl"] > 0).sum()
+                            pnl_col = next(
+                                (c for c in ("PnL", "pnl") if c in window_trades.columns),
+                                None,
+                            )
+                            if pnl_col is not None:
+                                wins = (window_trades[pnl_col] > 0).sum()
                                 win_rate = wins / n_trades if n_trades > 0 else 0.0
 
                                 gross_profit = window_trades.loc[
-                                    window_trades["pnl"] > 0, "pnl"
+                                    window_trades[pnl_col] > 0, pnl_col
                                 ].sum()
                                 gross_loss = abs(
-                                    window_trades.loc[
-                                        window_trades["pnl"] < 0, "pnl"
-                                    ].sum()
+                                    window_trades.loc[window_trades[pnl_col] < 0, pnl_col].sum()
                                 )
                                 profit_factor = (
-                                    gross_profit / gross_loss
-                                    if gross_loss > 0
-                                    else float("inf")
+                                    gross_profit / gross_loss if gross_loss > 0 else float("inf")
                                 )
 
                             # Annualized dollar turnover — unified with the
                             # reproducibility.py definition:
                             #   (total notional traded / 2) / avg NAV, annualized.
                             # 1.0 = the whole portfolio replaced once per year.
-                            if "dollar_amount" in window_trades.columns:
-                                total_notional = window_trades["dollar_amount"].abs().sum()
+                            notional_col = next(
+                                (
+                                    c
+                                    for c in ("TradeValue", "dollar_amount", "trade_value")
+                                    if c in window_trades.columns
+                                ),
+                                None,
+                            )
+                            if notional_col is not None:
+                                total_notional = window_trades[notional_col].abs().sum()
                                 nav_series = pdata.net_asset_value
                                 nav_window = nav_series.loc[
                                     (nav_series.index >= start) & (nav_series.index <= end)
@@ -392,9 +432,9 @@ class FoldRunner:
             "turnover_ann": float(turnover_ann),
         }
 
-    def _run_fold_refit(self) -> tuple[Any, Dict[str, Any]]:
-        opt_meta: Dict[str, Any] = {}
-        best_params: Dict[str, Any] = {}
+    def _run_fold_refit(self) -> tuple[Any, dict[str, Any]]:
+        opt_meta: dict[str, Any] = {}
+        best_params: dict[str, Any] = {}
 
         if self._optimizer is not None:
             opt_result = self._run_async(
@@ -416,14 +456,15 @@ class FoldRunner:
 
         bt = self._build_fold_backtester(best_params)
         self._run_backtester(bt)
+        self._blotter = getattr(bt, "blotter", None)
         pdata = getattr(bt, "portfolio_data", None)
         if pdata is None:
             raise ValueError("backtester_factory result must expose portfolio_data after run")
         return pdata, opt_meta
 
-    async def _run_fold_refit_async(self) -> tuple[Any, Dict[str, Any]]:
-        opt_meta: Dict[str, Any] = {}
-        best_params: Dict[str, Any] = {}
+    async def _run_fold_refit_async(self) -> tuple[Any, dict[str, Any]]:
+        opt_meta: dict[str, Any] = {}
+        best_params: dict[str, Any] = {}
 
         if self._optimizer is not None:
             opt_result_or_awaitable = self._optimizer.optimize(
@@ -440,21 +481,20 @@ class FoldRunner:
             opt_meta = self._optimizer_meta(opt_result, best_params)
 
             if self._pbo_trials >= 2:
-                candidate_oos, lam = await self._evaluate_pbo_candidates_async(
-                    opt_result
-                )
+                candidate_oos, lam = await self._evaluate_pbo_candidates_async(opt_result)
                 opt_meta["pbo_candidate_oos"] = candidate_oos
                 opt_meta["pbo_selected_logit"] = lam
 
         bt = self._build_fold_backtester(best_params)
         await self._run_backtester_async(bt)
+        self._blotter = getattr(bt, "blotter", None)
         pdata = getattr(bt, "portfolio_data", None)
         if pdata is None:
             raise ValueError("backtester_factory result must expose portfolio_data after run")
         return pdata, opt_meta
 
     @staticmethod
-    def _optimizer_meta(opt_result: Any, best_params: Dict[str, Any]) -> Dict[str, Any]:
+    def _optimizer_meta(opt_result: Any, best_params: dict[str, Any]) -> dict[str, Any]:
         """Extract fold-level optimizer metadata from an OptimizationResult."""
         return {
             "best_params": best_params or None,
@@ -465,7 +505,7 @@ class FoldRunner:
         }
 
     @staticmethod
-    def _extract_trial_values(opt_result: Any) -> Optional[list[float]]:
+    def _extract_trial_values(opt_result: Any) -> list[float] | None:
         """Completed-trial objective values — the DSR trial population."""
         trials = getattr(opt_result, "trials", None) or []
         vals = [
@@ -494,7 +534,7 @@ class FoldRunner:
         top = top_k(self._pbo_trials)
         return top if len(top) >= 2 else []
 
-    def _pbo_logit_from_scores(self, oos_scores: list[float]) -> Optional[float]:
+    def _pbo_logit_from_scores(self, oos_scores: list[float]) -> float | None:
         """λ of the IS-selected trial (top_k[0]) among candidate OOS scores."""
         if not oos_scores:
             return None
@@ -528,9 +568,7 @@ class FoldRunner:
         )
         return float(metrics["sharpe"])
 
-    def _evaluate_pbo_candidates(
-        self, opt_result: Any
-    ) -> tuple[Optional[list[float]], Optional[float]]:
+    def _evaluate_pbo_candidates(self, opt_result: Any) -> tuple[list[float] | None, float | None]:
         """
         Re-backtest the optimizer's top-K IS trials over the fold window
         and score each on the OOS slice (by OOS Sharpe; the ranking
@@ -556,7 +594,7 @@ class FoldRunner:
 
     async def _evaluate_pbo_candidates_async(
         self, opt_result: Any
-    ) -> tuple[Optional[list[float]], Optional[float]]:
+    ) -> tuple[list[float] | None, float | None]:
         """Async twin of ``_evaluate_pbo_candidates``."""
         top = self._pbo_top_trials(opt_result)
         if not top:
@@ -575,7 +613,7 @@ class FoldRunner:
                 oos_scores.append(float("-inf"))
         return oos_scores, self._pbo_logit_from_scores(oos_scores)
 
-    def _build_fold_backtester(self, best_params: Dict[str, Any]) -> Any:
+    def _build_fold_backtester(self, best_params: dict[str, Any]) -> Any:
         """
         Instantiate the per-fold backtester over [train_start, oos_end].
 
@@ -632,11 +670,12 @@ class FoldRunner:
             asyncio.get_running_loop()
         except RuntimeError:
             return asyncio.run(awaitable)
+        close = getattr(awaitable, "close", None)
+        if callable(close):
+            close()
         raise RuntimeError("WalkForward per-fold refit cannot run inside an active event loop")
 
-    def _compute_fold_fingerprint(
-        self, is_metrics: Dict, oos_metrics: Dict
-    ) -> str:
+    def _compute_fold_fingerprint(self, is_metrics: dict, oos_metrics: dict) -> str:
         """Deterministic hash for this fold's config + results."""
         payload = json.dumps(
             {

@@ -84,8 +84,15 @@ list_strategies() {
     for f in "$STRATEGIES_DIR"/*.py; do
         [ -f "$f" ] || continue
         name=$(basename "$f" .py)
-        # extract first non-empty docstring line as description
-        desc=$(sed -n '2,5{/^[[:space:]]*$/d; s/^[[:space:]]*//; p; q;}' "$f")
+        # Extract the first meaningful module-docstring line, after the
+        # mandatory license header. Do not present copyright text as a title.
+        desc=$(awk '
+            index($0, "\"\"\"") { if (in_doc) exit; in_doc=1; next }
+            in_doc {
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+                if (length($0) > 0 && $0 !~ /^=+$/) { print; exit }
+            }
+        ' "$f")
         echo -e "  ${GREEN}${name}${NC}  ${desc}"
     done
 }

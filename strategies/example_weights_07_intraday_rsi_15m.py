@@ -22,7 +22,7 @@ Usage:
 
 import asyncio
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
 
@@ -40,7 +40,7 @@ def _credentials() -> dict:
 
 
 def _recent_period(days: int = 21) -> dict[str, str]:
-    end = datetime.now(timezone.utc).date()
+    end = datetime.now(UTC).date()
     start = end - timedelta(days=days)
     return {"start": start.isoformat(), "end": end.isoformat()}
 

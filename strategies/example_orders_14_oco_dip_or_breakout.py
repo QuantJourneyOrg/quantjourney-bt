@@ -46,7 +46,9 @@ class OCODipOrBreakout(Backtester):
         self._oco_live = {}
 
     def _has_pending(self, instrument: str) -> bool:
-        return any(o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders)
+        return any(
+            o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders
+        )
 
     def _compute_orders(self, date, bars, current_positions, nav) -> None:
         for inst in self.instruments:
@@ -78,24 +80,28 @@ class OCODipOrBreakout(Backtester):
                     continue
 
                 oco_id = f"{inst}_{date:%Y%m%d}_dip_or_breakout"
-                self.fill_engine.submit(Order(
-                    inst,
-                    OrderSide.BUY,
-                    shares,
-                    OrderType.OCO,
-                    limit_price=round(bar.close * 0.98, 2),
-                    oco_pair_id=oco_id,
-                    expires_after_bars=5,
-                ))
-                self.fill_engine.submit(Order(
-                    inst,
-                    OrderSide.BUY,
-                    shares,
-                    OrderType.OCO,
-                    stop_price=round(bar.close * 1.02, 2),
-                    oco_pair_id=oco_id,
-                    expires_after_bars=5,
-                ))
+                self.fill_engine.submit(
+                    Order(
+                        inst,
+                        OrderSide.BUY,
+                        shares,
+                        OrderType.OCO,
+                        limit_price=round(bar.close * 0.98, 2),
+                        oco_pair_id=oco_id,
+                        expires_after_bars=5,
+                    )
+                )
+                self.fill_engine.submit(
+                    Order(
+                        inst,
+                        OrderSide.BUY,
+                        shares,
+                        OrderType.OCO,
+                        stop_price=round(bar.close * 1.02, 2),
+                        oco_pair_id=oco_id,
+                        expires_after_bars=5,
+                    )
+                )
                 self._oco_live[inst] = True
 
 

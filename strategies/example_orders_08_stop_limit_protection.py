@@ -73,14 +73,16 @@ class StopLimitProtection(Backtester):
             elif pos > 0 and not self._has_stop_limit.get(inst, False):
                 entry = self.get_average_entry_price(inst)
                 if entry is not None:
-                    self.fill_engine.submit(Order(
-                        inst,
-                        OrderSide.SELL,
-                        pos,
-                        OrderType.STOP_LIMIT,
-                        stop_price=round(entry * 0.96, 2),
-                        limit_price=round(entry * 0.955, 2),
-                    ))
+                    self.fill_engine.submit(
+                        Order(
+                            inst,
+                            OrderSide.SELL,
+                            pos,
+                            OrderType.STOP_LIMIT,
+                            stop_price=round(entry * 0.96, 2),
+                            limit_price=round(entry * 0.955, 2),
+                        )
+                    )
                     self._has_stop_limit[inst] = True
             elif signal == 0 and prev == 1 and pos > 0:
                 self.fill_engine.cancel_all(instrument=inst)

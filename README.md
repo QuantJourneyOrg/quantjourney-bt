@@ -15,7 +15,7 @@ fills update cash and positions, and NAV is reconstructed from portfolio state.
 
 It is designed for researchers who need more than an equity curve: execution
 assumptions, costs, slippage, rebalancing rules, crisis behavior, walk-forward
-validation, optimization diagnostics, metrics, plots, and run fingerprints from
+validation, optimization diagnostics, metrics, plots, and run metadata from
 one repeatable run.
 
 ## Why It Exists
@@ -52,7 +52,7 @@ Data -> Features -> Signals -> Target Weights / Orders -> Fills -> Positions -> 
 Each stage is explicit. Data is transformed into features, features drive
 signals, signals become either target weights or orders, execution assumptions
 turn those decisions into fills, and portfolio state is used to reconstruct NAV,
-metrics, plots, and reproducibility metadata.
+metrics, plots, and run metadata.
 
 ### What you want to do -> what to use
 
@@ -73,9 +73,10 @@ look-ahead, unrealistic intrabar fills, costs too low) — is documented at
 
 ## What You Get From One Run
 
-Each run can produce metrics, plots, equity curves, drawdowns, rolling risk,
-crisis diagnostics, optimization evidence, walk-forward results, CSV/JSON
-artifacts, HTML dashboards, PDF tear sheets, and reproducibility metadata.
+Each local run can produce metrics, plots, equity curves, drawdowns, rolling
+risk, optimization evidence, walk-forward results, CSV/JSON artifacts, a static
+HTML dashboard, and run metadata. The hosted platform adds crisis diagnostics,
+interactive dashboards, execution traces, and PDF tear sheets.
 
 ## What Stays Local
 
@@ -126,6 +127,10 @@ top of the same engine results. More examples at
 pip install quantjourney-bt
 ```
 
+The wheel installs the `backtester` library. The runnable strategy catalog and
+`strategy.sh` launcher are repository assets; clone this repository when you
+want to run or modify the examples below.
+
 Optional extras: `pip install "quantjourney-bt[wf]"` adds Optuna for the
 walk-forward optimization examples (WF05); `[data]` adds the yfinance
 benchmark fallback.
@@ -171,6 +176,11 @@ docs/                     Roadmap and supporting documentation
 CHANGELOG.md              Release history
 ```
 
+The public runtime includes the shared execution simulator, contract-aware
+portfolio ledger, portfolio-of-strategies book, and pre-trade risk controls.
+Hosted data, orchestration, and extended report packs remain outside this
+repository; see [Public Scope](docs/public_scope.md).
+
 The `tests/` directory is intentionally kept. It is not required at runtime, but
 it gives the package a quick install/import/report safety check before release.
 
@@ -182,6 +192,8 @@ it gives the package a quick install/import/report safety check before release.
   result links.
 - [Contributing](CONTRIBUTING.md) - how to add example strategies, fixes, and
   docs (fork, branch, pull request).
+- [Release process](docs/release.md) - clean-tag publishing and exact artifact
+  boundary checks.
 
 ## AI Co-Pilot Skills
 
@@ -204,7 +216,7 @@ use `skills/qj-strategy-reviewer/SKILL.md`; to make sense of the output, use
 
 ## Quick Start
 
-For a full catalog of all 45 example strategies — each with a one-line
+For a full catalog of all 50 example strategies — each with a one-line
 description, a link to its source, and a link to its results page — see
 [strategies/README.md](strategies/README.md) or the summary below.
 
@@ -247,11 +259,11 @@ existing web session.
 
 ## Strategy Catalog
 
-The repository ships **45 runnable example strategies** — 22 weight-based, 18
+The repository ships **50 runnable example strategies** — 25 weight-based, 20
 order-based, and 5 walk-forward / optimization. Each has source and results-page
 links in the [full catalog](strategies/README.md); a summary follows.
 
-**Weight-based (22)** — target-weight portfolios, market-neutral long/short, and risk overlays:
+**Weight-based (25)** — target-weight portfolios, market-neutral long/short, and risk overlays:
 
 | # | Strategy | Idea | Code | Results |
 |:--|:--|:--|:--|:--|
@@ -277,8 +289,15 @@ links in the [full catalog](strategies/README.md); a summary follows.
 | W20 | Risk Parity + Position Cap | Sector ERC chained with a 25% per-position cap | [source](strategies/example_weights_20_risk_parity_capped.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
 | W21 | Bollinger Band Reversion | Buy below the lower band, exit at the midline | [source](strategies/example_weights_21_bollinger_reversion.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
 | W22 | MACD Trend | Long while MACD is above its signal line | [source](strategies/example_weights_22_macd_trend.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W23 | FX Time-Series Momentum | Six-month trend across USD-quoted spot pairs; inverse-vol weights | [source](strategies/example_weights_23_fx_time_series_momentum.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W24 | FX Cross-Sectional Momentum | Long strongest / short weakest XXX/USD pair; monthly | [source](strategies/example_weights_24_fx_cross_sectional_momentum.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W25 | Continuous Futures Trend Proxy | Diversified long/short trend on provider continuous series | [source](strategies/example_weights_25_continuous_futures_trend.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
 
-**Order-based (18)** — explicit orders through the fill engine (slippage, commissions, blotter):
+W23-W25 are price-return research proxies. They do not apply FX lots or futures
+multipliers to PnL and do not model financing, margin, or controlled futures
+rolls.
+
+**Order-based (20)** — explicit orders through the fill engine (slippage, commissions, blotter):
 
 | # | Strategy | Order type | Idea | Code | Results |
 |:--|:--|:--|:--|:--|:--|
@@ -300,6 +319,13 @@ links in the [full catalog](strategies/README.md); a summary follows.
 | O16 | Intraday 30m Stop Breakout | Stop | Buy-stop above the 12-bar high, fixed holding period; 30-min bars | [source](strategies/example_orders_16_intraday_30m_stop_breakout.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
 | O17 | Monthly Rotation (orders) | Market | Event-driven monthly momentum rotation, executed with orders | [source](strategies/example_orders_17_monthly_rotation_orders.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
 | O18 | Signal-Change Rotation (orders) | Market | Trade only on SMA trend-signal flips (no calendar) | [source](strategies/example_orders_18_signal_change_rotation_orders.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| O19 | FX Momentum with Standard Lots | Market | Contract-aware whole-lot momentum on USD-quoted spot pairs | [source](strategies/example_orders_19_fx_momentum_lots.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| O20 | Futures Donchian Contracts | Market | Whole-contract ATR sizing on provider continuous futures | [source](strategies/example_orders_20_futures_donchian_contracts.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+
+O19-O20 consume provider contract specifications. Multipliers and lot sizes are
+applied. Cross-currency conversion, FX swaps, dated-futures selection, and
+controlled roll execution remain out of scope; unsupported cross-currency FX
+accounting is rejected rather than approximated.
 
 **Walk-forward & optimization (5)** — prove a strategy generalizes:
 

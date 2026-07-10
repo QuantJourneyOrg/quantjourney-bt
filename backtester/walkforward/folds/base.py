@@ -11,7 +11,7 @@ Licensed under the Apache License 2.0.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import pandas as pd
 
@@ -37,8 +37,8 @@ class Fold:
 
     # After purge/embargo (None when no dates are excluded)
     effective_is_end: pd.Timestamp
-    purge_start: Optional[pd.Timestamp]   # first excluded date
-    purge_end: Optional[pd.Timestamp]     # last excluded date (= oos_start - 1 trading day)
+    purge_start: pd.Timestamp | None  # first excluded date
+    purge_end: pd.Timestamp | None  # last excluded date (= oos_start - 1 trading day)
 
 
 @runtime_checkable
@@ -50,7 +50,7 @@ class FoldScheme(Protocol):
         start: pd.Timestamp,
         end: pd.Timestamp,
         trading_dates: pd.DatetimeIndex,
-    ) -> List[Fold]:
+    ) -> list[Fold]:
         """
         Generate all folds for the given date range.
 

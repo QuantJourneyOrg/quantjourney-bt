@@ -46,7 +46,9 @@ class TrailingStopRSI(Backtester):
         self._has_trail = {}
 
     def _has_pending(self, instrument: str) -> bool:
-        return any(o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders)
+        return any(
+            o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders
+        )
 
     def _compute_orders(self, date, bars, current_positions, nav) -> None:
         rsi = self.instruments_data.get_feature("RSI_14_close")
@@ -69,13 +71,15 @@ class TrailingStopRSI(Backtester):
                 if shares > 0:
                     self.fill_engine.submit(Order(inst, OrderSide.BUY, shares, OrderType.MARKET))
             elif pos > 0 and not self._has_trail.get(inst, False):
-                self.fill_engine.submit(Order(
-                    inst,
-                    OrderSide.SELL,
-                    pos,
-                    OrderType.STOP_TRAIL,
-                    trail_percent=0.05,
-                ))
+                self.fill_engine.submit(
+                    Order(
+                        inst,
+                        OrderSide.SELL,
+                        pos,
+                        OrderType.STOP_TRAIL,
+                        trail_percent=0.05,
+                    )
+                )
                 self._has_trail[inst] = True
             elif pos > 0 and value > 65:
                 self.fill_engine.cancel_all(instrument=inst)

@@ -15,7 +15,7 @@ Licensed under the Apache License 2.0.
 
 import logging
 import os
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 try:
     from backtester.utils.logger import logger
@@ -49,7 +49,7 @@ class SDKClientMixin:
         return isinstance(detail, dict) and detail.get("code") == "active_session_exists"
 
     @staticmethod
-    def _quota_limit_message(exc: Exception) -> Optional[str]:
+    def _quota_limit_message(exc: Exception) -> str | None:
         body = getattr(exc, "response_body", None)
         body = body if isinstance(body, dict) else {}
         code = (
@@ -70,7 +70,8 @@ class SDKClientMixin:
         return (
             f"{yellow}QuantJourney Backtester limit reached.\n"
             f"  {detail}\n"
-            f"  Upgrade to QuantJourney Pro to continue or ask support@quantjourney.cloud to increase your limit.\n"
+            "  Upgrade to QuantJourney Pro to continue or ask "
+            "support@quantjourney.cloud to increase your limit.\n"
             f"  Pro: {upgrade_url}{reset}"
         )
 
@@ -80,7 +81,7 @@ class SDKClientMixin:
         if not message:
             raise exc
         quota_exc = RuntimeError("QuantJourney Backtester quota exceeded")
-        setattr(quota_exc, "_qj_quota_message", message)
+        quota_exc._qj_quota_message = message
         raise quota_exc from exc
 
     # ─────────────────────────────────────────────────────────────────
@@ -124,12 +125,17 @@ class SDKClientMixin:
             if self._is_active_session_conflict(resp):
                 if not self._replace_existing_session_enabled():
                     raise ValueError(
-                        f"Authentication blocked by an active QuantJourney session at {auth_url}/auth/login\n"
+                        "Authentication blocked by an active QuantJourney session at "
+                        f"{auth_url}/auth/login\n"
                         f"  Email: {self._email}\n"
-                        f"  Set QJ_REPLACE_EXISTING_SESSION=1 to let the CLI replace the existing session,\n"
-                        f"  or use QJ_API_KEY to avoid browser-session conflicts."
+                        "  Set QJ_REPLACE_EXISTING_SESSION=1 to let the CLI replace "
+                        "the existing session,\n"
+                        "  or use QJ_API_KEY to avoid browser-session conflicts."
                     )
-                logger.info("[Backtester] Active auth session exists; replacing it for this headless backtester run")
+                logger.info(
+                    "[Backtester] Active auth session exists; replacing it for this "
+                    "headless backtester run"
+                )
                 resp = await self._sdk_client.client.post(
                     f"{auth_url}/auth/login",
                     json={**login_payload, "replace_existing_session": True},
@@ -163,9 +169,7 @@ class SDKClientMixin:
             expires = data.get("expires_in", "?")
             logger.info(f"[Backtester] Logged in as {self._email} (expires in {expires}s)")
         else:
-            raise ValueError(
-                "Backtester requires either (email + password) or api_key"
-            )
+            raise ValueError("Backtester requires either (email + password) or api_key")
 
         return self._sdk_client
 
@@ -194,6 +198,7 @@ class SDKClientMixin:
             )
             self.session_id = self._api_response["session_id"]
             self.dataset_id = self._api_response["dataset_id"]
+            self._validate_data_completeness_response()
             summary = self._api_response["summary"]
             logger.info(
                 f"[Backtester] Sample data loaded: "
@@ -232,6 +237,7 @@ class SDKClientMixin:
 
         self.session_id = self._api_response.get("session_id")
         self.dataset_id = self._api_response.get("dataset_id")
+        self._validate_data_completeness_response()
         summary = self._api_response.get("summary", {})
 
         logger.info(
@@ -241,15 +247,48 @@ class SDKClientMixin:
             f"granularity={self._granularity}"
         )
 
+    def _validate_data_completeness_response(self) -> None:
+        """Fail closed when the provider declares or reveals a partial universe."""
+        response = self._api_response if isinstance(self._api_response, dict) else {}
+        summary = response.get("summary", {})
+        if not isinstance(summary, dict):
+            summary = {}
+
+        declared_missing = response.get(
+            "missing_instruments", summary.get("missing_instruments", [])
+        )
+        if isinstance(declared_missing, str):
+            declared_missing = [declared_missing]
+        declared_missing = {str(symbol).strip().upper() for symbol in (declared_missing or [])}
+
+        received_raw = response.get("instrument_names")
+        received = (
+            {str(symbol).strip().upper() for symbol in received_raw}
+            if isinstance(received_raw, (list, tuple, set))
+            else set()
+        )
+        requested = {str(symbol).strip().upper() for symbol in self.instruments}
+        inferred_missing = requested - received if received else set()
+        missing = sorted(declared_missing | inferred_missing)
+        partial = bool(response.get("partial", summary.get("partial", False)))
+        if not missing and not partial:
+            return
+
+        detail = f"missing={missing}" if missing else "provider marked response partial"
+        message = f"Incomplete market-data response ({detail})"
+        if not getattr(self, "_allow_partial_data", False):
+            raise ValueError(message + ". Pass allow_partial_data=True to opt in.")
+        logger.warning(f"[Backtester] {message}; continuing by explicit opt-in")
+
     # ─────────────────────────────────────────────────────────────────
     # Server-Side Calculations (optional convenience)
     # ─────────────────────────────────────────────────────────────────
 
     async def calc_portfolio_server(
         self,
-        calc_ids: List[str],
-        params: Optional[Dict[str, Dict[str, Any]]] = None,
-    ) -> Dict[str, Any]:
+        calc_ids: list[str],
+        params: dict[str, dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         """
         Run calculations on the server via POST /bt/calc/portfolio.
         Returns the raw results dict.
@@ -259,9 +298,12 @@ class SDKClientMixin:
 
         client = await self._get_sdk_client()
 
-        result = await client._request("/bt/calc/portfolio", {
-            "session_id": self.session_id,
-            "calc_ids": calc_ids,
-            "params": params or {},
-        })
+        result = await client._request(
+            "/bt/calc/portfolio",
+            {
+                "session_id": self.session_id,
+                "calc_ids": calc_ids,
+                "params": params or {},
+            },
+        )
         return result.get("results", {}) if isinstance(result, dict) else result

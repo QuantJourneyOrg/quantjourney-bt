@@ -10,8 +10,8 @@ Licensed under the Apache License 2.0.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from typing import Any, Callable, Dict, List, Literal, Optional, Union
+from dataclasses import asdict, dataclass, field
+from typing import Any, Literal
 
 
 @dataclass(frozen=True)
@@ -28,16 +28,16 @@ class WalkForwardConfig:
     train_months: int = 24
     test_months: int = 6
     min_train_months: int = 12
-    step_months: Optional[int] = None  # default = test_months
-    n_splits: Optional[int] = None     # CPCV only
+    step_months: int | None = None  # default = test_months
+    n_splits: int | None = None  # CPCV only
 
     # ── Purging & Embargo ─────────────────────────────────────────────
     purge_days: int = 5
     embargo_pct: float = 0.01
-    max_holding_period_days: Optional[int] = None
+    max_holding_period_days: int | None = None
 
     # ── Optimization ──────────────────────────────────────────────────
-    optimization: Optional[Dict[str, Any]] = None
+    optimization: dict[str, Any] | None = None
 
     # ── Statistical Controls ──────────────────────────────────────────
     compute_deflated_sharpe: bool = True
@@ -51,9 +51,7 @@ class WalkForwardConfig:
     min_oos_sharpe: float = 0.0
 
     # ── Cost Sensitivity ──────────────────────────────────────────────
-    cost_sensitivity_bps: List[int] = field(
-        default_factory=lambda: [0, 5, 10, 20]
-    )
+    cost_sensitivity_bps: list[int] = field(default_factory=lambda: [0, 5, 10, 20])
     base_slippage_model: Any = None  # SlippageModel instance
     base_commission_scheme: Any = None  # CommissionScheme instance
 
@@ -91,7 +89,7 @@ class WalkForwardConfig:
 
     # ── Serialisation ─────────────────────────────────────────────────
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Return a JSON-safe dict (strip non-serialisable objects)."""
         d = asdict(self)
         # SlippageModel / CommissionScheme are not JSON-safe

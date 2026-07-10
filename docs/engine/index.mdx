@@ -1,0 +1,207 @@
+---
+title: "Backtester Engine"
+description: "The execution map for QuantJourney Backtester: signals, weights, positions, orders, fills, costs and validation."
+---
+
+# Backtester Engine
+
+QuantJourney Backtester has two strategy contracts and three accounting
+configurations. A weight strategy can use fast allocation accounting or route
+its targets through real orders and fills. An order strategy writes orders
+directly.
+
+<div className="qj-contract">
+  <div><strong>Source</strong><code>backtester/core.py + backtester/execution/ + backtester/portfolio/ + backtester/risk/</code></div>
+  <div><strong>Layer</strong>Engine map</div>
+  <div><strong>Mode</strong><code>weights</code> and <code>orders</code></div>
+  <div><strong>Input</strong>market data, indicators, strategy hooks, risk settings, rebalance settings and execution settings</div>
+  <div><strong>Output</strong>NAV, returns, weights, positions, orders, fills, trades, metrics, plots and reports</div>
+  <div><strong>Primary API</strong><code>await strategy.run_strategy()</code></div>
+  <div><strong>Main caveat</strong>Weights are not fills. Signals are not trades. Rebalancing and stops belong to different execution paths.</div>
+</div>
+
+## Mental Model
+
+The engine is deliberately small at the strategy boundary and explicit below it.
+A strategy either produces target exposures or submits orders. The rest of the
+engine turns those decisions into auditable state.
+
+<div className="qj-flow">
+WEIGHT + FAST - allocation research
+
+Data -> indicators -> _compute_signals() -> _compute_weights()
+     -> optional RiskModel.adjust()
+     -> RebalanceEngine.run()
+     -> actual weights -> positions -> NAV -> metrics/reports
+
+WEIGHT + ORDERS - execution-aware portfolio construction
+
+Data -> indicators -> _compute_signals() -> _compute_weights()
+     -> stateful RebalancePolicy -> target quantities
+     -> PreTradeRisk -> FillEngine -> PortfolioLedger
+
+ORDER MODE - discrete execution research
+
+Data -> indicators/state -> _compute_orders(date, bars, positions, nav)
+     -> FillEngine pending orders
+     -> fills -> cash/positions/NAV -> metrics/reports
+</div>
+
+<div className="qj-callout warning">
+  <div className="qj-callout-title">Do not mix these concepts</div>
+  Signals express intent. Weights express desired exposure. Positions are realized units. Orders are execution instructions. Fills are completed executions. Rebalancing is a weight-mode portfolio process. Stops, limits, brackets and OCO are order-mode execution mechanics.
+</div>
+
+## Which Path Should You Use?
+
+| I want to... | Use | Read next |
+|---|---|---|
+| Turn an idea into a runnable strategy file | contract + mode choice | <a href="/engine/strategy-writing">Writing Strategies</a> |
+| Generate long/flat/short or ranking intent | <code>_compute_signals()</code> | <a href="/engine/signals">Signals</a> |
+| Convert intent into target portfolio exposure | <code>_compute_weights()</code> | <a href="/engine/weights">Weights</a> |
+| Understand realized share/unit exposure | <code>portfolio_data.positions</code> | <a href="/engine/positions">Positions</a> |
+| Apply caps, vol targeting, inverse vol or risk parity | <code>risk_model=...</code> | <a href="/engine/risk-models">Risk Models</a> |
+| Trade only on calendar, drift, signal or turnover triggers | <code>RebalancePolicy(...)</code> | <a href="/engine/rebalancing">Rebalancing</a> |
+| Keep weight strategy code but get orders, fills, lots and margin | <code>weight_execution="orders"</code> | <a href="/engine/rebalancing">Rebalancing</a> |
+| Allocate capital across several strategy NAV streams | <code>StrategyBook</code> | <a href="/engine/strategy-book">Strategy Book</a> |
+| Submit market, limit, stop, trailing, bracket or OCO orders | <code>execution_mode="orders"</code> + <code>_compute_orders(...)</code> | <a href="/engine/order-lifecycle">Order Lifecycle</a> |
+| Model spread, impact and commission assumptions | slippage and commission models | <a href="/engine/transaction-costs">Costs</a> |
+| Validate parameters out of sample | walk-forward / Optuna | <a href="/engine/walk-forward-optimization">Walk-Forward</a> |
+
+## Weight Mode
+
+Use weight mode for portfolio allocation, factor research, ranking models,
+rotation systems, volatility targeting and scheduled rebalancing.
+
+Weight mode strategy code usually has two hooks:
+
+<div className="qj-code-card">
+<div className="qj-code-card-title">Weight mode hook shape</div>
+
+```python
+class MyPortfolioStrategy(Backtester):
+    def _compute_signals(self) -> pd.DataFrame:
+        ...
+
+    def _compute_weights(self) -> pd.DataFrame:
+        ...
+```
+</div>
+
+The performance path shifts target weights by one bar before returns are earned.
+That protects against same-bar look-ahead, but it does not make non-causal
+signals acceptable. Signal code must still use only information available at the
+decision timestamp.
+
+## Execution-Aware Weight Mode
+
+Use <code>weight_execution="orders"</code> when the alpha is naturally stated
+as weights but the answer must reflect discrete shares/contracts/lots,
+slippage, commission, partial fills, margin and rejected orders. Strategy hooks
+stay unchanged; the controller converts targets into orders after each bar.
+
+## Direct Order Mode
+
+Use order mode for execution-aware tests: market orders, limit entries,
+take-profit exits, stop-loss, trailing stop, bracket orders, OCO pairs,
+slippage and per-fill commission.
+
+Order mode strategy code uses this hook:
+
+<div className="qj-code-card">
+<div className="qj-code-card-title">Order mode hook shape</div>
+
+```python
+class MyOrderStrategy(Backtester):
+    def _compute_orders(self, date, bars, current_positions, nav) -> None:
+        ...
+```
+</div>
+
+In order mode the engine processes pending orders first, updates portfolio
+state, and only then calls <code>_compute_orders(...)</code>. Treat newly
+submitted orders as pending for later bar processing.
+
+## Minimal Order Example
+
+The simplest execution-aware entry with a take-profit and stop-loss is a
+bracket order.
+
+<div className="qj-code-card">
+<div className="qj-code-card-title">Market-style entry with TP and SL</div>
+
+```python
+from backtester import Backtester
+from backtester.execution import BracketSpec, Order, OrderSide, OrderType
+
+
+class EntryWithBracket(Backtester):
+    def __init__(self, **kwargs):
+        super().__init__(execution_mode="orders", **kwargs)
+        self._submitted = False
+
+    def _compute_orders(self, date, bars, current_positions, nav):
+        inst = "SPY"
+        bar = bars[inst]
+        pos = current_positions.get(inst, 0.0)
+
+        if pos != 0 or self._submitted:
+            return
+
+        qty = int(nav * 0.20 / bar.close)
+        if qty <= 0:
+            return
+
+        self.fill_engine.submit(Order(
+            instrument=inst,
+            side=OrderSide.BUY,
+            quantity=qty,
+            order_type=OrderType.BRACKET,
+            bracket=BracketSpec(
+                take_profit_price=round(bar.close * 1.10, 2),
+                stop_loss_price=round(bar.close * 0.95, 2),
+            ),
+        ))
+        self._submitted = True
+```
+</div>
+
+## Execution Rules
+
+| Rule | Engine behavior | Why it matters |
+|---|---|---|
+| Fast weight timing | Target weights are shifted before compatibility accounting. | A signal on date t should not earn date t return. |
+| Weight-order timing | Unshifted target(t) is submitted after t and fills no earlier than t+1. | The order lifecycle supplies the lag without a second shift. |
+| Order timing | Pending orders are processed before <code>_compute_orders(...)</code> is called. | A new order is normally eligible on a later bar, not through same-bar hindsight. |
+| Market fills | Market orders use <code>FillEngine.fill_at</code>, default <code>open</code>. | Fill price is an assumption and should be reported. |
+| Stops and limits | Trigger checks use OHLC high/low. | Daily bars show touched levels, not tick sequence. |
+| Costs | Weight mode charges turnover cost; order mode charges per-fill slippage and commission. | The two paths use different cost mechanics. |
+| Positions | Positions are derived from realized weights in weight mode and from fills in order mode. | Positions are state, not strategy intent. |
+
+Fast weights run on adjusted close with a default turnover-cost model.
+Execution paths use executable OHLC and explicit slippage/commission models.
+Always report <code>execution_mode</code>, <code>weight_execution</code>, fill
+timing, cost assumptions and price/corporate-action basis.
+
+## Common Failure Modes
+
+| Failure mode | What goes wrong | What to inspect |
+|---|---|---|
+| Survivorship bias | Universe excludes failed or delisted names. | Universe construction and data source. |
+| Look-ahead | Signals use future data. | Indicator alignment, shifts and feature timestamps. |
+| Unrealistic intrabar fills | TP and SL both touch in a daily candle. | Fill priority, same-bar policy and whether intraday data is required. |
+| Costs too low | High-turnover strategy works gross and fails net. | Turnover, slippage, commission and fill count. |
+| Rebalance artifacts | Daily rebalancing hides drift or creates unrealistic turnover. | <code>rebalance_flags</code> and <code>RebalancePolicy</code>. |
+| Stale orders | Pending stop/limit/OCO orders stay live after the signal is invalid. | <code>fill_engine.pending_orders</code> and cancel logic. |
+
+## Related Guides
+
+- <a href="/engine/strategy-writing">Writing Strategies</a>
+- <a href="/engine/signals">Signals</a>
+- <a href="/engine/weights">Weights</a>
+- <a href="/engine/positions">Positions</a>
+- <a href="/engine/order-lifecycle">Order Lifecycle</a>
+- <a href="/engine/stop-loss">Stop Loss</a>
+- <a href="/engine/bracket-orders">Bracket Orders</a>
+- <a href="/engine/rebalancing">Rebalancing</a>
+- <a href="/engine/strategy-book">Strategy Book</a>

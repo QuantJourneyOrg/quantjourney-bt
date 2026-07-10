@@ -1,7 +1,7 @@
 # Strategy Examples
 
-This folder contains **45 runnable example strategies** for the QuantJourney
-Backtester — **22 weight-based**, **18 order-based**, and **5 walk-forward /
+This folder contains **50 runnable example strategies** for the QuantJourney
+Backtester — **25 weight-based**, **20 order-based**, and **5 walk-forward /
 optimization** examples. Each file is a complete, self-contained template: copy
 the one closest to your idea, change the rule, and you are testing your own
 strategy in minutes.
@@ -27,7 +27,7 @@ Naming: `example_<mode>_<NN>_<name>.py`, where mode is `weights`, `orders`, or
 
 ---
 
-## Weight-based strategies (22)
+## Weight-based strategies (25)
 
 Portfolio thinking — produce target weights, let the rebalance engine (and any
 risk overlay) trade them. Includes long/cash, market-neutral long/short, and
@@ -57,11 +57,18 @@ risk-overlay templates.
 | W20 | Risk Parity + Position Cap | Sector ERC chained with a 25% per-position cap | [source](./example_weights_20_risk_parity_capped.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
 | W21 | Bollinger Band Reversion | Buy below the lower band, exit at the midline | [source](./example_weights_21_bollinger_reversion.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
 | W22 | MACD Trend | Long while MACD is above its signal line | [source](./example_weights_22_macd_trend.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W23 | FX Time-Series Momentum | Six-month trend across USD-quoted spot pairs; inverse-vol weights | [source](./example_weights_23_fx_time_series_momentum.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W24 | FX Cross-Sectional Momentum | Long strongest / short weakest XXX/USD pair; monthly | [source](./example_weights_24_fx_cross_sectional_momentum.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| W25 | Continuous Futures Trend Proxy | Diversified long/short trend on provider continuous series | [source](./example_weights_25_continuous_futures_trend.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
 
 The long/short examples (W13–W16) are market-neutral; short borrow/financing is
 not modeled (a documented research approximation).
 
-## Order-based strategies (18)
+W23-W25 are price-return research proxies. They do not apply FX lots or futures
+multipliers to PnL and do not model financing, margin, or controlled futures
+rolls.
+
+## Order-based strategies (20)
 
 Execution thinking — submit explicit orders through the fill engine with
 slippage, commissions, and a trade blotter.
@@ -86,6 +93,13 @@ slippage, commissions, and a trade blotter.
 | O16 | Intraday 30m Stop Breakout | Stop | Buy-stop above the 12-bar high, fixed holding period; 30-min bars | [source](./example_orders_16_intraday_30m_stop_breakout.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
 | O17 | Monthly Rotation (orders) | Market | Event-driven monthly momentum rotation, executed with orders | [source](./example_orders_17_monthly_rotation_orders.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
 | O18 | Signal-Change Rotation (orders) | Market | Trade only on SMA trend-signal flips (no calendar) | [source](./example_orders_18_signal_change_rotation_orders.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| O19 | FX Momentum with Standard Lots | Market | Contract-aware whole-lot momentum on USD-quoted spot pairs | [source](./example_orders_19_fx_momentum_lots.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+| O20 | Futures Donchian Contracts | Market | Whole-contract ATR sizing on provider continuous futures | [source](./example_orders_20_futures_donchian_contracts.py) | [browse](https://backtester.quantjourney.cloud/strategies) |
+
+O19-O20 consume `instrument_specs` returned by qj-api. Multipliers and lot sizes
+are applied, but margin/buying-power enforcement, FX swaps and currency
+conversion, dated futures selection, and controlled roll execution remain out
+of scope for these examples.
 
 ## Walk-forward & optimization examples (5)
 

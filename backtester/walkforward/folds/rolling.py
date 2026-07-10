@@ -10,8 +10,6 @@ Licensed under the Apache License 2.0.
 
 from __future__ import annotations
 
-from typing import List
-
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
@@ -31,8 +29,8 @@ class RollingFoldScheme:
         start: pd.Timestamp,
         end: pd.Timestamp,
         trading_dates: pd.DatetimeIndex,
-    ) -> List[Fold]:
-        folds: List[Fold] = []
+    ) -> list[Fold]:
+        folds: list[Fold] = []
         step = relativedelta(months=self._cfg.effective_step_months)
         train_delta = relativedelta(months=self._cfg.train_months)
         test_delta = relativedelta(months=self._cfg.test_months)

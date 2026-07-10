@@ -7,8 +7,6 @@ Licensed under the Apache License 2.0.
 
 from __future__ import annotations
 
-from typing import List
-
 import pandas as pd
 
 from backtester.walkforward.config import WalkForwardConfig
@@ -26,7 +24,7 @@ class CPCVFoldScheme:
         start: pd.Timestamp,
         end: pd.Timestamp,
         trading_dates: pd.DatetimeIndex,
-    ) -> List[Fold]:
+    ) -> list[Fold]:
         raise NotImplementedError(
             "CPCV fold scheme is planned for Phase 10. "
             "Use 'rolling', 'expanding', or 'anchored' for now."

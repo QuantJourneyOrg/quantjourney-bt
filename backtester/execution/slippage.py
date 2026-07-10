@@ -25,8 +25,8 @@ from typing import Protocol, runtime_checkable
 
 from backtester.execution.order_types import BarData, OrderSide
 
-
 # ── Protocol ───────────────────────────────────────────────────────────
+
 
 @runtime_checkable
 class SlippageModel(Protocol):
@@ -45,12 +45,17 @@ class SlippageModel(Protocol):
 
 # ── Implementations ───────────────────────────────────────────────────
 
+
 @dataclass(frozen=True, slots=True)
 class NoSlippage:
     """No slippage — fill at theoretical price."""
 
     def compute(
-        self, price: float, quantity: float, side: OrderSide, bar: BarData,
+        self,
+        price: float,
+        quantity: float,
+        side: OrderSide,
+        bar: BarData,
     ) -> float:
         return price
 
@@ -68,9 +73,13 @@ class FixedBpsSlippage:
     bps: float = 5.0
 
     def compute(
-        self, price: float, quantity: float, side: OrderSide, bar: BarData,
+        self,
+        price: float,
+        quantity: float,
+        side: OrderSide,
+        bar: BarData,
     ) -> float:
-        spread = price * self.bps / 10_000
+        spread = abs(price) * self.bps / 10_000
         return price + spread if side == OrderSide.BUY else price - spread
 
 
@@ -87,12 +96,16 @@ class VolatilitySlippage:
     vol_factor: float = 0.1
 
     def compute(
-        self, price: float, quantity: float, side: OrderSide, bar: BarData,
+        self,
+        price: float,
+        quantity: float,
+        side: OrderSide,
+        bar: BarData,
     ) -> float:
         if bar.close == 0:
             return price
-        bar_range = (bar.high - bar.low) / bar.close
-        spread = price * self.vol_factor * bar_range
+        bar_range = abs(bar.high - bar.low) / abs(bar.close)
+        spread = abs(price) * self.vol_factor * bar_range
         return price + spread if side == OrderSide.BUY else price - spread
 
 
@@ -114,8 +127,12 @@ class MarketImpactSlippage:
     eta: float = 0.1
 
     def compute(
-        self, price: float, quantity: float, side: OrderSide, bar: BarData,
+        self,
+        price: float,
+        quantity: float,
+        side: OrderSide,
+        bar: BarData,
     ) -> float:
         participation = abs(quantity) / max(self.adv, 1.0)
-        impact = price * self.eta * self.sigma_daily * math.sqrt(participation)
+        impact = abs(price) * self.eta * self.sigma_daily * math.sqrt(participation)
         return price + impact if side == OrderSide.BUY else price - impact

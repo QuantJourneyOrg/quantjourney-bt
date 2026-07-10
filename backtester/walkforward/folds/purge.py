@@ -11,8 +11,6 @@ Licensed under the Apache License 2.0.
 
 from __future__ import annotations
 
-from typing import Optional, Tuple
-
 import pandas as pd
 
 
@@ -23,8 +21,8 @@ def compute_purge_embargo(
     embargo_pct: float,
     trading_dates: pd.DatetimeIndex,
     is_start: pd.Timestamp,
-    max_holding_period_days: Optional[int] = None,
-) -> Tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp]:
+    max_holding_period_days: int | None = None,
+) -> tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp]:
     """
     Compute effective IS end after purge & embargo.
 

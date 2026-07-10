@@ -16,14 +16,13 @@ Copyright (c) 2026 QuantJourney.
 Licensed under the Apache License 2.0.
 """
 
-from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Tuple, Union
 import datetime
+from collections.abc import Callable
+from dataclasses import dataclass
 
 import matplotlib.dates as mdates
 import matplotlib.ticker as mticker
 import pandas as pd
-
 
 __all__ = ["DateFormatter"]
 
@@ -31,6 +30,7 @@ __all__ = ["DateFormatter"]
 # ---------------------------------------------------------------------------
 # Frequency registry — single source of truth
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class FreqConfig:
@@ -45,31 +45,33 @@ def _auto() -> mdates.AutoDateLocator:
     return mdates.AutoDateLocator()
 
 
-_FREQ_REGISTRY: Dict[str, FreqConfig] = {
+_FREQ_REGISTRY: dict[str, FreqConfig] = {
     # Daily / business daily
-    "D":     FreqConfig(lambda: _auto(),                                      "%Y-%m-%d", "D"),
-    "B":     FreqConfig(lambda: _auto(),                                      "%Y-%m-%d", "B"),
+    "D": FreqConfig(lambda: _auto(), "%Y-%m-%d", "D"),
+    "B": FreqConfig(lambda: _auto(), "%Y-%m-%d", "B"),
     # Weekly
-    "W":     FreqConfig(lambda: mdates.WeekdayLocator(byweekday=mdates.MO),   "%Y-%m-%d", "W"),
-    "W-MON": FreqConfig(lambda: mdates.WeekdayLocator(byweekday=mdates.MO),   "%Y-%m-%d", "W-MON"),
-    "W-FRI": FreqConfig(lambda: mdates.WeekdayLocator(byweekday=mdates.FR),   "%Y-%m-%d", "W-FRI"),
-    "2W":    FreqConfig(lambda: mdates.WeekdayLocator(byweekday=mdates.MO, interval=2), "%Y-%m-%d", "2W"),
+    "W": FreqConfig(lambda: mdates.WeekdayLocator(byweekday=mdates.MO), "%Y-%m-%d", "W"),
+    "W-MON": FreqConfig(lambda: mdates.WeekdayLocator(byweekday=mdates.MO), "%Y-%m-%d", "W-MON"),
+    "W-FRI": FreqConfig(lambda: mdates.WeekdayLocator(byweekday=mdates.FR), "%Y-%m-%d", "W-FRI"),
+    "2W": FreqConfig(
+        lambda: mdates.WeekdayLocator(byweekday=mdates.MO, interval=2), "%Y-%m-%d", "2W"
+    ),
     # Monthly
-    "M":     FreqConfig(lambda: mdates.MonthLocator(),                         "%Y-%m",   "ME"),
-    "MS":    FreqConfig(lambda: mdates.MonthLocator(),                         "%Y-%m",   "MS"),
-    "BM":    FreqConfig(lambda: mdates.MonthLocator(),                         "%Y-%m",   "BME"),
+    "M": FreqConfig(lambda: mdates.MonthLocator(), "%Y-%m", "ME"),
+    "MS": FreqConfig(lambda: mdates.MonthLocator(), "%Y-%m", "MS"),
+    "BM": FreqConfig(lambda: mdates.MonthLocator(), "%Y-%m", "BME"),
     # Quarterly
-    "Q":     FreqConfig(lambda: mdates.MonthLocator(bymonth=[1, 4, 7, 10]),   "%Y-Q%Q",  "QE"),
-    "QS":    FreqConfig(lambda: mdates.MonthLocator(bymonth=[1, 4, 7, 10]),   "%Y-Q%Q",  "QS"),
-    "BQ":    FreqConfig(lambda: mdates.MonthLocator(bymonth=[3, 6, 9, 12]),   "%Y-Q%Q",  "BQE"),
+    "Q": FreqConfig(lambda: mdates.MonthLocator(bymonth=[1, 4, 7, 10]), "%Y-Q%Q", "QE"),
+    "QS": FreqConfig(lambda: mdates.MonthLocator(bymonth=[1, 4, 7, 10]), "%Y-Q%Q", "QS"),
+    "BQ": FreqConfig(lambda: mdates.MonthLocator(bymonth=[3, 6, 9, 12]), "%Y-Q%Q", "BQE"),
     # Yearly
-    "Y":     FreqConfig(lambda: mdates.YearLocator(),                          "%Y",      "YE"),
-    "YE":    FreqConfig(lambda: mdates.YearLocator(),                          "%Y",      "YE"),
-    "A":     FreqConfig(lambda: mdates.YearLocator(),                          "%Y",      "YE"),
-    "YS":    FreqConfig(lambda: mdates.YearLocator(),                          "%Y",      "YS"),
-    "AS":    FreqConfig(lambda: mdates.YearLocator(),                          "%Y",      "YS"),
-    "BY":    FreqConfig(lambda: mdates.YearLocator(),                          "%Y",      "BYE"),
-    "BA":    FreqConfig(lambda: mdates.YearLocator(),                          "%Y",      "BYE"),
+    "Y": FreqConfig(lambda: mdates.YearLocator(), "%Y", "YE"),
+    "YE": FreqConfig(lambda: mdates.YearLocator(), "%Y", "YE"),
+    "A": FreqConfig(lambda: mdates.YearLocator(), "%Y", "YE"),
+    "YS": FreqConfig(lambda: mdates.YearLocator(), "%Y", "YS"),
+    "AS": FreqConfig(lambda: mdates.YearLocator(), "%Y", "YS"),
+    "BY": FreqConfig(lambda: mdates.YearLocator(), "%Y", "BYE"),
+    "BA": FreqConfig(lambda: mdates.YearLocator(), "%Y", "BYE"),
 }
 
 # Groups used by ``map_dates_index_to_str`` to decide label strategy
@@ -84,6 +86,7 @@ _DAILY_FREQS = {"D", "B"}
 # DateFormatter
 # ---------------------------------------------------------------------------
 
+
 class DateFormatter:
     """Utility for intelligent date-axis formatting on matplotlib charts."""
 
@@ -92,8 +95,8 @@ class DateFormatter:
     @staticmethod
     def get_locator_and_formatter(
         freq: str,
-        date_format: Optional[str] = None,
-    ) -> Tuple[mdates.DateLocator, mticker.Formatter]:
+        date_format: str | None = None,
+    ) -> tuple[mdates.DateLocator, mticker.Formatter]:
         """
         Return a (locator, formatter) pair appropriate for *freq*.
 
@@ -114,9 +117,7 @@ class DateFormatter:
 
         # Capture *fmt* by value (default-argument trick) to avoid closure bug
         formatter = mticker.FuncFormatter(
-            lambda x, pos, _fmt=fmt: DateFormatter._format_date(
-                mdates.num2date(x), _fmt
-            )
+            lambda x, pos, _fmt=fmt: DateFormatter._format_date(mdates.num2date(x), _fmt)
         )
         return locator, formatter
 
@@ -137,9 +138,9 @@ class DateFormatter:
 
     @staticmethod
     def map_dates_index_to_str(
-        data: Union[pd.DataFrame, pd.Series],
+        data: pd.DataFrame | pd.Series,
         **kwargs,
-    ) -> Tuple[Union[pd.DataFrame, pd.Series], List[str]]:
+    ) -> tuple[pd.DataFrame | pd.Series, list[str]]:
         """
         Re-index *data* with formatted date strings and generate tick labels
         suitable for bar charts.
@@ -178,9 +179,7 @@ class DateFormatter:
 
         if len(ticks) <= 1:
             for fallback in ["ME", "W", "D"]:
-                ticks = pd.date_range(
-                    start=dates_index[0], end=dates_index[-1], freq=fallback
-                )
+                ticks = pd.date_range(start=dates_index[0], end=dates_index[-1], freq=fallback)
                 if len(ticks) > 1:
                     pd_freq = fallback
                     break
@@ -194,9 +193,7 @@ class DateFormatter:
         re_indexed_data.index = dates_index.strftime(x_date_format)
 
         # Build labels based on resolved frequency
-        datalabels = DateFormatter._build_labels(
-            dates_index, pd_freq, x_date_format
-        )
+        datalabels = DateFormatter._build_labels(dates_index, pd_freq, x_date_format)
 
         # Suppress consecutive duplicates
         prev = ""
@@ -215,20 +212,14 @@ class DateFormatter:
         dates_index: pd.DatetimeIndex,
         pd_freq: str,
         fmt: str,
-    ) -> List[str]:
+    ) -> list[str]:
         """Choose label strategy based on resolved frequency."""
 
         if pd_freq in _YEARLY_FREQS:
-            return [
-                t.strftime(fmt) if t.month == 12 else ""
-                for t in dates_index
-            ]
+            return [t.strftime(fmt) if t.month == 12 else "" for t in dates_index]
 
         if pd_freq in _QUARTERLY_FREQS:
-            return [
-                t.strftime(fmt) if t.month % 3 == 0 else ""
-                for t in dates_index
-            ]
+            return [t.strftime(fmt) if t.month % 3 == 0 else "" for t in dates_index]
 
         if pd_freq in _MONTHLY_FREQS:
             return [t.strftime(fmt) for t in dates_index]
@@ -237,7 +228,7 @@ class DateFormatter:
             return [t.strftime("%d-%b") for t in dates_index]
 
         if pd_freq in _DAILY_FREQS:
-            labels: List[str] = []
+            labels: list[str] = []
             for i, t in enumerate(dates_index):
                 if i == 0:
                     labels.append(t.strftime("%d-%b"))

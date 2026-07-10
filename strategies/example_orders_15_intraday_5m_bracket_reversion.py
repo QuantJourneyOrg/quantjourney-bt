@@ -24,7 +24,7 @@ Usage:
 
 import asyncio
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
 
@@ -45,7 +45,7 @@ def _credentials() -> dict:
 
 def _recent_period(days: int = 30) -> dict[str, str]:
     # yfinance serves at most ~60 calendar days of 5-minute bars.
-    end = datetime.now(timezone.utc).date()
+    end = datetime.now(UTC).date()
     start = end - timedelta(days=days)
     return {"start": start.isoformat(), "end": end.isoformat()}
 
@@ -80,13 +80,15 @@ class IntradayBracketReversion5m(Backtester):
                         take_profit_price=round(bar.close * 1.006, 2),
                         stop_loss_price=round(bar.close * 0.996, 2),
                     )
-                    self.fill_engine.submit(Order(
-                        inst,
-                        OrderSide.BUY,
-                        shares,
-                        OrderType.BRACKET,
-                        bracket=bracket,
-                    ))
+                    self.fill_engine.submit(
+                        Order(
+                            inst,
+                            OrderSide.BUY,
+                            shares,
+                            OrderType.BRACKET,
+                            bracket=bracket,
+                        )
+                    )
                     self._has_bracket[inst] = True
 
 

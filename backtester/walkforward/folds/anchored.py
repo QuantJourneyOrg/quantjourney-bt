@@ -11,8 +11,6 @@ Licensed under the Apache License 2.0.
 
 from __future__ import annotations
 
-from typing import List
-
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
@@ -38,8 +36,8 @@ class AnchoredFoldScheme:
         start: pd.Timestamp,
         end: pd.Timestamp,
         trading_dates: pd.DatetimeIndex,
-    ) -> List[Fold]:
-        folds: List[Fold] = []
+    ) -> list[Fold]:
+        folds: list[Fold] = []
         step = relativedelta(months=self._cfg.effective_step_months)
         train_delta = relativedelta(months=self._cfg.train_months)
         test_delta = relativedelta(months=self._cfg.test_months)
@@ -62,10 +60,15 @@ class AnchoredFoldScheme:
                 (trading_dates >= oos_start_dt) & (trading_dates <= oos_end_dt)
             ]
 
-            if len(train_dates) < max(1, len(trading_dates[
-                (trading_dates >= train_start_dt)
-                & (trading_dates <= train_start_dt + min_train_delta)
-            ])):
+            if len(train_dates) < max(
+                1,
+                len(
+                    trading_dates[
+                        (trading_dates >= train_start_dt)
+                        & (trading_dates <= train_start_dt + min_train_delta)
+                    ]
+                ),
+            ):
                 oos_cursor += step
                 continue
 
