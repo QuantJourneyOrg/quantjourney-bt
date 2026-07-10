@@ -1,3 +1,0 @@
-Public release is intentionally blocked while the approved execution/accounting
-hardening is under review. Remove this file only in the dedicated, reviewed
-release commit after CI, wheel, and sdist verification pass.
