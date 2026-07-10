@@ -66,10 +66,7 @@ metrics, plots, and run metadata.
 | Model spread, impact, and commission assumptions | slippage & commission models |
 | Validate parameters out of sample | walk-forward / Optuna |
 
-More on engine semantics — one-bar weight timing, order timing, fill
-assumptions, and the common failure modes it helps you catch (survivorship,
-look-ahead, unrealistic intrabar fills, costs too low) — is documented at
-[backtester.quantjourney.cloud/engine](https://backtester.quantjourney.cloud/engine).
+The repository examples and tests demonstrate these engine semantics locally.
 
 ## What You Get From One Run
 

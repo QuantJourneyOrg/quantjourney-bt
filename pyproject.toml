@@ -65,7 +65,7 @@ wf = ["optuna>=3.0"]
 
 [project.urls]
 Homepage = "https://backtester.quantjourney.cloud"
-Documentation = "https://backtester.quantjourney.cloud/engine"
+Documentation = "https://backtester.quantjourney.cloud"
 Changelog = "https://backtester.quantjourney.cloud/changelog"
 Source = "https://github.com/QuantJourneyOrg/quantjourney-bt"
 Issues = "https://github.com/QuantJourneyOrg/quantjourney-bt/issues"

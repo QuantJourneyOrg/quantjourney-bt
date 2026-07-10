@@ -100,11 +100,6 @@ sdist benchmarks/strategy_suite.md
 sdist CHANGELOG.md
 sdist CONTRIBUTING.md
 sdist compare/README.md
-sdist docs/engine/index.mdx
-sdist docs/engine/order-lifecycle.mdx
-sdist docs/engine/rebalancing.mdx
-sdist docs/engine/strategy-book.mdx
-sdist docs/engine/strategy-writing.mdx
 sdist docs/public_scope.md
 sdist docs/release.md
 sdist docs/ROADMAP.md
