@@ -1,3 +1,7 @@
+# QuantJourney Backtester
+# Copyright (c) 2026 QuantJourney.
+# Licensed under the Apache License 2.0.
+
 """LEAN-native strategy implementations for the cross-engine benchmark."""
 
 # ruff: noqa: F403, F405

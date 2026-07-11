@@ -1,3 +1,7 @@
+# QuantJourney Backtester
+# Copyright (c) 2026 QuantJourney.
+# Licensed under the Apache License 2.0.
+
 """Orchestrate the 5 × 6 native-engine strategy benchmark."""
 
 from __future__ import annotations

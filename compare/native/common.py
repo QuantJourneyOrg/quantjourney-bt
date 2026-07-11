@@ -1,3 +1,7 @@
+# QuantJourney Backtester
+# Copyright (c) 2026 QuantJourney.
+# Licensed under the Apache License 2.0.
+
 """Shared inputs and result serialization for the native-engine benchmark.
 
 This module deliberately contains no strategy builders and never reads the

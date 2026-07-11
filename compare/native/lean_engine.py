@@ -1,3 +1,7 @@
+# QuantJourney Backtester
+# Copyright (c) 2026 QuantJourney.
+# Licensed under the Apache License 2.0.
+
 """Run the native strategy suite in the official QuantConnect LEAN image."""
 
 from __future__ import annotations

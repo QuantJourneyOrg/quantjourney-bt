@@ -1,3 +1,7 @@
+# QuantJourney Backtester
+# Copyright (c) 2026 QuantJourney.
+# Licensed under the Apache License 2.0.
+
 """Native pmorissette/bt implementations for the comparison strategies."""
 
 from __future__ import annotations

@@ -1,3 +1,7 @@
+# QuantJourney Backtester
+# Copyright (c) 2026 QuantJourney.
+# Licensed under the Apache License 2.0.
+
 #!/usr/bin/env python3
 """
 QuantConnect LEAN Runner
