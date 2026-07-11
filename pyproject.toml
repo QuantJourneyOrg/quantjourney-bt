@@ -43,6 +43,8 @@ dependencies = [
     "psutil>=5.9",
     "python-dateutil",
     "pydantic>=2.0",
+    "questionary>=2.0",
+    "rich>=13.7",
 ]
 
 [project.optional-dependencies]
@@ -69,6 +71,9 @@ Documentation = "https://backtester.quantjourney.cloud"
 Changelog = "https://backtester.quantjourney.cloud/changelog"
 Source = "https://github.com/QuantJourneyOrg/quantjourney-bt"
 Issues = "https://github.com/QuantJourneyOrg/quantjourney-bt/issues"
+
+[project.scripts]
+qj-data = "backtester.cli.qj_data:main"
 
 [tool.setuptools.packages.find]
 include = ["backtester", "backtester.*"]

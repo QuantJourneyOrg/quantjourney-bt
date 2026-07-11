@@ -136,6 +136,9 @@ The wheel installs the `backtester` library. The runnable strategy catalog and
 `strategy.sh` launcher are repository assets; clone this repository when you
 want to run or modify the examples below.
 
+The install also exposes `qj-data`, a terminal helper for browsing public
+backtester metadata such as sources, granularities, datasets, and example universes.
+
 Optional extras: `pip install "quantjourney-bt[wf]"` adds Optuna for the
 walk-forward optimization examples (WF05); `[data]` adds the yfinance
 benchmark fallback.
@@ -167,6 +170,18 @@ The sample dataset is intentionally small and reproducible. It is useful for
 install checks, report generation, and reading the engine flow without creating
 an account. For real market data, set QuantJourney API credentials and run the
 same strategy without `--sample-data`.
+
+## qj-data Metadata Browser
+
+Browse public backtester metadata with a keyboard-driven terminal helper:
+
+```bash
+qj-data
+```
+
+`qj-data` uses the public metadata endpoints and renders the currently available
+sources, granularities, datasets, example universes, asset classes, and symbols
+in a keyboard-driven Rich terminal UI.
 
 ## Repository Layout
 

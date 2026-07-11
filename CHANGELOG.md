@@ -3,6 +3,9 @@
 ## 0.10.0 - 2026-07-10
 
 ### Added
+- Added `qj-data`, a Rich-based terminal helper for browsing public backtester
+  metadata such as sources, granularities, datasets, example universes, asset
+  classes, and available symbols.
 - Added the shared execution simulator, contract-aware portfolio ledger,
   portfolio-of-strategies book, and pre-trade risk controls to the explicitly
   approved Apache-2.0 public scope.
