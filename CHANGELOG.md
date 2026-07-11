@@ -3,9 +3,26 @@
 ## 0.10.1 - 2026-07-11
 
 ### Added
-- Added `qj-data`, an unauthenticated Rich-based terminal helper for browsing
-  public backtester metadata such as sources, granularities, datasets, asset
-  classes, example universes, and the symbols referenced by those examples.
+- Added `qj-bt data`, an unauthenticated public data-catalog CLI.
+- Added an optional terminal browser with Rich tables and keyboard navigation.
+- Added deterministic `overview`, `sources`, `granularities`, `datasets`,
+  `asset-classes`, `universes`, `example-symbols`, and `all` commands.
+- Added `--json` output for scripts, agents, and automation.
+
+### Changed
+- Interactive browsing is enabled only for terminal sessions; non-interactive
+  calls return the catalog overview without prompting.
+- Public catalog requests do not require, read, or transmit an API key.
+- Catalog output identifies symbols derived from example universes as example
+  symbols rather than an exhaustive list of available instruments.
+- Registered the `qj-bt` console entry point and updated the locked dependency
+  set and public release manifest.
+
+### Fixed
+- Extended release verification to validate the exact console entry point in
+  wheel and source-distribution artifacts.
+- Added coverage for metadata normalization, fallback data, terminal and
+  non-terminal behavior, JSON output, errors, and release artifacts.
 
 ## 0.10.0 - 2026-07-10
 

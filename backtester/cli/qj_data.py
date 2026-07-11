@@ -1,6 +1,6 @@
 """
-qj_data — interactive public metadata browser
----------------------------------------------
+qj_data — public backtester data-catalog CLI
+--------------------------------------------
 
 Institutional-grade QuantJourney Backtester component.
 Designed for deterministic strategy simulation, portfolio accounting,
@@ -13,13 +13,19 @@ Licensed under the Apache License 2.0.
 from __future__ import annotations
 
 import argparse
+import json
+import sys
 from collections.abc import Callable
 from typing import Any, cast
 
 import questionary
 from questionary import Choice
 
-from backtester.cli.qj_data_api import DEFAULT_API_BASE_URL, fetch_qj_data_snapshot
+from backtester.cli.qj_data_api import (
+    DEFAULT_API_BASE_URL,
+    QJDataSnapshot,
+    fetch_qj_data_snapshot,
+)
 from backtester.cli.qj_data_views import (
     clear_screen,
     console,
@@ -38,6 +44,18 @@ from backtester.cli.qj_data_views import (
     show_symbol_detail,
     show_universe_detail,
     show_view_all,
+)
+from backtester.version import __version__
+
+SECTIONS = (
+    "overview",
+    "sources",
+    "granularities",
+    "datasets",
+    "asset-classes",
+    "universes",
+    "example-symbols",
+    "all",
 )
 
 
@@ -113,15 +131,47 @@ def _browse_items(
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="qj-data",
-        description="Browse QuantJourney backtester metadata in the terminal.",
+        prog="qj-bt",
+        description="QuantJourney Backtester command-line tools.",
     )
     parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
+    commands = parser.add_subparsers(dest="command", metavar="COMMAND")
+    data_parser = commands.add_parser(
+        "data",
+        help="Browse the public backtester data catalog.",
+        description=(
+            "Browse public sources, granularities, datasets, example universes, "
+            "and symbols referenced by those examples."
+        ),
+    )
+    data_parser.add_argument(
+        "section",
+        nargs="?",
+        choices=SECTIONS,
+        help="Catalog section (interactive in a TTY when omitted).",
+    )
+    data_parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="as_json",
+        help="Emit stable machine-readable JSON instead of Rich tables.",
+    )
+    data_parser.add_argument(
+        "-i",
+        "--interactive",
+        action="store_true",
+        help="Force the keyboard-driven catalog browser.",
+    )
+    data_parser.add_argument(
         "--base-url",
         default=DEFAULT_API_BASE_URL,
         help=f"Public QuantJourney API base URL (default: {DEFAULT_API_BASE_URL}).",
     )
-    parser.add_argument(
+    data_parser.add_argument(
         "--timeout",
         type=int,
         default=20,
@@ -131,25 +181,76 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = _build_parser().parse_args(argv)
+def _catalog_metadata(snapshot: QJDataSnapshot) -> dict[str, Any]:
+    return {
+        "catalog_revision": snapshot.catalog_doc.get("catalog_revision"),
+        "schema_version": snapshot.catalog_doc.get("schema_version"),
+        "snapshot_date": snapshot.catalog_doc.get("snapshot_date")
+        or snapshot.help_doc.get("snapshot_date"),
+        "source": snapshot.source_label,
+    }
 
-    try:
-        with console.status(
-            "[bold bright_cyan]Loading QuantJourney public metadata...[/bold bright_cyan]",
-            spinner="dots12",
-            spinner_style="bright_magenta",
-        ):
-            snapshot = fetch_qj_data_snapshot(
-                base_url=args.base_url,
-                timeout=args.timeout,
-            )
-    except KeyboardInterrupt:
-        return 130
-    except Exception as exc:
-        show_error(f"Failed to load metadata: {exc}")
-        return 1
 
+def _section_data(snapshot: QJDataSnapshot, section: str) -> Any:
+    if section == "overview":
+        return {
+            "asset_classes": len(snapshot.asset_classes),
+            "sources": len(snapshot.sources),
+            "granularities": len(snapshot.granularities),
+            "datasets": len(snapshot.datasets),
+            "example_universes": len(snapshot.example_universes),
+            "example_symbols": len(snapshot.example_symbols),
+            "strategies": snapshot.catalog_doc.get("strategy_summary", {}),
+        }
+    if section == "sources":
+        return snapshot.sources
+    if section == "granularities":
+        return snapshot.granularities
+    if section == "datasets":
+        return snapshot.datasets
+    if section == "asset-classes":
+        return snapshot.asset_classes
+    if section == "universes":
+        return snapshot.example_universes
+    if section == "example-symbols":
+        return snapshot.example_symbols
+    if section == "all":
+        return {
+            "asset_classes": snapshot.asset_classes,
+            "sources": snapshot.sources,
+            "granularities": snapshot.granularities,
+            "datasets": snapshot.datasets,
+            "example_universes": snapshot.example_universes,
+            "example_symbols": snapshot.example_symbols,
+            "strategy_summary": snapshot.catalog_doc.get("strategy_summary", {}),
+        }
+    raise ValueError(f"Unknown qj-bt data section: {section}")
+
+
+def _show_section(snapshot: QJDataSnapshot, section: str) -> None:
+    renderers: dict[str, Callable[[QJDataSnapshot], None]] = {
+        "overview": show_overview,
+        "sources": show_sources,
+        "granularities": show_granularities,
+        "datasets": show_datasets,
+        "asset-classes": show_asset_classes,
+        "universes": show_example_universes,
+        "example-symbols": show_example_symbols,
+        "all": show_view_all,
+    }
+    renderers[section](snapshot)
+
+
+def _show_json(snapshot: QJDataSnapshot, section: str) -> None:
+    payload = {
+        **_catalog_metadata(snapshot),
+        "section": section,
+        "data": _section_data(snapshot, section),
+    }
+    sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+def _run_interactive(snapshot: QJDataSnapshot) -> int:
     while True:
         try:
             clear_screen()
@@ -160,25 +261,23 @@ def main(argv: list[str] | None = None) -> int:
                 _select(
                     "Select a section",
                     [
-                        Choice("View All", "view_all", shortcut_key="0"),
                         Choice("Overview", "overview"),
-                        Choice("Symbols in example universes", "symbols"),
                         Choice("Sources", "sources"),
                         Choice("Granularities", "granularities"),
-                        Choice("Asset classes", "asset_classes"),
                         Choice("Datasets", "datasets"),
+                        Choice("Asset classes", "asset_classes"),
                         Choice("Example universes", "universes"),
+                        Choice("Symbols in example universes", "symbols"),
+                        Choice("View all", "view_all"),
                         Choice("Exit", "exit"),
                     ],
                 ),
             )
 
             clear_screen()
-
             if section == "exit":
                 return 0
             if section == "view_all":
-                clear_screen()
                 show_view_all(snapshot)
                 if _after_view() == "exit":
                     return 0
@@ -250,6 +349,55 @@ def main(argv: list[str] | None = None) -> int:
                     return 0
         except KeyboardInterrupt:
             return 130
+
+
+def _is_interactive_request(args: argparse.Namespace) -> bool:
+    if args.interactive:
+        return True
+    return args.section is None and not args.as_json and sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def _fetch_snapshot(args: argparse.Namespace, *, interactive: bool) -> QJDataSnapshot:
+    if not interactive:
+        return fetch_qj_data_snapshot(base_url=args.base_url, timeout=args.timeout)
+    with console.status(
+        "[bold bright_cyan]Loading QuantJourney public metadata...[/bold bright_cyan]",
+        spinner="dots12",
+        spinner_style="bright_magenta",
+    ):
+        return fetch_qj_data_snapshot(base_url=args.base_url, timeout=args.timeout)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+    if args.command is None:
+        parser.print_help()
+        return 0
+
+    if args.interactive and (args.section is not None or args.as_json):
+        parser.error("--interactive cannot be combined with a section or --json")
+
+    interactive = _is_interactive_request(args)
+    section = args.section or "overview"
+    try:
+        snapshot = _fetch_snapshot(args, interactive=interactive)
+    except KeyboardInterrupt:
+        return 130
+    except Exception as exc:
+        if args.as_json:
+            print(json.dumps({"error": str(exc)}, sort_keys=True), file=sys.stderr)
+        else:
+            show_error(f"Failed to load metadata: {exc}")
+        return 1
+
+    if interactive:
+        return _run_interactive(snapshot)
+    if args.as_json:
+        _show_json(snapshot, section)
+    else:
+        _show_section(snapshot, section)
+    return 0
 
 
 if __name__ == "__main__":

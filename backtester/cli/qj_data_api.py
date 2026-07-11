@@ -1,5 +1,5 @@
 """
-qj_data_api — public metadata fetch + normalization for qj-data
+qj_data_api — public metadata fetch + normalization for qj-bt data
 ---------------------------------------------------------------
 
 Institutional-grade QuantJourney Backtester component.

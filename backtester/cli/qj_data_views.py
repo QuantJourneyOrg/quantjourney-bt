@@ -1,5 +1,5 @@
 """
-qj_data_views — Rich views for qj-data
+qj_data_views — Rich views for qj-bt data
 --------------------------------------
 
 Institutional-grade QuantJourney Backtester component.
@@ -19,7 +19,6 @@ from rich.align import Align
 from rich.columns import Columns
 from rich.console import Console
 from rich.panel import Panel
-from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 
@@ -77,44 +76,32 @@ def _fmt_status(text: str) -> str:
     return f"[bold bright_yellow]{text}[/bold bright_yellow]"
 
 
-def show_home_banner(_snapshot: QJDataSnapshot) -> None:
-    ascii_title = Text(
-        "\n".join(
-            [
-                " ██████╗ ██╗   ██╗ █████╗ ███╗   ██╗████████╗ ",
-                "██╔═══██╗██║   ██║██╔══██╗████╗  ██║╚══██╔══╝ ",
-                "██║   ██║██║   ██║███████║██╔██╗ ██║   ██║    ",
-                "██║▄▄ ██║██║   ██║██╔══██║██║╚██╗██║   ██║    ",
-                "╚██████╔╝╚██████╔╝██║  ██║██║ ╚████║   ██║    ",
-                " ╚══▀▀═╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ",
-                "",
-                "     ██╗ ██████╗ ██╗   ██╗██████╗ ███╗   ██╗███████╗██╗   ██╗ ",
-                "     ██║██╔═══██╗██║   ██║██╔══██╗████╗  ██║██╔════╝╚██╗ ██╔╝ ",
-                "     ██║██║   ██║██║   ██║██████╔╝██╔██╗ ██║█████╗   ╚████╔╝  ",
-                "██   ██║██║   ██║██║   ██║██╔══██╗██║╚██╗██║██╔══╝    ╚██╔╝   ",
-                "╚█████╔╝╚██████╔╝╚██████╔╝██║  ██║██║ ╚████║███████╗   ██║    ",
-            ]
-        ),
-        style="bold bright_cyan",
-        justify="center",
+def show_home_banner(snapshot: QJDataSnapshot) -> None:
+    snapshot_date = snapshot.catalog_doc.get("snapshot_date") or snapshot.help_doc.get(
+        "snapshot_date", "unknown"
     )
-    helper = Text("HELPER EXPLORER", style="bold bright_magenta", justify="center")
-
-    body = Table.grid(padding=(0, 1))
-    body.add_row(ascii_title)
-    body.add_row(Text(""))
-    body.add_row(helper)
-
-    console.print(Rule(style="bright_cyan"))
+    revision = snapshot.catalog_doc.get("catalog_revision", "-")
+    body = Table.grid(expand=True)
+    body.add_row(Text("QuantJourney Backtester", style="bold bright_cyan"))
+    body.add_row(Text("PUBLIC DATA CATALOG", style="bold bright_magenta"))
+    body.add_row(
+        Text(
+            (
+                f"Snapshot {snapshot_date} · Revision {revision} · "
+                f"{len(snapshot.sources)} sources · "
+                f"{len(snapshot.granularities)} granularities"
+            ),
+            style="white",
+        )
+    )
     console.print(
         Panel(
-            Align.center(body),
+            Align.left(body),
             border_style="bright_cyan",
-            box=box.DOUBLE,
+            box=box.ROUNDED,
             padding=(1, 2),
         )
     )
-    console.print(Rule(style="bright_cyan"))
 
 
 def show_overview(snapshot: QJDataSnapshot) -> None:

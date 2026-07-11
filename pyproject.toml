@@ -73,7 +73,7 @@ Source = "https://github.com/QuantJourneyOrg/quantjourney-bt"
 Issues = "https://github.com/QuantJourneyOrg/quantjourney-bt/issues"
 
 [project.scripts]
-qj-data = "backtester.cli.qj_data:main"
+qj-bt = "backtester.cli.qj_data:main"
 
 [tool.setuptools.packages.find]
 include = ["backtester", "backtester.*"]

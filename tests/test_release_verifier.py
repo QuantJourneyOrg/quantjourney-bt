@@ -96,7 +96,7 @@ def test_wheel_rejects_modified_console_entry_point(tmp_path: Path) -> None:
     _write_wheel(
         wheel,
         wheel_payload,
-        entry_points=b"[console_scripts]\nqj-data = unreviewed.module:main\n",
+        entry_points=b"[console_scripts]\nqj-bt = unreviewed.module:main\n",
     )
 
     with pytest.raises(RuntimeError, match="console entry points"):
