@@ -89,8 +89,7 @@ def _momentum_vol_weights(close: pd.DataFrame) -> pd.DataFrame:
             current[:] = 0.0
             if i >= MOMENTUM_LOOKBACK:
                 momentum = (
-                    close.iloc[i - MOMENTUM_SKIP_RECENT] / close.iloc[i - MOMENTUM_LOOKBACK]
-                    - 1.0
+                    close.iloc[i - MOMENTUM_SKIP_RECENT] / close.iloc[i - MOMENTUM_LOOKBACK] - 1.0
                 )
                 top = momentum.dropna().nlargest(MOMENTUM_TOP_N).index
                 if len(top) == MOMENTUM_TOP_N:
@@ -170,10 +169,7 @@ def run(strategy: str) -> dict:
             "execution_count": int(active_execution.sum()),
         },
     )
-    print(
-        f"VectorBT native {strategy}: core={core_seconds:.4f}s "
-        f"NAV={result['final_nav']:,.6f}"
-    )
+    print(f"VectorBT native {strategy}: core={core_seconds:.4f}s NAV={result['final_nav']:,.6f}")
     return result
 
 

@@ -119,6 +119,10 @@ class RebalancePolicy:
     #   "BYE" = business year-end   (also accepts legacy "BA")
     #   "21D" = every 21 trading days
     #   None  = never calendar-rebalance (signal/drift only)
+    calendar_dates: Sequence[object] | None = None
+    #   Optional exact rebalance timestamps. When supplied, these replace the
+    #   frequency-generated calendar while the other policy triggers still OR
+    #   with it. Useful for exchange calendars and externally audited schedules.
     weekday: int = 4  # 0=Mon..4=Fri.  Used when frequency="W"
 
     # ── L2a: Drift band ──
@@ -173,6 +177,8 @@ class RebalancePolicy:
 
     def __repr__(self) -> str:
         parts = [f"freq={self.frequency}"]
+        if self.calendar_dates is not None:
+            parts.append(f"dates={len(self.calendar_dates)}")
         if self.rebalance_at != RebalanceAt.CLOSE:
             parts.append(f"at={self.rebalance_at.value}")
         if self.drift_threshold is not None:
@@ -938,6 +944,17 @@ class RebalanceEngine:
 
     def _calendar_flags(self, dates: pd.DatetimeIndex) -> pd.Series:
         """Generate calendar-based rebalance flags."""
+        if self.policy.calendar_dates is not None:
+            calendar_values = [str(value) for value in self.policy.calendar_dates]
+            scheduled = pd.DatetimeIndex(pd.to_datetime(calendar_values))
+            if dates.tz is None and scheduled.tz is not None:
+                scheduled = scheduled.tz_localize(None)
+            elif dates.tz is not None and scheduled.tz is None:
+                scheduled = scheduled.tz_localize(dates.tz)
+            elif dates.tz is not None and scheduled.tz is not None:
+                scheduled = scheduled.tz_convert(dates.tz)
+            return pd.Series(dates.isin(scheduled), index=dates)
+
         freq = self.policy.frequency
 
         if freq is None:
@@ -985,10 +1002,22 @@ class RebalanceEngine:
             rebal_dates = pd.date_range(dates[0], dates[-1], freq=freq)
         except (ValueError, TypeError) as exc:
             raise ValueError(f"Unsupported rebalance frequency: {self.policy.frequency!r}") from exc
-        # Snap each scheduled date to the last actual trading date on or
-        # before it — a scheduled month/quarter-end falling on an exchange
-        # holiday would otherwise drop that rebalance entirely.
-        pos = np.searchsorted(dates.values, rebal_dates.values, side="right") - 1
+        # End schedules snap backwards (e.g. month-end holiday).  Start
+        # schedules must snap forwards: snapping BMS backwards would place a
+        # January rebalance on the last session of December.
+        start_freqs = {"MS", "BMS", "QS", "BQS", "YS", "BYS"}
+        if freq in start_freqs:
+            pos = np.searchsorted(dates.values, rebal_dates.values, side="left")
+            # Do not leak a start rebalance into the next period when the
+            # requested date is outside the supplied data window.
+            period_kind = "M" if freq.endswith("MS") else ("Q" if freq.endswith("QS") else "Y")
+            valid = (pos < len(dates)) & (
+                dates.to_period(period_kind).values[np.minimum(pos, len(dates) - 1)]
+                == rebal_dates.to_period(period_kind).values
+            )
+            pos = pos[valid]
+        else:
+            pos = np.searchsorted(dates.values, rebal_dates.values, side="right") - 1
         pos = np.unique(pos[pos >= 0])
         flags = np.zeros(len(dates), dtype=bool)
         flags[pos] = True

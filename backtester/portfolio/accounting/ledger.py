@@ -417,12 +417,17 @@ def _margin_history(
     margin = pd.DataFrame(0.0, index=positions.index, columns=positions.columns, dtype=float)
     for instrument in positions.columns:
         spec = contract_spec_resolver(instrument)
-        for date in positions.index:
-            quantity = float(positions.loc[date, instrument])
-            price = marked_prices.loc[date, instrument]
-            if abs(quantity) <= 1e-12 or pd.isna(price) or not np.isfinite(float(price)):
-                continue
-            margin.loc[date, instrument] = spec.margin_required(quantity, float(price))
+        quantity = positions[instrument].to_numpy(dtype=float)
+        price = marked_prices[instrument].to_numpy(dtype=float)
+        active = (np.abs(quantity) > 1e-12) & np.isfinite(price)
+        if spec.margin > 0:
+            required = np.abs(quantity) * spec.margin
+        elif spec.inverse:
+            with np.errstate(divide="ignore", invalid="ignore"):
+                required = np.where(price != 0, np.abs(quantity) * spec.multiplier / price, 0.0)
+        else:
+            required = np.abs(quantity) * np.abs(price) * spec.multiplier * spec.lot_size
+        margin[instrument] = np.where(active, np.nan_to_num(required, nan=0.0), 0.0)
     return margin
 
 
@@ -470,27 +475,36 @@ def build_weight_ledger(
     for instrument in actual_weights.columns:
         spec = contract_spec_resolver(instrument)
         spec.validate_settlement_currency(settlement_currency)
-        for date in actual_weights.index:
-            price = marked_prices.loc[date, instrument]
-            target_value = float(desired_exposure.loc[date, instrument])
-            if pd.isna(price) or not np.isfinite(float(price)):
-                continue
-            unit_notional = float(spec.notional(1.0, float(price)))
-            if unit_notional <= 0.0 or not np.isfinite(unit_notional):
-                continue
-            quantity = target_value / unit_notional
-            positions.loc[date, instrument] = quantity
-            exposure_values.loc[date, instrument] = float(np.sign(quantity)) * spec.notional(
-                quantity, float(price)
-            )
+        price = marked_prices[instrument].to_numpy(dtype=float)
+        target_value = desired_exposure[instrument].to_numpy(dtype=float)
+        # Same per-cell semantics as spec.notional()/the previous scalar loop,
+        # expressed column-wise: cells with an unusable price or non-positive
+        # unit notional keep quantity/value 0.
+        with np.errstate(divide="ignore", invalid="ignore"):
             if spec.inverse:
-                position_values.loc[date, instrument] = -float(np.sign(quantity)) * spec.notional(
-                    quantity, float(price)
-                )
+                unit_notional = np.where(price != 0, spec.multiplier / price, 0.0)
             else:
-                position_values.loc[date, instrument] = (
-                    quantity * float(price) * float(spec.multiplier) * float(spec.lot_size)
+                unit_notional = np.abs(price) * spec.multiplier * spec.lot_size
+            usable = np.isfinite(price) & np.isfinite(unit_notional) & (unit_notional > 0.0)
+            quantity = np.where(usable, target_value / unit_notional, 0.0)
+            if spec.inverse:
+                # sign(q) * notional(q, p) == q * multiplier / p
+                exposure = np.where(usable, quantity * spec.multiplier / price, 0.0)
+                value = -exposure
+            else:
+                exposure = np.where(
+                    usable,
+                    quantity * np.abs(price) * spec.multiplier * spec.lot_size,
+                    0.0,
                 )
+                value = np.where(
+                    usable,
+                    quantity * price * spec.multiplier * spec.lot_size,
+                    0.0,
+                )
+        positions[instrument] = quantity
+        exposure_values[instrument] = exposure
+        position_values[instrument] = value
     cash = (nav - position_values.sum(axis=1)).rename("cash")
     realized_weights = weights_from_position_values(exposure_values, nav)
     book_weights = weights_from_position_values(position_values, nav)

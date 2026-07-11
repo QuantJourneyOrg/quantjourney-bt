@@ -165,9 +165,7 @@ def _momentum_targets(context, data) -> dict[str, float]:
     raw_weight = 1.0 / MOMENTUM_TOP_N
     portfolio_returns = np.zeros(VOLATILITY_LOOKBACK, dtype=float)
     for ticker in top:
-        history = data.history(
-            context.assets[ticker], "price", VOLATILITY_LOOKBACK + 2, "1d"
-        )
+        history = data.history(context.assets[ticker], "price", VOLATILITY_LOOKBACK + 2, "1d")
         prior = history.iloc[:-1]
         returns = prior.pct_change().dropna().iloc[-VOLATILITY_LOOKBACK:]
         if len(returns) != VOLATILITY_LOOKBACK:
@@ -175,9 +173,7 @@ def _momentum_targets(context, data) -> dict[str, float]:
         portfolio_returns += returns.to_numpy(dtype=float) * raw_weight
     realised = float(np.std(portfolio_returns, ddof=1) * np.sqrt(252.0))
     scale = min(VOLATILITY_TARGET / realised, 1.0) if realised > 0.01 else 1.0
-    return {
-        ticker: raw_weight * scale if ticker in top else 0.0 for ticker in TICKERS
-    }
+    return {ticker: raw_weight * scale if ticker in top else 0.0 for ticker in TICKERS}
 
 
 def _dual_targets(context, data) -> dict[str, float]:
@@ -212,9 +208,7 @@ def _submit_targets(context, data, targets: dict[str, float]) -> None:
 def handle_data(context, data):
     date = _session_date(data.current_dt)
     rsi = _update_native_rsi(context, data)
-    warm_rsi_targets = (
-        _rsi_targets(context, rsi) if ACTIVE_STRATEGY == "02_rsi_reversion" else None
-    )
+    warm_rsi_targets = _rsi_targets(context, rsi) if ACTIVE_STRATEGY == "02_rsi_reversion" else None
     month = (date.year, date.month)
     first_session = month != context.last_month
     context.last_month = month
@@ -274,10 +268,7 @@ def run(strategy: str) -> dict:
             "decision_count": len(decisions),
         },
     )
-    print(
-        f"Zipline native {strategy}: core={core_seconds:.4f}s "
-        f"NAV={result['final_nav']:,.6f}"
-    )
+    print(f"Zipline native {strategy}: core={core_seconds:.4f}s NAV={result['final_nav']:,.6f}")
     return result
 
 

@@ -87,7 +87,11 @@ def load_ohlcv() -> pd.DataFrame:
     frame = pd.read_parquet(require_data()).copy()
     frame.index = pd.DatetimeIndex(pd.to_datetime(frame.index)).tz_localize(None)
     frame = frame.sort_index().loc[WARMUP_START:EVALUATION_END]
-    expected = [(ticker, field) for ticker in TICKERS for field in ("open", "high", "low", "close", "volume")]
+    expected = [
+        (ticker, field)
+        for ticker in TICKERS
+        for field in ("open", "high", "low", "close", "volume")
+    ]
     missing = [column for column in expected if column not in frame.columns]
     if missing:
         raise ValueError(f"Native OHLCV panel is missing columns: {missing}")
@@ -142,8 +146,7 @@ def normalize_nav(nav: pd.Series) -> pd.Series:
     extra = out.index.difference(expected)
     if len(missing) or len(extra):
         raise AssertionError(
-            f"Native NAV calendar mismatch: missing={list(missing[:5])}, "
-            f"extra={list(extra[:5])}"
+            f"Native NAV calendar mismatch: missing={list(missing[:5])}, extra={list(extra[:5])}"
         )
     out = out.reindex(expected)
     if out.isna().any() or not np.isfinite(out.to_numpy(dtype=float)).all():
@@ -224,7 +227,5 @@ def write_native_result(
         result["wall_clock_seconds"] = round(float(wall_seconds), 6)
     if extra:
         result.update(extra)
-    (RESULTS_DIR / f"{prefix}_{strategy}.json").write_text(
-        json.dumps(result, indent=2) + "\n"
-    )
+    (RESULTS_DIR / f"{prefix}_{strategy}.json").write_text(json.dumps(result, indent=2) + "\n")
     return result

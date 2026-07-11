@@ -79,9 +79,7 @@ def _child_env(engine: str) -> dict[str, str]:
     matplotlib_config.mkdir(parents=True, exist_ok=True)
     env = {
         **os.environ,
-        "PYTHONPATH": os.pathsep.join(
-            [str(NATIVE_DIR), str(COMPARE_DIR), str(REPO_ROOT)]
-        ),
+        "PYTHONPATH": os.pathsep.join([str(NATIVE_DIR), str(COMPARE_DIR), str(REPO_ROOT)]),
         "MPLCONFIGDIR": str(matplotlib_config),
     }
     if engine == "zipline":
@@ -173,9 +171,7 @@ def build_decision_divergence() -> pd.DataFrame:
         qj_path = RESULTS_DIR / f"qj_{strategy}_decision_weights.csv"
         if not qj_path.exists():
             continue
-        comparison_start = (
-            PRIOR_SESSION if strategy in DAILY_STRATEGIES else EVALUATION_START
-        )
+        comparison_start = PRIOR_SESSION if strategy in DAILY_STRATEGIES else EVALUATION_START
         qj = (
             pd.read_csv(qj_path, index_col=0, parse_dates=True)
             .reindex(columns=TICKERS)
@@ -192,8 +188,7 @@ def build_decision_divergence() -> pd.DataFrame:
             )
             common_index = qj.index.intersection(other.index)
             delta = (
-                qj.reindex(common_index).fillna(0.0)
-                - other.reindex(common_index).fillna(0.0)
+                qj.reindex(common_index).fillna(0.0) - other.reindex(common_index).fillna(0.0)
             ).abs()
             row_delta = delta.max(axis=1)
             divergent = row_delta.loc[lambda values: values > 1e-9]
@@ -228,17 +223,13 @@ def validate_decision_divergence(report: pd.DataFrame, *, require_complete: bool
         return
     unexpected = report.loc[
         (report["different_decision_rows"] > 0)
-        & ~(
-            (report["strategy"] == "02_rsi_reversion")
-            & (report["engine"] == "vectorbt")
-        )
+        & ~((report["strategy"] == "02_rsi_reversion") & (report["engine"] == "vectorbt"))
     ]
     if not unexpected.empty:
         pairs = list(zip(unexpected["strategy"], unexpected["engine"], strict=True))
         raise AssertionError(f"Unattributed native target divergence: {pairs}")
     expected_rsi = report.loc[
-        (report["strategy"] == "02_rsi_reversion")
-        & (report["engine"] == "vectorbt"),
+        (report["strategy"] == "02_rsi_reversion") & (report["engine"] == "vectorbt"),
         "different_decision_rows",
     ]
     if len(expected_rsi) != 1 or int(expected_rsi.iloc[0]) == 0:

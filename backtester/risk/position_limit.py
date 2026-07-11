@@ -63,7 +63,22 @@ class PositionLimitModel(RiskModel):
     ) -> pd.DataFrame:
         out = weights.copy()
 
-        for i in range(len(out)):
+        # Vectorized pre-screen: only rows where a constraint can actually
+        # bind go through the per-row adjustment path. Rows that provably
+        # satisfy every limit are returned untouched (identical to running
+        # the loop body, which would be a no-op for them).
+        abs_w = out.abs()
+        row_total = abs_w.sum(axis=1)
+        needs_work = (row_total >= 1e-10) & (
+            (abs_w.max(axis=1) > self.max_weight) | (row_total > self.max_total_leverage)
+        )
+        if self.min_weight > 0:
+            needs_work |= ((abs_w > 1e-10) & (abs_w < self.min_weight)).any(axis=1)
+        if self.sector_limits and metadata and "sectors" in metadata:
+            needs_work |= row_total >= 1e-10
+
+        for raw_index in np.flatnonzero(needs_work.to_numpy()):
+            i = int(raw_index)
             row = out.iloc[i].copy()
 
             if row.abs().sum() < 1e-10:

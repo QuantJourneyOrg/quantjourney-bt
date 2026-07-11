@@ -8,6 +8,13 @@
 - Added deterministic `overview`, `sources`, `granularities`, `datasets`,
   `asset-classes`, `universes`, `example-symbols`, and `all` commands.
 - Added `--json` output for scripts, agents, and automation.
+- Added `RebalancePolicy(calendar_dates=...)` for explicit rebalance timestamps
+  alongside frequency-based schedules.
+- Added a public six-engine benchmark harness under `compare/native/`: five
+  strategies implemented natively in QJ, VectorBT, pmorissette/bt, Zipline,
+  Backtrader and QuantConnect LEAN, with an invariant-gated runner and a QJ
+  adapter that runs on this package. The harness is repository-only and is not
+  included in the wheel.
 
 ### Changed
 - Interactive browsing is enabled only for terminal sessions; non-interactive
@@ -17,12 +24,17 @@
   symbols rather than an exhaustive list of available instruments.
 - Registered the `qj-bt` console entry point and updated the locked dependency
   set and public release manifest.
+- Weight-mode accounting runs on a vectorized path. Results are unchanged and
+  were verified bit-identical across the full benchmark suite.
+- Position-limit risk checks skip rows where no limit can bind.
 
 ### Fixed
 - Extended release verification to validate the exact console entry point in
   wheel and source-distribution artifacts.
 - Added coverage for metadata normalization, fallback data, terminal and
   non-terminal behavior, JSON output, errors, and release artifacts.
+- Start-anchored rebalance frequencies (`MS`, `QS`, `YS`, ...) snap forward to
+  the next trading session instead of backward into the prior period.
 
 ## 0.10.0 - 2026-07-10
 

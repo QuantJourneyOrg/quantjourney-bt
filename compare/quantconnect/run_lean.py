@@ -170,7 +170,10 @@ def convert_to_lean_format():
         # so map = identity from first_date to last_date)
         first_date = df.index[0].strftime("%Y%m%d")
         last_date = df.index[-1].strftime("%Y%m%d")
-        map_content = f"{first_date},{ticker_lower},{ticker_lower}\n{last_date},{ticker_lower},{ticker_lower}\n"
+        map_content = (
+            f"{first_date},{ticker_lower},{ticker_lower}\n"
+            f"{last_date},{ticker_lower},{ticker_lower}\n"
+        )
         map_path = map_dir / f"{ticker_lower}.csv"
         map_path.write_text(map_content)
 
@@ -219,8 +222,12 @@ def generate_lean_config(strategy_name: str, output_dir: Path) -> Path:
                 "result-handler": "QuantConnect.Lean.Engine.Results.BacktestingResultHandler",
                 "data-feed-handler": "QuantConnect.Lean.Engine.DataFeeds.FileSystemDataFeed",
                 "real-time-handler": "QuantConnect.Lean.Engine.RealTime.BacktestingRealTimeHandler",
-                "history-provider": "QuantConnect.Lean.Engine.HistoricalData.SubscriptionDataReaderHistoryProvider",
-                "transaction-handler": "QuantConnect.Lean.Engine.TransactionHandlers.BacktestingTransactionHandler",
+                "history-provider": (
+                    "QuantConnect.Lean.Engine.HistoricalData.SubscriptionDataReaderHistoryProvider"
+                ),
+                "transaction-handler": (
+                    "QuantConnect.Lean.Engine.TransactionHandlers.BacktestingTransactionHandler"
+                ),
             }
         },
     }

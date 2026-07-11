@@ -102,7 +102,12 @@ class NativeStrategy(bt.Strategy):
                 )
                 for data in self.datas
             }
-            top = [name for name, _value in sorted(momentum.items(), key=lambda item: item[1], reverse=True)[:MOMENTUM_TOP_N]]
+            top = [
+                name
+                for name, _value in sorted(
+                    momentum.items(), key=lambda item: item[1], reverse=True
+                )[:MOMENTUM_TOP_N]
+            ]
             raw_weight = 1.0 / MOMENTUM_TOP_N
             portfolio_returns = np.zeros(VOLATILITY_LOOKBACK, dtype=float)
             for data in self.datas:
@@ -118,9 +123,7 @@ class NativeStrategy(bt.Strategy):
                 portfolio_returns += np.asarray(returns) * raw_weight
             realised = float(np.std(portfolio_returns, ddof=1) * np.sqrt(252.0))
             scale = min(VOLATILITY_TARGET / realised, 1.0) if realised > 0.01 else 1.0
-            return {
-                ticker: raw_weight * scale if ticker in top else 0.0 for ticker in TICKERS
-            }
+            return {ticker: raw_weight * scale if ticker in top else 0.0 for ticker in TICKERS}
 
         momentum = {
             data._name: float(data.close[-1]) / float(data.close[-1 - MOMENTUM_LOOKBACK]) - 1.0
@@ -151,9 +154,7 @@ class NativeStrategy(bt.Strategy):
 
         decision_date = self._date(-1)
         strategy = self.p.strategy_key
-        warm_rsi_targets = (
-            self._daily_targets() if strategy == "02_rsi_reversion" else None
-        )
+        warm_rsi_targets = self._daily_targets() if strategy == "02_rsi_reversion" else None
         if current_date < EVALUATION_START or current_date > EVALUATION_END:
             return
 
@@ -196,10 +197,7 @@ def run(strategy: str) -> dict:
             "decision_count": len(decisions),
         },
     )
-    print(
-        f"Backtrader native {strategy}: core={core_seconds:.4f}s "
-        f"NAV={result['final_nav']:,.6f}"
-    )
+    print(f"Backtrader native {strategy}: core={core_seconds:.4f}s NAV={result['final_nav']:,.6f}")
     return result
 
 

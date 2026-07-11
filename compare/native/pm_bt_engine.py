@@ -57,12 +57,8 @@ def _wilder_rsi(close: pd.DataFrame) -> pd.DataFrame:
     avg_gain.iloc[RSI_PERIOD] = gain.iloc[1 : RSI_PERIOD + 1].mean(axis=0)
     avg_loss.iloc[RSI_PERIOD] = loss.iloc[1 : RSI_PERIOD + 1].mean(axis=0)
     for i in range(RSI_PERIOD + 1, len(close)):
-        avg_gain.iloc[i] = (
-            avg_gain.iloc[i - 1] * (RSI_PERIOD - 1) + gain.iloc[i]
-        ) / RSI_PERIOD
-        avg_loss.iloc[i] = (
-            avg_loss.iloc[i - 1] * (RSI_PERIOD - 1) + loss.iloc[i]
-        ) / RSI_PERIOD
+        avg_gain.iloc[i] = (avg_gain.iloc[i - 1] * (RSI_PERIOD - 1) + gain.iloc[i]) / RSI_PERIOD
+        avg_loss.iloc[i] = (avg_loss.iloc[i - 1] * (RSI_PERIOD - 1) + loss.iloc[i]) / RSI_PERIOD
     rs = avg_gain.divide(avg_loss.replace(0.0, np.nan))
     rsi = 100.0 - 100.0 / (1.0 + rs)
     rsi = rsi.mask((avg_loss == 0.0) & (avg_gain > 0.0), 100.0)
@@ -105,16 +101,15 @@ def _momentum_vol(close: pd.DataFrame) -> pd.DataFrame:
             current[:] = 0.0
             if i >= MOMENTUM_LOOKBACK:
                 momentum = (
-                    close.iloc[i - MOMENTUM_SKIP_RECENT] / close.iloc[i - MOMENTUM_LOOKBACK]
-                    - 1.0
+                    close.iloc[i - MOMENTUM_SKIP_RECENT] / close.iloc[i - MOMENTUM_LOOKBACK] - 1.0
                 )
                 top = momentum.dropna().nlargest(MOMENTUM_TOP_N).index
                 if len(top) == MOMENTUM_TOP_N:
                     raw = pd.Series(0.0, index=close.columns)
                     raw.loc[top] = 1.0 / MOMENTUM_TOP_N
-                    portfolio_returns = (
-                        returns.iloc[i - VOLATILITY_LOOKBACK : i] * raw
-                    ).sum(axis=1)
+                    portfolio_returns = (returns.iloc[i - VOLATILITY_LOOKBACK : i] * raw).sum(
+                        axis=1
+                    )
                     realised = float(portfolio_returns.std(ddof=1) * np.sqrt(252.0))
                     scale = min(VOLATILITY_TARGET / realised, 1.0) if realised > 0.01 else 1.0
                     current = raw * scale
@@ -190,8 +185,7 @@ def run(strategy: str) -> dict:
         },
     )
     print(
-        f"pmorissette/bt native {strategy}: core={core_seconds:.4f}s "
-        f"NAV={result['final_nav']:,.6f}"
+        f"pmorissette/bt native {strategy}: core={core_seconds:.4f}s NAV={result['final_nav']:,.6f}"
     )
     return result
 

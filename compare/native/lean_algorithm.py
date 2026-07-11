@@ -109,9 +109,7 @@ class NativeStrategyAlgorithm(QCAlgorithm):
             portfolio_returns += np.diff(prior) / prior[:-1] * raw_weight
         realised = float(np.std(portfolio_returns, ddof=1) * np.sqrt(252.0))
         scale = min(0.15 / realised, 1.0) if realised > 0.01 else 1.0
-        return {
-            ticker: raw_weight * scale if ticker in top else 0.0 for ticker in self.tickers
-        }
+        return {ticker: raw_weight * scale if ticker in top else 0.0 for ticker in self.tickers}
 
     def _dual_targets(self):
         momentum = {}
@@ -155,9 +153,7 @@ class NativeStrategyAlgorithm(QCAlgorithm):
         month = (self.time.year, self.time.month)
         first_session = month != self.last_month
         self.last_month = month
-        warm_rsi_targets = (
-            self._rsi_targets() if self.strategy_key == "02_rsi_reversion" else None
-        )
+        warm_rsi_targets = self._rsi_targets() if self.strategy_key == "02_rsi_reversion" else None
         decision_start = (
             self.prior_session
             if self.strategy_key in {"01_sma_crossover", "02_rsi_reversion"}
