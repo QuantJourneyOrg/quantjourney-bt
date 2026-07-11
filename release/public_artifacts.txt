@@ -4,6 +4,10 @@
 # reviewed and added here explicitly; CI rejects undeclared artifact content.
 
 both backtester/__init__.py
+both backtester/cli/__init__.py
+both backtester/cli/qj_data.py
+both backtester/cli/qj_data_api.py
+both backtester/cli/qj_data_views.py
 both backtester/core.py
 both backtester/engines/__init__.py
 both backtester/engines/benchmark.py

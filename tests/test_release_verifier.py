@@ -26,12 +26,20 @@ def _approved_payloads() -> tuple[set[str], set[str]]:
     return release_verifier._load_manifest(ROOT / "release" / "public_artifacts.txt")
 
 
-def _write_wheel(path: Path, payload: set[str], *, unexpected: str | None = None) -> None:
-    dist_info = "quantjourney_bt-0.10.0.dist-info"
+def _write_wheel(
+    path: Path,
+    payload: set[str],
+    *,
+    unexpected: str | None = None,
+    entry_points: bytes | None = None,
+) -> None:
+    dist_info = f"{release_verifier._distribution_stem()}.dist-info"
+    entry_points = entry_points or release_verifier._expected_entry_points_text().encode()
     generated = {
         f"{dist_info}/METADATA": b"Metadata-Version: 2.1\nName: quantjourney-bt\n",
         f"{dist_info}/RECORD": b"",
         f"{dist_info}/WHEEL": b"Wheel-Version: 1.0\n",
+        f"{dist_info}/entry_points.txt": entry_points,
         f"{dist_info}/licenses/LICENSE": b"Apache-2.0\n",
         f"{dist_info}/top_level.txt": b"backtester\n",
     }
@@ -45,13 +53,14 @@ def _write_wheel(path: Path, payload: set[str], *, unexpected: str | None = None
 
 
 def _write_sdist(path: Path, payload: set[str], *, unexpected: str | None = None) -> None:
-    root = "quantjourney_bt-0.10.0"
+    root = release_verifier._distribution_stem()
     generated = {
         "PKG-INFO",
         "setup.cfg",
         "quantjourney_bt.egg-info/PKG-INFO",
         "quantjourney_bt.egg-info/SOURCES.txt",
         "quantjourney_bt.egg-info/dependency_links.txt",
+        "quantjourney_bt.egg-info/entry_points.txt",
         "quantjourney_bt.egg-info/requires.txt",
         "quantjourney_bt.egg-info/top_level.txt",
     }
@@ -79,3 +88,16 @@ def test_sdist_rejects_unapproved_test_or_private_file(tmp_path: Path) -> None:
 
     with pytest.raises(RuntimeError, match="Sdist payload"):
         release_verifier.verify_sdist(sdist, sdist_payload)
+
+
+def test_wheel_rejects_modified_console_entry_point(tmp_path: Path) -> None:
+    wheel_payload, _ = _approved_payloads()
+    wheel = tmp_path / "package.whl"
+    _write_wheel(
+        wheel,
+        wheel_payload,
+        entry_points=b"[console_scripts]\nqj-data = unreviewed.module:main\n",
+    )
+
+    with pytest.raises(RuntimeError, match="console entry points"):
+        release_verifier.verify_wheel(wheel, wheel_payload)

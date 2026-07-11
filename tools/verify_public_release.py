@@ -153,6 +153,25 @@ def _distribution_stem() -> str:
     return f"{normalized_name}-{data['project']['version']}"
 
 
+def _project_scripts() -> dict[str, str]:
+    data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    scripts = data.get("project", {}).get("scripts", {})
+    if not isinstance(scripts, dict) or not all(
+        isinstance(name, str) and isinstance(target, str) for name, target in scripts.items()
+    ):
+        raise RuntimeError("pyproject.toml [project.scripts] must map names to import targets")
+    return dict(sorted(scripts.items()))
+
+
+def _expected_entry_points_text() -> str:
+    scripts = _project_scripts()
+    if not scripts:
+        return ""
+    return "\n".join(
+        ["[console_scripts]", *(f"{name} = {target}" for name, target in scripts.items())]
+    )
+
+
 def verify_version_metadata() -> str:
     """Require one consistent package version across source and changelog."""
     version = _project_version()
@@ -216,6 +235,9 @@ def verify_wheel(path: Path, expected: set[str]) -> None:
             f"{dist_info_root}/licenses/LICENSE",
             f"{dist_info_root}/top_level.txt",
         }
+        entry_points_path = f"{dist_info_root}/entry_points.txt"
+        if _project_scripts():
+            generated.add(entry_points_path)
         _assert_equal(
             "Wheel generated metadata",
             {name for name in names if name.startswith(f"{dist_info_root}/")},
@@ -230,6 +252,10 @@ def verify_wheel(path: Path, expected: set[str]) -> None:
         offenders = sorted(token for token in FORBIDDEN_METADATA_TOKENS if token in metadata)
         if offenders:
             raise RuntimeError("Wheel metadata exposes private tokens: " + ", ".join(offenders))
+        if entry_points_path in generated:
+            actual_entry_points = archive.read(entry_points_path).decode("utf-8").strip()
+            if actual_entry_points != _expected_entry_points_text():
+                raise RuntimeError("Wheel console entry points do not match pyproject.toml")
 
 
 def verify_sdist(path: Path, expected: set[str]) -> None:
@@ -258,6 +284,8 @@ def verify_sdist(path: Path, expected: set[str]) -> None:
             f"{distribution_name}.egg-info/requires.txt",
             f"{distribution_name}.egg-info/top_level.txt",
         }
+        if _project_scripts():
+            generated.add(f"{distribution_name}.egg-info/entry_points.txt")
         files: set[str] = set()
         for member in members:
             if not member.isfile():

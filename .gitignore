@@ -1,7 +1,5 @@
 .DS_Store
 .venv/
-.venv311/
-uv.lock
 __pycache__/
 *.py[cod]
 *.egg-info/

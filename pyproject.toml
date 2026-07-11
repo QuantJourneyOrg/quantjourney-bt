@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quantjourney-bt"
-version = "0.10.0"
+version = "0.10.1"
 description = "Python-native backtesting engine for reproducible portfolio and order-based strategy research"
 readme = "README.md"
 requires-python = ">=3.11"

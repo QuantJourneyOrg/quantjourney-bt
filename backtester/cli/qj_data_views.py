@@ -134,7 +134,7 @@ def show_overview(snapshot: QJDataSnapshot) -> None:
         _fmt_list([item.get("id", "-") for item in snapshot.granularities]),
     )
     data_table.add_row("Datasets", str(len(snapshot.datasets)))
-    data_table.add_row("Symbols", str(len(snapshot.available_symbols)))
+    data_table.add_row("Example-universe symbols", str(len(snapshot.example_symbols)))
     data_table.add_row("Universes", str(len(snapshot.example_universes)))
     console.print(data_table)
 
@@ -179,7 +179,7 @@ def show_view_all(snapshot: QJDataSnapshot) -> None:
         _fmt_list([str(item.get("id", "-")) for item in snapshot.granularities]),
     )
     top_data.add_row("Datasets", str(len(snapshot.datasets)))
-    top_data.add_row("Symbols", str(len(snapshot.available_symbols)))
+    top_data.add_row("Example-universe symbols", str(len(snapshot.example_symbols)))
     top_data.add_row("Universes", str(len(snapshot.example_universes)))
 
     strategy_summary = snapshot.catalog_doc.get("strategy_summary", {})
@@ -296,7 +296,7 @@ def show_view_all(snapshot: QJDataSnapshot) -> None:
 
     symbols_table = Table(
         box=box.DOUBLE_EDGE,
-        title="[bold bright_cyan]Symbol Availability Snapshot[/bold bright_cyan]",
+        title="[bold bright_cyan]Example-Universe Symbol Index[/bold bright_cyan]",
         header_style="bold bright_white",
     )
     symbols_table.add_column("Symbol", style="bold bright_green", no_wrap=True)
@@ -304,7 +304,7 @@ def show_view_all(snapshot: QJDataSnapshot) -> None:
     symbols_table.add_column("Asset Class", overflow="fold")
     symbols_table.add_column("Granularities", overflow="fold")
     symbols_table.add_column("Period / Dates", overflow="fold")
-    for symbol_item in snapshot.available_symbols:
+    for symbol_item in snapshot.example_symbols:
         symbols_table.add_row(
             str(symbol_item.get("symbol", "-")),
             _fmt_list(symbol_item.get("universe_labels")),
@@ -420,16 +420,16 @@ def show_example_universes(snapshot: QJDataSnapshot) -> None:
     console.print(table)
 
 
-def show_available_symbols(snapshot: QJDataSnapshot) -> None:
+def show_example_symbols(snapshot: QJDataSnapshot) -> None:
     table = Table(
         box=box.DOUBLE_EDGE,
-        title="[bold bright_cyan]Available Symbols[/bold bright_cyan]",
+        title="[bold bright_cyan]Symbols Referenced by Example Universes[/bold bright_cyan]",
         header_style="bold bright_white",
     )
     table.add_column("Symbol", style="bold bright_green", no_wrap=True)
     table.add_column("Universe", overflow="fold")
 
-    for item in snapshot.available_symbols:
+    for item in snapshot.example_symbols:
         table.add_row(
             str(item.get("symbol", "-")),
             _fmt_list(item.get("universe_labels")),
@@ -438,7 +438,7 @@ def show_available_symbols(snapshot: QJDataSnapshot) -> None:
     console.print(table)
 
 
-def show_source_detail(source: dict[str, object]) -> None:
+def show_source_detail(source: dict[str, Any]) -> None:
     console.print(
         Panel(
             _make_info_table(
@@ -461,7 +461,7 @@ def show_source_detail(source: dict[str, object]) -> None:
     )
 
 
-def show_granularity_detail(granularity: dict[str, object]) -> None:
+def show_granularity_detail(granularity: dict[str, Any]) -> None:
     console.print(
         Panel(
             _make_info_table(
@@ -480,7 +480,7 @@ def show_granularity_detail(granularity: dict[str, object]) -> None:
     )
 
 
-def show_dataset_detail(dataset: dict[str, object]) -> None:
+def show_dataset_detail(dataset: dict[str, Any]) -> None:
     endpoint = str(dataset.get("payload_endpoint", "-"))
     console.print(
         Panel(
@@ -517,7 +517,7 @@ def show_dataset_detail(dataset: dict[str, object]) -> None:
     )
 
 
-def show_universe_detail(universe: dict[str, object]) -> None:
+def show_universe_detail(universe: dict[str, Any]) -> None:
     symbols = [str(symbol) for symbol in universe.get("symbols", [])]
     console.print(
         Panel(
@@ -537,7 +537,7 @@ def show_universe_detail(universe: dict[str, object]) -> None:
     console.print(_make_list_panel("Universe Symbols", symbols, border_style="bright_cyan"))
 
 
-def show_symbol_detail(symbol_item: dict[str, object], snapshot: QJDataSnapshot) -> None:
+def show_symbol_detail(symbol_item: dict[str, Any], snapshot: QJDataSnapshot) -> None:
     public_granularities = [str(item.get("id", "-")) for item in snapshot.granularities]
     console.print(
         Panel(
@@ -590,7 +590,7 @@ def show_symbol_detail(symbol_item: dict[str, object], snapshot: QJDataSnapshot)
                 "example universes, but they do not expose per-symbol period coverage, per-symbol "
                 "granularity coverage, or per-symbol date ranges."
             ),
-            title=_make_title_text("Availability Note"),
+            title=_make_title_text("Example Index Note"),
             border_style="bright_yellow",
             box=box.ROUNDED,
             padding=(1, 1),

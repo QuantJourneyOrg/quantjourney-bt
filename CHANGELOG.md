@@ -1,11 +1,15 @@
 # QuantJourney Backtester Changelog
 
+## 0.10.1 - 2026-07-11
+
+### Added
+- Added `qj-data`, an unauthenticated Rich-based terminal helper for browsing
+  public backtester metadata such as sources, granularities, datasets, asset
+  classes, example universes, and the symbols referenced by those examples.
+
 ## 0.10.0 - 2026-07-10
 
 ### Added
-- Added `qj-data`, a Rich-based terminal helper for browsing public backtester
-  metadata such as sources, granularities, datasets, example universes, asset
-  classes, and available symbols.
 - Added the shared execution simulator, contract-aware portfolio ledger,
   portfolio-of-strategies book, and pre-trade risk controls to the explicitly
   approved Apache-2.0 public scope.

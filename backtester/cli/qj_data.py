@@ -13,21 +13,22 @@ Licensed under the Apache License 2.0.
 from __future__ import annotations
 
 import argparse
-from typing import Any
+from collections.abc import Callable
+from typing import Any, cast
 
 import questionary
 from questionary import Choice
 
-from backtester.cli.qj_data_api import fetch_qj_data_snapshot
+from backtester.cli.qj_data_api import DEFAULT_API_BASE_URL, fetch_qj_data_snapshot
 from backtester.cli.qj_data_views import (
     clear_screen,
     console,
     show_asset_class_detail,
     show_asset_classes,
-    show_available_symbols,
     show_dataset_detail,
     show_datasets,
     show_error,
+    show_example_symbols,
     show_example_universes,
     show_granularities,
     show_home_banner,
@@ -53,12 +54,15 @@ def _select(message: str, choices: list[Choice]) -> Any:
 
 
 def _after_view() -> str:
-    return _select(
-        "Choose next step",
-        [
-            Choice("Back to main menu", "main"),
-            Choice("Exit", "exit"),
-        ],
+    return cast(
+        str,
+        _select(
+            "Choose next step",
+            [
+                Choice("Back to main menu", "main"),
+                Choice("Exit", "exit"),
+            ],
+        ),
     )
 
 
@@ -66,7 +70,7 @@ def _item_choice_label(item: dict[str, Any]) -> str:
     return f"{item.get('id', '-')}  |  {item.get('label', '-')}"
 
 
-def _prompt_symbol(items: list[dict[str, Any]]) -> dict[str, Any] | str:
+def _prompt_symbol(items: list[dict[str, Any]]) -> dict[str, Any] | None:
     symbol_map = {str(item.get("symbol", "")).upper(): item for item in items}
 
     while True:
@@ -78,7 +82,7 @@ def _prompt_symbol(items: list[dict[str, Any]]) -> dict[str, Any] | str:
 
         normalized = answer.strip().upper()
         if not normalized:
-            return "main"
+            return None
         if normalized in symbol_map:
             return symbol_map[normalized]
 
@@ -89,8 +93,8 @@ def _browse_items(
     *,
     prompt: str,
     items: list[dict[str, Any]],
-    make_choice_label,
-    render_item,
+    make_choice_label: Callable[[dict[str, Any]], str],
+    render_item: Callable[[dict[str, Any]], None],
 ) -> str:
     while True:
         choices = [Choice(make_choice_label(item), item) for item in items]
@@ -101,21 +105,34 @@ def _browse_items(
             return "main"
 
         clear_screen()
-        render_item(selected)
+        render_item(cast(dict[str, Any], selected))
         if _after_view() == "exit":
             return "exit"
         clear_screen()
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    return argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         prog="qj-data",
         description="Browse QuantJourney backtester metadata in the terminal.",
     )
+    parser.add_argument(
+        "--base-url",
+        default=DEFAULT_API_BASE_URL,
+        help=f"Public QuantJourney API base URL (default: {DEFAULT_API_BASE_URL}).",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=20,
+        metavar="SECONDS",
+        help="HTTP timeout in seconds (default: 20).",
+    )
+    return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    _build_parser().parse_args(argv)
+    args = _build_parser().parse_args(argv)
 
     try:
         with console.status(
@@ -123,7 +140,10 @@ def main(argv: list[str] | None = None) -> int:
             spinner="dots12",
             spinner_style="bright_magenta",
         ):
-            snapshot = fetch_qj_data_snapshot()
+            snapshot = fetch_qj_data_snapshot(
+                base_url=args.base_url,
+                timeout=args.timeout,
+            )
     except KeyboardInterrupt:
         return 130
     except Exception as exc:
@@ -135,19 +155,22 @@ def main(argv: list[str] | None = None) -> int:
             clear_screen()
             show_home_banner(snapshot)
 
-            section = _select(
-                "Select a section",
-                [
-                    Choice("View All", "view_all", shortcut_key="0"),
-                    Choice("Overview", "overview"),
-                    Choice("Available symbols", "symbols"),
-                    Choice("Sources", "sources"),
-                    Choice("Granularities", "granularities"),
-                    Choice("Asset classes", "asset_classes"),
-                    Choice("Datasets", "datasets"),
-                    Choice("Example universes", "universes"),
-                    Choice("Exit", "exit"),
-                ],
+            section = cast(
+                str,
+                _select(
+                    "Select a section",
+                    [
+                        Choice("View All", "view_all", shortcut_key="0"),
+                        Choice("Overview", "overview"),
+                        Choice("Symbols in example universes", "symbols"),
+                        Choice("Sources", "sources"),
+                        Choice("Granularities", "granularities"),
+                        Choice("Asset classes", "asset_classes"),
+                        Choice("Datasets", "datasets"),
+                        Choice("Example universes", "universes"),
+                        Choice("Exit", "exit"),
+                    ],
+                ),
             )
 
             clear_screen()
@@ -165,9 +188,9 @@ def main(argv: list[str] | None = None) -> int:
                     return 0
             elif section == "symbols":
                 while True:
-                    show_available_symbols(snapshot)
-                    selected_symbol = _prompt_symbol(snapshot.available_symbols)
-                    if selected_symbol == "main":
+                    show_example_symbols(snapshot)
+                    selected_symbol = _prompt_symbol(snapshot.example_symbols)
+                    if selected_symbol is None:
                         break
 
                     clear_screen()
@@ -177,12 +200,15 @@ def main(argv: list[str] | None = None) -> int:
                     clear_screen()
             elif section == "sources":
                 show_sources(snapshot)
-                if _browse_items(
-                    prompt="Select a source",
-                    items=snapshot.sources,
-                    make_choice_label=_item_choice_label,
-                    render_item=show_source_detail,
-                ) == "exit":
+                if (
+                    _browse_items(
+                        prompt="Select a source",
+                        items=snapshot.sources,
+                        make_choice_label=_item_choice_label,
+                        render_item=show_source_detail,
+                    )
+                    == "exit"
+                ):
                     return 0
             elif section == "granularities":
                 show_granularities(snapshot)
@@ -200,21 +226,27 @@ def main(argv: list[str] | None = None) -> int:
                         return 0
             elif section == "datasets":
                 show_datasets(snapshot)
-                if _browse_items(
-                    prompt="Select a dataset",
-                    items=snapshot.datasets,
-                    make_choice_label=_item_choice_label,
-                    render_item=show_dataset_detail,
-                ) == "exit":
+                if (
+                    _browse_items(
+                        prompt="Select a dataset",
+                        items=snapshot.datasets,
+                        make_choice_label=_item_choice_label,
+                        render_item=show_dataset_detail,
+                    )
+                    == "exit"
+                ):
                     return 0
             elif section == "universes":
                 show_example_universes(snapshot)
-                if _browse_items(
-                    prompt="Select an example universe",
-                    items=snapshot.example_universes,
-                    make_choice_label=_item_choice_label,
-                    render_item=show_universe_detail,
-                ) == "exit":
+                if (
+                    _browse_items(
+                        prompt="Select an example universe",
+                        items=snapshot.example_universes,
+                        make_choice_label=_item_choice_label,
+                        render_item=show_universe_detail,
+                    )
+                    == "exit"
+                ):
                     return 0
         except KeyboardInterrupt:
             return 130
