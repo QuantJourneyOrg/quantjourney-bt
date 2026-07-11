@@ -122,7 +122,6 @@ def show_overview(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_green]Available Data[/bold bright_green]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
         expand=True,
     )
     data_table.add_column("Available Data Sources", style="bold bright_cyan")
@@ -144,7 +143,6 @@ def show_overview(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_magenta]Strategies[/bold bright_magenta]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
         expand=True,
     )
     strategy_table.add_column("Strategies", style="bold bright_cyan")
@@ -167,7 +165,6 @@ def show_view_all(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_green]Data Availability[/bold bright_green]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
         expand=True,
     )
     top_data.add_column("Category", style="bold bright_cyan")
@@ -190,7 +187,6 @@ def show_view_all(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_magenta]Strategy Types[/bold bright_magenta]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
         expand=True,
     )
     strategies.add_column("Strategy Metric", style="bold bright_cyan")
@@ -213,7 +209,6 @@ def show_view_all(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_green]Source Coverage[/bold bright_green]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
     )
     sources_table.add_column("Source", style="bold bright_green", no_wrap=True)
     sources_table.add_column("Label", style="bold bright_white")
@@ -243,7 +238,6 @@ def show_view_all(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_magenta]Granularity Coverage[/bold bright_magenta]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
     )
     granularity_table.add_column("Granularity", style="bold bright_cyan", no_wrap=True)
     granularity_table.add_column("Category", style="bright_yellow")
@@ -269,7 +263,6 @@ def show_view_all(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_yellow]Dataset & Endpoint Coverage[/bold bright_yellow]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
     )
     datasets_table.add_column("Dataset", style="bold bright_cyan", no_wrap=True)
     datasets_table.add_column("Label", style="bold bright_white")
@@ -288,7 +281,6 @@ def show_view_all(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_red]Universe Coverage[/bold bright_red]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
     )
     universes_table.add_column("Universe", style="bold bright_cyan", no_wrap=True)
     universes_table.add_column("Symbols", justify="right", style="bright_yellow")
@@ -306,7 +298,6 @@ def show_view_all(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_cyan]Symbol Availability Snapshot[/bold bright_cyan]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
     )
     symbols_table.add_column("Symbol", style="bold bright_green", no_wrap=True)
     symbols_table.add_column("Universe", overflow="fold")
@@ -329,7 +320,6 @@ def show_sources(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_green]Sources[/bold bright_green]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
     )
     table.add_column("ID", style="bright_cyan", no_wrap=True)
     table.add_column("Label", style="bold bright_white")
@@ -354,7 +344,6 @@ def show_granularities(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_magenta]Granularities[/bold bright_magenta]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
     )
     table.add_column("ID", style="bright_cyan", no_wrap=True)
     table.add_column("Category", style="bright_yellow")
@@ -377,7 +366,6 @@ def show_asset_classes(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_blue]Asset Classes[/bold bright_blue]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
     )
     table.add_column("#", style="bright_cyan", no_wrap=True, justify="right")
     table.add_column("Asset class", style="bold bright_white")
@@ -393,7 +381,6 @@ def show_datasets(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_yellow]Datasets[/bold bright_yellow]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
     )
     table.add_column("ID", style="bright_cyan", no_wrap=True)
     table.add_column("Label", style="bold bright_white")
@@ -418,7 +405,6 @@ def show_example_universes(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_red]Example Universes[/bold bright_red]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
     )
     table.add_column("ID", style="bright_cyan", no_wrap=True)
     table.add_column("Label", style="bold bright_white")
@@ -439,7 +425,6 @@ def show_available_symbols(snapshot: QJDataSnapshot) -> None:
         box=box.DOUBLE_EDGE,
         title="[bold bright_cyan]Available Symbols[/bold bright_cyan]",
         header_style="bold bright_white",
-        row_styles=["none", "dim"],
     )
     table.add_column("Symbol", style="bold bright_green", no_wrap=True)
     table.add_column("Universe", overflow="fold")
