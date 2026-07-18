@@ -11,7 +11,7 @@ from backtester import Backtester
 from backtester.engines.blotter import Blotter
 from backtester.execution import BarData, ContractSpec
 from backtester.reporting_frequency import infer_periods_per_year
-from backtester.risk import PositionLimitModel, RiskParityModel
+from backtester.risk import InverseVolModel, PositionLimitModel, RiskParityModel
 from backtester.sample_data import build_sample_bt_payload
 from backtester.walkforward.runner import FoldRunner
 
@@ -47,6 +47,26 @@ def test_risk_parity_preserves_strategy_signs():
     assert adjusted.iloc[-1]["A"] > 0.0
     assert adjusted.iloc[-1]["B"] < 0.0
     assert adjusted.iloc[-1]["C"] == 0.0
+
+
+def test_pure_inverse_vol_preserves_strategy_signs():
+    dates = pd.bdate_range("2024-01-02", periods=3)
+    weights = pd.DataFrame({"A": 0.5, "B": -0.5, "C": 0.0}, index=dates)
+    returns = pd.DataFrame(
+        {"A": [0.01, -0.01, 0.0], "B": [0.02, -0.02, 0.0], "C": 0.0},
+        index=dates,
+    )
+
+    adjusted = InverseVolModel(
+        lookback=2,
+        ann_factor=1.0,
+        blend_alpha=False,
+    ).adjust(weights, returns)
+
+    assert adjusted.iloc[-1]["A"] > 0.0
+    assert adjusted.iloc[-1]["B"] < 0.0
+    assert adjusted.iloc[-1]["C"] == 0.0
+    assert adjusted.iloc[-1].abs().sum() == pytest.approx(1.0)
 
 
 @pytest.mark.parametrize(

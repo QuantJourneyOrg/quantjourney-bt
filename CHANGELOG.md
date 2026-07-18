@@ -1,5 +1,11 @@
 # QuantJourney Backtester Changelog
 
+## 0.10.2 - 2026-07-18
+
+### Fixed
+- Preserved long and short directions when applying pure inverse-volatility
+  weighting to active instruments.
+
 ## 0.10.1 - 2026-07-11
 
 ### Added

@@ -2,7 +2,7 @@
   "schema": 2,
   "context": {
     "config_sha256": "58319a2dcf443e8de2b5ae9fec1ceea84775dde58d8fe68107a8de85656c3783",
-    "lock_sha256": "fd603631e7f0ae49e393f2731adea7fdd8883f41fa3067df883df6916a65817e",
+    "lock_sha256": "6712cb9efaf908bb76bec81b204d84b4a607b1d219fa2c87aeaa7ee6b314a423",
     "packages": {
       "mypy": "2.2.0",
       "pandas-stubs": "2.3.3.260113",

@@ -93,8 +93,9 @@ class InverseVolModel(RiskModel):
                 blended = row_w * inv_vol
                 blended = blended.where(active, 0.0)
             else:
-                # Pure inverse-vol among active instruments
-                blended = inv_vol.where(active, 0.0)
+                # Pure inverse-vol among active instruments, preserving the
+                # sign of the incoming weight so a short stays short.
+                blended = (np.sign(row_w) * inv_vol).where(active, 0.0)
 
             total = blended.abs().sum()
             if total < 1e-10:
