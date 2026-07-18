@@ -86,6 +86,30 @@ def test_effective_trial_count_reduces_dsr_deflation() -> None:
         deflated_sharpe(trials, n_trials=5, effective_n_trials=6, n_obs=252)
 
 
+@pytest.mark.parametrize(
+    ("method", "label"),
+    [
+        ("pooled_walk_forward_dsr_style", "Pooled WF DSR-style"),
+        ("probabilistic_sharpe_n1", "Probabilistic Sharpe N=1"),
+    ],
+)
+def test_walk_forward_sharpe_method_is_serialized_and_labelled(
+    method: str,
+    label: str,
+) -> None:
+    result = WalkForwardResult(
+        folds=[],
+        config_dict={},
+        deflated_sharpe=0.91,
+        deflated_sharpe_method=method,
+        dsr_raw_completed_trials=1,
+        dsr_effective_trials=1.0,
+    )
+
+    assert result.to_dict()["deflated_sharpe_method"] == method
+    assert label in result.summary()
+
+
 def test_refined_expected_max_matches_documented_finite_examples() -> None:
     assert _expected_max_sr(1.0, 20) == pytest.approx(1.9007, abs=1e-4)
     assert _expected_max_sr(1.0, 500) == pytest.approx(3.0525, abs=1e-4)

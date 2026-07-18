@@ -121,6 +121,10 @@ class WalkForwardResult:
     sharpe_decay: float = 0.0
     deflated_sharpe: float | None = None  # probability in [0, 1]
     deflated_sharpe_reason: str | None = None  # why DSR is unavailable (when None)
+    # ``pooled_walk_forward_dsr_style`` is an explicitly labelled extension:
+    # its trial objectives come from multiple chronological training folds,
+    # not one canonical common trial population. With N=1 the statistic is PSR.
+    deflated_sharpe_method: str | None = None
     dsr_raw_completed_trials: int | None = None
     dsr_effective_trials: float | None = None
     walk_forward_top_k_rank_failure_rate: float | None = None
@@ -195,6 +199,7 @@ class WalkForwardResult:
             "sharpe_decay": self.sharpe_decay,
             "deflated_sharpe": self.deflated_sharpe,
             "deflated_sharpe_reason": self.deflated_sharpe_reason,
+            "deflated_sharpe_method": self.deflated_sharpe_method,
             "dsr_raw_completed_trials": self.dsr_raw_completed_trials,
             "dsr_effective_trials": self.dsr_effective_trials,
             "walk_forward_top_k_rank_failure_rate": (self.walk_forward_top_k_rank_failure_rate),
@@ -316,7 +321,13 @@ class WalkForwardResult:
         lines.append(f"  Sharpe Decay:         {self.sharpe_decay:+.3f}/fold")
 
         if self.deflated_sharpe is not None:
-            lines.append(f"  Deflated Sharpe (prob):{self.deflated_sharpe:>7.2f}")
+            if self.deflated_sharpe_method == "pooled_walk_forward_dsr_style":
+                dsr_label = "Pooled WF DSR-style"
+            elif self.deflated_sharpe_method == "probabilistic_sharpe_n1":
+                dsr_label = "Probabilistic Sharpe N=1"
+            else:
+                dsr_label = "Deflated Sharpe"
+            lines.append(f"  {dsr_label} (prob):{self.deflated_sharpe:>7.2f}")
             if self.dsr_raw_completed_trials is not None:
                 effective = (
                     self.dsr_effective_trials

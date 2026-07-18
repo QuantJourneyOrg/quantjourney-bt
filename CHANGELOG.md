@@ -1,5 +1,18 @@
 # QuantJourney Backtester Changelog
 
+## 0.12.1 - 2026-07-18
+
+### Added
+- Added `deflated_sharpe_method` to serialized walk-forward results so each
+  reported probability carries its statistical construction.
+
+### Changed
+- Walk-forward trial objectives pooled across chronological folds are now
+  labelled `pooled_walk_forward_dsr_style`, rather than canonical DSR for one
+  common trial population.
+- An N=1 Sharpe probability is labelled `probabilistic_sharpe_n1`, making clear
+  that multiple-testing deflation has vanished and the statistic is PSR.
+
 ## 0.12.0 - 2026-07-18
 
 ### Added

@@ -192,8 +192,13 @@ class WalkForwardEngine:
         wf_result = self._aggregate(fold_results)
 
         if self._config.verbose:
+            dsr_label = (
+                "pooled-WF-DSR-style"
+                if wf_result.deflated_sharpe_method == "pooled_walk_forward_dsr_style"
+                else "PSR-N1"
+            )
             dsr_str = (
-                f", DSR={wf_result.deflated_sharpe:.2f}"
+                f", {dsr_label}={wf_result.deflated_sharpe:.2f}"
                 if wf_result.deflated_sharpe is not None
                 else ""
             )
@@ -302,8 +307,13 @@ class WalkForwardEngine:
         wf_result = self._aggregate(fold_results)
 
         if self._config.verbose:
+            dsr_label = (
+                "pooled-WF-DSR-style"
+                if wf_result.deflated_sharpe_method == "pooled_walk_forward_dsr_style"
+                else "PSR-N1"
+            )
             dsr_str = (
-                f", DSR={wf_result.deflated_sharpe:.2f}"
+                f", {dsr_label}={wf_result.deflated_sharpe:.2f}"
                 if wf_result.deflated_sharpe is not None
                 else ""
             )
@@ -389,16 +399,17 @@ class WalkForwardEngine:
             eff_val = float("nan")
             decay = float("nan")
 
-        # ── Deflated Sharpe Ratio (Bailey & López de Prado 2014) ──────
+        # ── Sharpe selection diagnostic ───────────────────────────────
         # Candidate: the aggregated OOS daily return series (T, skew, raw
         # kurtosis, and per-day Sharpe all come from the SAME series).
-        # Trial population: per-trial IS objective values pooled across
-        # folds — the same population defines both √V[SR] and N, so the
-        # E[max SR] deflation is internally consistent.  Objective values
-        # are annualized Sharpes, so they are de-annualized to the native
-        # return cadence. No optimizer → N = 1 → the DSR
-        # honestly reduces to the PSR of the OOS Sharpe.  Folds are NOT
-        # trials and are never used as the trial population.
+        # Trial objectives are pooled across chronological training folds.
+        # That keeps the implemented calculation internally consistent, but
+        # it is an extension rather than canonical DSR for one common trial
+        # population. It is therefore labelled ``pooled_walk_forward_dsr_style``.
+        # Objective values are annualized Sharpes, so they are de-annualized
+        # to the native return cadence. No usable optimizer population means
+        # N = 1 and the statistic is labelled as PSR, not DSR. Folds themselves
+        # are never counted as trials.
         #
         # Mode caveats:
         # - slice_diagnostics: the "OOS" series is an in-sample slice of
@@ -409,6 +420,7 @@ class WalkForwardEngine:
         #   whole tune-then-trade process, not one fixed parameterization.
         dsr_val = None
         dsr_reason = None
+        dsr_method = None
         dsr_raw_completed_trials = None
         dsr_effective_trials = None
         if self.mode == "slice_diagnostics":
@@ -443,6 +455,11 @@ class WalkForwardEngine:
                     self._config.dsr_effective_n_trials
                     if self._config.dsr_effective_n_trials is not None
                     else float(dsr_raw_completed_trials)
+                )
+                dsr_method = (
+                    "pooled_walk_forward_dsr_style"
+                    if pooled_trials and optimizer_used
+                    else "probabilistic_sharpe_n1"
                 )
                 dsr_val = deflated_sharpe(
                     pooled_trials,
@@ -532,6 +549,7 @@ class WalkForwardEngine:
             sharpe_decay=decay,
             deflated_sharpe=dsr_val,
             deflated_sharpe_reason=dsr_reason,
+            deflated_sharpe_method=dsr_method,
             dsr_raw_completed_trials=dsr_raw_completed_trials,
             dsr_effective_trials=dsr_effective_trials,
             walk_forward_top_k_rank_failure_rate=rank_failure,
