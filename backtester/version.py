@@ -24,7 +24,7 @@ def get_version() -> str:
     try:
         return metadata.version("quantjourney-bt")
     except metadata.PackageNotFoundError:
-        return "0.10.2"
+        return "0.11.0"
 
 
 __version__ = get_version()

@@ -2,14 +2,14 @@
   "schema": 2,
   "context": {
     "config_sha256": "58319a2dcf443e8de2b5ae9fec1ceea84775dde58d8fe68107a8de85656c3783",
-    "lock_sha256": "6712cb9efaf908bb76bec81b204d84b4a607b1d219fa2c87aeaa7ee6b314a423",
+    "lock_sha256": "4eda507fa6795bd563fda68c83ba685cf8b5d7101819c3319275403df8e26ddf",
     "packages": {
       "mypy": "2.2.0",
       "pandas-stubs": "2.3.3.260113",
       "types-python-dateutil": "2.9.0.20260518"
     }
   },
-  "error_count": 795,
+  "error_count": 789,
   "errors": [
     "[\"backtester/core.py\",\"arg-type\",\"Argument \\\"dates\\\" to \\\"ExecutionRebalanceEngine\\\" has incompatible type \\\"Index[Any]\\\"; expected \\\"DatetimeIndex\\\"\",\"4d28b5a0297ef8e6\"]",
     "[\"backtester/core.py\",\"arg-type\",\"Argument \\\"fill_engine\\\" to \\\"ExecutionSimulator\\\" has incompatible type \\\"FillEngine | None\\\"; expected \\\"FillEngine\\\"\",\"2430f504bb8d5d3f\"]",
@@ -25,7 +25,6 @@
     "[\"backtester/core.py\",\"assignment\",\"Incompatible types in assignment (expression has type \\\"Universe\\\", variable has type \\\"None\\\")\",\"cf92bc8138583351\"]",
     "[\"backtester/core.py\",\"assignment\",\"Incompatible types in assignment (expression has type \\\"float\\\", variable has type \\\"Series[Any] | DataFrame\\\")\",\"0602d7c813c1f6e7\"]",
     "[\"backtester/core.py\",\"assignment\",\"Incompatible types in assignment (expression has type \\\"float\\\", variable has type \\\"Series[Any] | DataFrame\\\")\",\"15daecc9f182435f\"]",
-    "[\"backtester/core.py\",\"assignment\",\"Incompatible types in assignment (expression has type \\\"object\\\", variable has type \\\"None\\\")\",\"e243a573ae82d05f\"]",
     "[\"backtester/core.py\",\"attr-defined\",\"\\\"None\\\" has no attribute \\\"buying_power\\\"\",\"300b8f47477399fb\"]",
     "[\"backtester/core.py\",\"attr-defined\",\"\\\"None\\\" has no attribute \\\"cash\\\"\",\"5e5451fa9cfc41b8\"]",
     "[\"backtester/core.py\",\"attr-defined\",\"\\\"None\\\" has no attribute \\\"exposure_values\\\"\",\"a0c14d6ae1e683e8\"]",
@@ -47,8 +46,6 @@
     "[\"backtester/core.py\",\"attr-defined\",\"\\\"PortfolioData\\\" has no attribute \\\"current_positions_meta\\\"\",\"a0bc737b549cd931\"]",
     "[\"backtester/core.py\",\"attr-defined\",\"\\\"PortfolioData\\\" has no attribute \\\"current_positions_meta\\\"\",\"a0bc737b549cd931\"]",
     "[\"backtester/core.py\",\"attr-defined\",\"\\\"PortfolioData\\\" has no attribute \\\"current_positions_meta\\\"\",\"a0bc737b549cd931\"]",
-    "[\"backtester/core.py\",\"attr-defined\",\"\\\"object\\\" has no attribute \\\"total_cost\\\"\",\"88eeebf2dd09dcc7\"]",
-    "[\"backtester/core.py\",\"attr-defined\",\"\\\"object\\\" has no attribute \\\"transaction_costs\\\"\",\"cfcbeac8cf795269\"]",
     "[\"backtester/core.py\",\"call-overload\",\"No overload variant of \\\"__getitem__\\\" of \\\"_LocIndexerSeries\\\" matches argument type \\\"object\\\"\",\"ab92ab74abea2c23\"]",
     "[\"backtester/core.py\",\"call-overload\",\"No overload variant of \\\"__setitem__\\\" of \\\"_LocIndexerSeries\\\" matches argument types \\\"object\\\", \\\"Any\\\"\",\"ab92ab74abea2c23\"]",
     "[\"backtester/core.py\",\"func-returns-value\",\"\\\"_compute_positions\\\" of \\\"Backtester\\\" does not return a value (it only ever returns None)\",\"1ac072538b4cd91d\"]",
@@ -80,7 +77,6 @@
     "[\"backtester/core.py\",\"no-untyped-def\",\"Function is missing a type annotation for one or more parameters\",\"be381bbee1835ec2\"]",
     "[\"backtester/core.py\",\"no-untyped-def\",\"Function is missing a type annotation for one or more parameters\",\"c152690b05e9f1c5\"]",
     "[\"backtester/core.py\",\"no-untyped-def\",\"Function is missing a type annotation for one or more parameters\",\"cdd7c932e6d254a8\"]",
-    "[\"backtester/core.py\",\"no-untyped-def\",\"Function is missing a type annotation for one or more parameters\",\"dd2454eeeac8c66d\"]",
     "[\"backtester/core.py\",\"no-untyped-def\",\"Function is missing a type annotation for one or more parameters\",\"de9ba62f1e7a5932\"]",
     "[\"backtester/core.py\",\"no-untyped-def\",\"Function is missing a type annotation for one or more parameters\",\"e68fea9c5383ff4b\"]",
     "[\"backtester/core.py\",\"no-untyped-def\",\"Function is missing a type annotation for one or more parameters\",\"eba1c4603af0dff0\"]",
@@ -435,7 +431,6 @@
     "[\"backtester/portfolio/accounting/ledger.py\",\"arg-type\",\"Argument 1 to \\\"float\\\" has incompatible type \\\"object\\\"; expected \\\"str | Buffer | SupportsFloat | SupportsIndex\\\"\",\"683b531f41ec88a2\"]",
     "[\"backtester/portfolio/accounting/ledger.py\",\"arg-type\",\"Argument 1 to \\\"float\\\" has incompatible type \\\"object\\\"; expected \\\"str | Buffer | SupportsFloat | SupportsIndex\\\"\",\"683b531f41ec88a2\"]",
     "[\"backtester/portfolio/accounting/ledger.py\",\"arg-type\",\"Argument 1 to \\\"float\\\" has incompatible type \\\"object\\\"; expected \\\"str | Buffer | SupportsFloat | SupportsIndex\\\"\",\"cd42404d52ad55cc\"]",
-    "[\"backtester/portfolio/accounting/ledger.py\",\"attr-defined\",\"\\\"object\\\" has no attribute \\\"compute\\\"\",\"9819e6bfcdf59293\"]",
     "[\"backtester/portfolio/accounting/ledger.py\",\"var-annotated\",\"Need type annotation for \\\"_average_entry_rows\\\" (hint: \\\"_average_entry_rows: list[<type>] = ...\\\")\",\"8ef22fbd705ecbbe\"]",
     "[\"backtester/portfolio/accounting/ledger.py\",\"var-annotated\",\"Need type annotation for \\\"_cash_rows\\\" (hint: \\\"_cash_rows: list[<type>] = ...\\\")\",\"e9fffe7cd637bbb2\"]",
     "[\"backtester/portfolio/accounting/ledger.py\",\"var-annotated\",\"Need type annotation for \\\"_dates\\\" (hint: \\\"_dates: list[<type>] = ...\\\")\",\"ebaf15f0eaab7264\"]",
@@ -445,7 +440,6 @@
     "[\"backtester/portfolio/accounting/ledger.py\",\"var-annotated\",\"Need type annotation for \\\"_position_rows\\\" (hint: \\\"_position_rows: list[<type>] = ...\\\")\",\"fc19d6044cf2b87a\"]",
     "[\"backtester/portfolio/accounting/ledger.py\",\"var-annotated\",\"Need type annotation for \\\"_position_value_rows\\\" (hint: \\\"_position_value_rows: list[<type>] = ...\\\")\",\"8e0f2ba10004b186\"]",
     "[\"backtester/portfolio/book.py\",\"arg-type\",\"Argument 1 to \\\"_prepare_allocations\\\" of \\\"StrategyBook\\\" has incompatible type \\\"Index[Any]\\\"; expected \\\"DatetimeIndex\\\"\",\"2316d797a5d13350\"]",
-    "[\"backtester/portfolio/book.py\",\"arg-type\",\"Argument 2 to \\\"_validated_cost_rate\\\" of \\\"StrategyBook\\\" has incompatible type \\\"Index[Any]\\\"; expected \\\"DatetimeIndex\\\"\",\"2316d797a5d13350\"]",
     "[\"backtester/portfolio/book.py\",\"assignment\",\"Incompatible types in assignment (expression has type \\\"Any | None\\\", variable has type \\\"Series[Any]\\\")\",\"635a4d2fb1fd7960\"]",
     "[\"backtester/portfolio/instr_calc.py\",\"no-any-return\",\"Returning Any from function declared to return \\\"DataFrame\\\"\",\"3cf29004f95b3e94\"]",
     "[\"backtester/portfolio/instr_calc.py\",\"no-any-return\",\"Returning Any from function declared to return \\\"DataFrame\\\"\",\"3f2a53534ea321aa\"]",

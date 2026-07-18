@@ -25,6 +25,7 @@ from backtester.execution import (
     OrderStatus,
     OrderType,
     TimeInForce,
+    VolatilitySlippage,
 )
 from backtester.execution.contract_spec import ContractSpec
 from backtester.portfolio.accounting import (
@@ -121,6 +122,83 @@ def test_market_fill_validates_only_configured_execution_price() -> None:
     )
     assert len(close_fills) == 1
     assert close_fills[0].fill_price == pytest.approx(101.0)
+
+
+def test_open_fill_slippage_uses_only_lagged_bar_range() -> None:
+    """Changing future HLC on the fill bar cannot change an opening fill."""
+    previous = BarData(
+        timestamp=pd.Timestamp("2024-01-01"),
+        open=99.0,
+        high=101.0,
+        low=99.0,
+        close=100.0,
+        volume=1_000.0,
+    )
+
+    fill_prices = []
+    for high, low, close in ((102.0, 98.0, 101.0), (140.0, 60.0, 70.0)):
+        engine = FillEngine(
+            fill_at="open",
+            slippage=VolatilitySlippage(vol_factor=0.1),
+        )
+        assert engine.process_bar("AAPL", previous) == []
+        engine.submit(Order("AAPL", OrderSide.BUY, 1.0))
+        fills = engine.process_bar(
+            "AAPL",
+            BarData(
+                timestamp=pd.Timestamp("2024-01-02"),
+                open=100.0,
+                high=high,
+                low=low,
+                close=close,
+                volume=2_000.0,
+            ),
+        )
+        fill_prices.append(fills[0].fill_price)
+
+    assert fill_prices == pytest.approx([100.2, 100.2])
+
+
+def test_open_fill_volume_capacity_uses_lagged_observations() -> None:
+    """Changing future volume on the fill bar cannot change opening capacity."""
+    quantities = []
+    for current_volume in (10.0, 10_000.0):
+        engine = FillEngine(
+            fill_at="open",
+            max_volume_participation=0.10,
+            volume_lookback=2,
+            expected_open_volume_fraction=0.25,
+        )
+        assert (
+            engine.process_bar(
+                "AAPL",
+                BarData(pd.Timestamp("2023-12-29"), 100.0, 101.0, 99.0, 100.0, 100.0),
+            )
+            == []
+        )
+        assert (
+            engine.process_bar(
+                "AAPL",
+                BarData(pd.Timestamp("2024-01-01"), 100.0, 101.0, 99.0, 100.0, 300.0),
+            )
+            == []
+        )
+        engine.submit(Order("AAPL", OrderSide.BUY, 100.0))
+        fills = engine.process_bar(
+            "AAPL",
+            BarData(
+                pd.Timestamp("2024-01-02"),
+                100.0,
+                101.0,
+                99.0,
+                100.0,
+                current_volume,
+            ),
+        )
+        quantities.append(fills[0].quantity)
+
+    # mean(100, 300) * 25% expected opening share * 10% participation
+    assert quantities == pytest.approx([5.0, 5.0])
 
 
 def test_unobservable_stop_still_ages_day_order() -> None:
@@ -394,9 +472,55 @@ def test_fast_weight_initial_trade_cost_is_not_deferred_or_dropped() -> None:
         cost_model=FixedBpsWeightCostModel(total_bps=100.0),
         contract_spec_resolver=ContractSpec.equity,
     )
-    assert costs.total_cost.iloc[0] == pytest.approx(1_000.0)
-    assert result.nav.iloc[0] == pytest.approx(99_000.0)
-    assert result.returns.iloc[0] == pytest.approx(-0.01)
+    expected_nav = 100_000.0 / 1.01
+    expected_cost = 100_000.0 - expected_nav
+    assert costs.total_cost.iloc[0] == pytest.approx(expected_cost)
+    assert result.nav.iloc[0] == pytest.approx(expected_nav)
+    assert result.returns.iloc[0] == pytest.approx(expected_nav / 100_000.0 - 1.0)
+
+
+def test_fast_weight_costs_positions_and_nav_share_one_recursive_path() -> None:
+    """Costs, audited trades and positions must use the same post-cost capital."""
+    dates = pd.date_range("2024-01-01", periods=2, freq="B")
+    weights = pd.DataFrame(
+        {"A": [1.0, 0.0], "B": [0.0, 1.0]},
+        index=dates,
+    )
+    prices = pd.DataFrame(100.0, index=dates, columns=weights.columns)
+
+    result, costs, position_changes = build_weight_ledger(
+        actual_weights=weights,
+        portfolio_returns=pd.Series(0.0, index=dates),
+        prices=prices,
+        initial_capital=100_000.0,
+        rebalance_flags=pd.Series(True, index=dates),
+        cost_model=FixedBpsWeightCostModel(total_bps=100.0),
+        contract_spec_resolver=ContractSpec.equity,
+    )
+
+    # Initial all-in purchase: V+ = 100,000 - 1% * V+.
+    first_nav = 100_000.0 / 1.01
+    # Full A -> B rotation: V2+ = V1+ - 1% * (V1+ + V2+).
+    second_nav = first_nav * 0.99 / 1.01
+    expected_nav = pd.Series([first_nav, second_nav], index=dates)
+    expected_costs = pd.Series(
+        [100_000.0 - first_nav, first_nav - second_nav],
+        index=dates,
+    )
+
+    pd.testing.assert_series_equal(result.nav, expected_nav, check_names=False)
+    pd.testing.assert_series_equal(costs.total_cost, expected_costs, check_names=False)
+    pd.testing.assert_frame_equal(
+        position_changes,
+        costs.quantity_deltas,
+        check_names=False,
+    )
+    pd.testing.assert_frame_equal(
+        result.positions.diff().fillna(result.positions),
+        costs.quantity_deltas,
+        check_names=False,
+    )
+    assert costs.transaction_costs.sum(axis=1).tolist() == pytest.approx(expected_costs.tolist())
 
 
 def test_weight_cost_does_not_reenter_unchanged_position_after_gap() -> None:

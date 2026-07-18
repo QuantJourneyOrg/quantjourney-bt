@@ -86,11 +86,14 @@ class FixedBpsSlippage:
 @dataclass(frozen=True, slots=True)
 class VolatilitySlippage:
     """
-    Slippage proportional to intra-bar volatility.
+    Slippage proportional to an observable bar range.
 
     spread = price × vol_factor × (high - low) / close
 
     Useful for illiquid instruments where spread widens with volatility.
+    ``FillEngine`` supplies the previous completed bar for opening fills and
+    the current completed bar for closing fills, so this model does not read
+    the future high, low or close of an opening-fill bar.
     """
 
     vol_factor: float = 0.1

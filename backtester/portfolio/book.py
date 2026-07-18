@@ -27,6 +27,7 @@ from backtester.portfolio.weight_cost import (
     FixedBpsWeightCostModel,
     WeightCostBreakdown,
     WeightCostModel,
+    solve_recursive_weight_costs,
 )
 
 
@@ -36,9 +37,8 @@ class StrategyBookResult:
 
     ``actual_allocations`` are end-of-period sleeve allocations.  The
     ``returns`` series includes transaction-cost drag, including any initial
-    allocation cost on its first row.  ``cost_breakdown`` is the raw output of
-    the configured weight cost model, while ``costs`` contains the amount
-    actually deducted from book NAV after prior cost drag is accounted for.
+    allocation cost on its first row. ``cost_breakdown`` and ``costs`` share
+    the same recursive post-cost capital path as sleeve units and book NAV.
     """
 
     nav: pd.Series
@@ -166,34 +166,17 @@ class StrategyBook:
         gross_returns = engine.portfolio_returns.reindex(sleeve_nav.index).astype(float)
         gross_returns.name = "gross_book_return"
 
-        gross_nav = self._initial_capital * (1.0 + gross_returns).cumprod()
-        cost_breakdown = self._cost_model.compute(
+        nav, net_returns, cost_breakdown = solve_recursive_weight_costs(
             actual_weights=actual_allocations,
             prices=sleeve_nav,
-            nav=gross_nav,
+            gross_returns=gross_returns,
+            initial_capital=self._initial_capital,
             rebalance_flags=rebalance_flags,
+            cost_model=self._cost_model,
         )
-        cost_rate = self._validated_cost_rate(
-            cost_breakdown.total_cost_pct,
-            sleeve_nav.index,
-        )
-
-        # Costs are charged after the period's sleeve P&L.  Expressing the
-        # model output as a rate lets prior cost drag reduce later dollar
-        # costs instead of continuing to charge against a hypothetical gross
-        # NAV.  This is exact for proportional models such as fixed bps.
-        net_returns = (1.0 + gross_returns) * (1.0 - cost_rate) - 1.0
         net_returns.name = "book_return"
-        growth = 1.0 + net_returns
-        if not np.isfinite(growth.to_numpy(dtype=float)).all() or (growth <= 0.0).any():
-            raise ValueError(
-                "book NAV became non-positive; check leverage, sleeve returns, and costs"
-            )
-        nav = (self._initial_capital * growth.cumprod()).rename("book_nav")
-
-        previous_nav = nav.shift(1, fill_value=self._initial_capital)
-        nav_before_cost = previous_nav * (1.0 + gross_returns)
-        costs = (nav_before_cost * cost_rate).rename("book_transaction_cost")
+        nav.name = "book_nav"
+        costs = cost_breakdown.total_cost.rename("book_transaction_cost")
 
         actual_allocations = actual_allocations.astype(float)
         sleeve_values = actual_allocations.multiply(nav, axis=0)
@@ -205,7 +188,7 @@ class StrategyBook:
             index=sleeve_nav.index,
             columns=self._names,
         )
-        turnover = trade_values.sum(axis=1).divide(gross_nav.replace(0.0, np.nan))
+        turnover = trade_values.sum(axis=1).divide(nav.replace(0.0, np.nan))
         turnover = turnover.replace([np.inf, -np.inf], np.nan).fillna(0.0)
         turnover.name = "book_turnover"
 

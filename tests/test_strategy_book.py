@@ -110,11 +110,13 @@ def test_initial_allocation_cost_reduces_first_nav_and_reconciles() -> None:
         initial_capital=100_000.0,
     ).run()
 
-    assert result.costs.tolist() == pytest.approx([1_000.0, 0.0, 0.0])
-    assert result.returns.tolist() == pytest.approx([-0.01, 0.0, 0.0])
-    assert result.nav.tolist() == pytest.approx([99_000.0, 99_000.0, 99_000.0])
+    expected_nav = 100_000.0 / 1.01
+    expected_cost = 100_000.0 - expected_nav
+    assert result.costs.tolist() == pytest.approx([expected_cost, 0.0, 0.0])
+    assert result.returns.tolist() == pytest.approx([expected_nav / 100_000.0 - 1.0, 0.0, 0.0])
+    assert result.nav.tolist() == pytest.approx([expected_nav] * 3)
     assert result.turnover.tolist() == pytest.approx([1.0, 0.0, 0.0])
-    assert result.stats["total_costs"] == pytest.approx(1_000.0)
+    assert result.stats["total_costs"] == pytest.approx(expected_cost)
     assert result.stats["underlying_security_netting"] is False
     assert result.transaction_costs is result.costs
 

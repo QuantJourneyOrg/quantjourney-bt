@@ -32,7 +32,7 @@ from __future__ import annotations
 import logging
 import math
 import uuid
-from collections import defaultdict
+from collections import defaultdict, deque
 from collections.abc import Callable
 
 from backtester.execution.commission import CommissionScheme, ZeroCommission
@@ -66,6 +66,15 @@ class FillEngine:
         conservative: stops are evaluated before limits. Use intraday data for
         strategies whose edge depends on exact same-bar path ordering.
 
+    Opening-fill observability:
+        A market fill at the bar open cannot observe that bar's later high,
+        low, close or volume. Slippage therefore receives the previous
+        completed bar's HLCV, while volume participation uses the mean of up
+        to ``volume_lookback`` prior volumes, optionally scaled by
+        ``expected_open_volume_fraction``. Closing fills may use the completed
+        current bar. With no lagged volume, an opening participation cap fails
+        closed at zero capacity.
+
     Bracket orders are decomposed into an entry order + OCO pair (TP + SL).
     OCO logic: when one order in a pair fills, the other is cancelled.
 
@@ -86,6 +95,8 @@ class FillEngine:
         commission: CommissionScheme | None = None,
         fill_at: str = "open",  # "open" or "close"
         max_volume_participation: float | None = None,
+        volume_lookback: int = 20,
+        expected_open_volume_fraction: float = 1.0,
         notional_fn: Callable[[str, float, float], float] | None = None,
         pre_submit_check: Callable[[Order], str | None] | None = None,
         price_validator: Callable[[str, float], bool] | None = None,
@@ -95,6 +106,15 @@ class FillEngine:
         self.commission = commission or ZeroCommission()
         self.fill_at = fill_at
         self.max_volume_participation = max_volume_participation
+        if isinstance(volume_lookback, bool) or not isinstance(volume_lookback, int):
+            raise TypeError("volume_lookback must be a positive integer")
+        if volume_lookback <= 0:
+            raise ValueError("volume_lookback must be a positive integer")
+        open_fraction = float(expected_open_volume_fraction)
+        if not math.isfinite(open_fraction) or not 0.0 <= open_fraction <= 1.0:
+            raise ValueError("expected_open_volume_fraction must be between 0 and 1")
+        self.volume_lookback = volume_lookback
+        self.expected_open_volume_fraction = open_fraction
         self.notional_fn = notional_fn
         self.pre_submit_check = pre_submit_check
         self.price_validator = price_validator
@@ -111,6 +131,10 @@ class FillEngine:
         self._last_fill_by_instrument: dict[str, Fill] = {}
         self._last_fill_by_order: dict[str, Fill] = {}
         self._commission_state_by_order: dict[str, dict[str, float]] = {}
+        self._last_bar_by_instrument: dict[str, BarData] = {}
+        self._volume_history: defaultdict[str, deque[float]] = defaultdict(
+            lambda: deque(maxlen=self.volume_lookback)
+        )
 
     # ── Reset ──────────────────────────────────────────────────────────
 
@@ -121,7 +145,8 @@ class FillEngine:
         Clears pending orders, OCO pair registries, order/fill histories,
         last-fill caches, and per-order commission state. Configuration
         (slippage, commission, fill_at, max_volume_participation,
-        notional_fn) is preserved.
+        volume_lookback, expected_open_volume_fraction, notional_fn) is
+        preserved.
 
         Runners that reuse a Backtester / FillEngine instance across runs
         MUST call this at run start — otherwise orders left pending by the
@@ -135,6 +160,8 @@ class FillEngine:
         self._last_fill_by_instrument = {}
         self._last_fill_by_order = {}
         self._commission_state_by_order = {}
+        self._last_bar_by_instrument = {}
+        self._volume_history = defaultdict(lambda: deque(maxlen=self.volume_lookback))
 
     # ── Submit ─────────────────────────────────────────────────────────
 
@@ -267,11 +294,14 @@ class FillEngine:
         Returns list of fills generated.
         """
         fills: list[Fill] = []
+        previous_bar = self._last_bar_by_instrument.get(instrument)
         orders = self._orders.get(instrument, [])
         if not orders:
+            self._observe_bar(instrument, bar)
             return fills
 
         remaining_bar_capacity = self._bar_fill_capacity(instrument, bar)
+        slippage_bar = self._slippage_reference_bar(bar, previous_bar)
 
         # Process in priority: stops → limits → markets
         for order in sorted(orders, key=lambda o: _ORDER_PRIORITY.get(o.order_type, 99)):
@@ -281,7 +311,12 @@ class FillEngine:
             if self._expire_before_bar(order, bar):
                 continue
 
-            fill = self._try_fill(order, bar, max_quantity=remaining_bar_capacity)
+            fill = self._try_fill(
+                order,
+                bar,
+                max_quantity=remaining_bar_capacity,
+                slippage_bar=slippage_bar,
+            )
             if fill:
                 fills.append(fill)
                 self._record_fill(fill)
@@ -316,6 +351,7 @@ class FillEngine:
 
         # Clean up filled/cancelled orders
         self._orders[instrument] = [o for o in orders if o.is_active]
+        self._observe_bar(instrument, bar)
         return fills
 
     # ── Fill Logic ─────────────────────────────────────────────────────
@@ -325,6 +361,7 @@ class FillEngine:
         order: Order,
         bar: BarData,
         max_quantity: float | None = None,
+        slippage_bar: BarData | None = None,
     ) -> Fill | None:
         """Attempt to fill a single order against a bar."""
         if not self._bar_supports_order(order, bar):
@@ -348,7 +385,7 @@ class FillEngine:
             price=theoretical_price,
             quantity=fill_qty,
             side=order.side,
-            bar=bar,
+            bar=bar if slippage_bar is None else slippage_bar,
         )
         if not self._valid_price(order.instrument, slipped_price):
             return None
@@ -710,7 +747,20 @@ class FillEngine:
             return None
         if self.max_volume_participation <= 0:
             return 0.0
-        volume = float(bar.volume)
+        if self.fill_at == "open":
+            observations = self._volume_history.get(instrument)
+            if not observations:
+                logger.warning(
+                    "No lagged volume for %s at %s with open participation cap; "
+                    "treating capacity as 0 (no fills this bar)",
+                    instrument,
+                    bar.timestamp,
+                )
+                return 0.0
+            volume = sum(observations) / len(observations)
+            volume *= self.expected_open_volume_fraction
+        else:
+            volume = float(bar.volume)
         if not math.isfinite(volume):
             # Unknown liquidity: refuse to fill rather than fill uncapped
             # (NaN would otherwise bypass min() and poison later capacity).
@@ -722,6 +772,38 @@ class FillEngine:
             )
             return 0.0
         return max(volume, 0.0) * float(self.max_volume_participation)
+
+    def _slippage_reference_bar(
+        self,
+        bar: BarData,
+        previous_bar: BarData | None,
+    ) -> BarData:
+        """Expose only information available at the configured fill time."""
+        if self.fill_at != "open":
+            return bar
+        if previous_bar is None:
+            return BarData(
+                timestamp=bar.timestamp,
+                open=bar.open,
+                high=float("nan"),
+                low=float("nan"),
+                close=float("nan"),
+                volume=float("nan"),
+            )
+        return BarData(
+            timestamp=bar.timestamp,
+            open=bar.open,
+            high=previous_bar.high,
+            low=previous_bar.low,
+            close=previous_bar.close,
+            volume=previous_bar.volume,
+        )
+
+    def _observe_bar(self, instrument: str, bar: BarData) -> None:
+        self._last_bar_by_instrument[instrument] = bar
+        volume = float(bar.volume)
+        if math.isfinite(volume) and volume >= 0.0:
+            self._volume_history[instrument].append(volume)
 
     def _normalize_tif(self, order: Order) -> TimeInForce:
         tif = order.time_in_force

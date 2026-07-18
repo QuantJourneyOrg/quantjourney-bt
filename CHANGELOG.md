@@ -1,5 +1,26 @@
 # QuantJourney Backtester Changelog
 
+## 0.11.0 - 2026-07-18
+
+### Added
+- Added `volume_lookback` and `expected_open_volume_fraction` controls for
+  forecasting the liquidity available to fills at the open from lagged data.
+
+### Changed
+- Fast-weight costs, implied quantities, positions and NAV now share one
+  recursive post-cost capital path. Costed quantity deltas reconcile with
+  reported position changes instead of being scaled from a separate gross NAV.
+- `min_trade_value` is a cost-materiality threshold: sub-threshold implied
+  trades remain visible in the quantity and notional audit while incurring no
+  modeled cost.
+
+### Fixed
+- Opening fills no longer expose the current bar's later high, low or close to
+  range-sensitive slippage models.
+- Opening participation caps now use lagged observed volume rather than the
+  completed current bar's future full-day volume, and fail closed when no
+  lagged observation exists.
+
 ## 0.10.2 - 2026-07-18
 
 ### Added

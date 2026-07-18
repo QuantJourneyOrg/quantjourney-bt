@@ -51,6 +51,14 @@ and scheduled rebalancing.
 trailing stop, bracket, and OCO orders with commissions, slippage, volume
 participation, fills, positions, cash, NAV, and trade blotters.
 
+Fast weight execution solves transaction costs recursively on one post-cost
+capital path: NAV, implied quantities, trade notionals, booked costs and
+reported positions reconcile to the same self-financing ledger. Use
+`weight_execution="orders"` when discrete fills and cash movements matter.
+For fills at the open, range-sensitive slippage sees only the previous
+completed bar and volume capacity is forecast from lagged observations; the
+engine does not use that day's later high, low, close or full-day volume.
+
 ## Engine Contract
 
 ```text

@@ -18,6 +18,12 @@ import pandas as pd
 
 from backtester.execution.contract_spec import AssetClass, ContractSpec
 from backtester.execution.order_types import Fill, OrderSide
+from backtester.portfolio.weight_cost import (
+    FixedBpsWeightCostModel,
+    WeightCostBreakdown,
+    WeightCostModel,
+    solve_recursive_weight_costs,
+)
 
 ContractSpecResolver = Callable[[str], ContractSpec]
 
@@ -438,31 +444,48 @@ def build_weight_ledger(
     prices: pd.DataFrame,
     initial_capital: float,
     rebalance_flags: pd.Series,
-    cost_model: object,
+    cost_model: WeightCostModel,
     contract_spec_resolver: ContractSpecResolver,
     settlement_currency: str = "USD",
-) -> tuple[LedgerResult, object, pd.DataFrame]:
-    """Build the compatibility ledger for vectorized target-weight mode.
+) -> tuple[LedgerResult, WeightCostBreakdown, pd.DataFrame]:
+    """Build the recursive compatibility ledger for target-weight mode.
 
-    This intentionally preserves the existing close-to-close weight accounting
-    and implied-trade cost model. It does not claim that implied trades are
-    broker orders or fills.
+    The path remains close-to-close and uses implied rather than broker fills,
+    but positions, audited trades, costs and post-cost NAV are solved from one
+    self-financing capital trajectory.
     """
-    gross_nav = float(initial_capital) * (1.0 + portfolio_returns).cumprod()
-    if len(gross_nav) > 0:
-        gross_nav.iloc[0] = float(initial_capital)
-    cost_breakdown = cost_model.compute(
-        actual_weights=actual_weights,
-        prices=prices,
-        nav=gross_nav,
-        rebalance_flags=rebalance_flags,
-    )
-    net_returns = portfolio_returns - cost_breakdown.total_cost_pct
-    nav = float(initial_capital) * (1.0 + net_returns).cumprod()
-
     marked_prices = prices.reindex(
         index=actual_weights.index, columns=actual_weights.columns
     ).ffill()
+    trade_unit_values = pd.DataFrame(
+        np.nan,
+        index=actual_weights.index,
+        columns=actual_weights.columns,
+        dtype=float,
+    )
+    specs: dict[str, ContractSpec] = {}
+    for instrument in actual_weights.columns:
+        spec = contract_spec_resolver(instrument)
+        spec.validate_settlement_currency(settlement_currency)
+        specs[instrument] = spec
+        raw_price = prices.reindex(index=actual_weights.index)[instrument].astype(float)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            if spec.inverse:
+                unit_value = spec.multiplier / raw_price
+            else:
+                unit_value = raw_price.abs() * spec.multiplier * spec.lot_size
+        trade_unit_values[instrument] = unit_value.where(raw_price.notna())
+
+    nav, net_returns, cost_breakdown = solve_recursive_weight_costs(
+        actual_weights=actual_weights,
+        prices=prices,
+        gross_returns=portfolio_returns,
+        initial_capital=initial_capital,
+        rebalance_flags=rebalance_flags,
+        cost_model=cost_model,
+        trade_unit_values=trade_unit_values,
+    )
+
     desired_exposure = actual_weights.multiply(nav, axis=0)
     positions = pd.DataFrame(
         0.0,
@@ -473,8 +496,7 @@ def build_weight_ledger(
     position_values = positions.copy()
     exposure_values = positions.copy()
     for instrument in actual_weights.columns:
-        spec = contract_spec_resolver(instrument)
-        spec.validate_settlement_currency(settlement_currency)
+        spec = specs[instrument]
         price = marked_prices[instrument].to_numpy(dtype=float)
         target_value = desired_exposure[instrument].to_numpy(dtype=float)
         # Same per-cell semantics as spec.notional()/the previous scalar loop,
@@ -518,6 +540,16 @@ def build_weight_ledger(
     returns = net_returns.rename("returns")
     position_changes = positions.diff().fillna(positions)
     position_changes.loc[~rebalance_flags.reindex(positions.index).fillna(False), :] = 0.0
+
+    if isinstance(cost_model, FixedBpsWeightCostModel) and not np.allclose(
+        position_changes.to_numpy(dtype=float),
+        cost_breakdown.quantity_deltas.to_numpy(dtype=float),
+        rtol=1e-10,
+        atol=1e-8,
+    ):
+        raise AssertionError(
+            "weight-mode position changes do not reconcile with costed quantity deltas"
+        )
 
     _assert_accounting_identity(nav, cash, position_values)
     return (
