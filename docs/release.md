@@ -25,9 +25,13 @@ git config core.hooksPath .githooks
    baseline must reflect a deliberate diagnostic review, not a CI bypass.
 4. Update the version in both `pyproject.toml` and the fallback in
    `backtester/version.py`, then add the matching release section to
-   `CHANGELOG.md`.
-5. Remove `RELEASE_BLOCKED` only in the dedicated reviewed release commit.
-6. Tag that exact commit as `vX.Y.Z` and push the tag. The publish workflow
+   `CHANGELOG.md`. Update the explicit "Current PyPI release" line in
+   `README.md` after the version is confirmed on PyPI.
+5. When repository launch behavior changes, keep `strategy.py`, `strategy.sh`,
+   `strategy.bat`, `WINDOWS.md`, README examples, Windows CI, and the
+   Windows/macOS/Linux paths on `/how-to-start` synchronized.
+6. Remove `RELEASE_BLOCKED` only in the dedicated reviewed release commit.
+7. Tag that exact commit as `vX.Y.Z` and push the tag. The publish workflow
    verifies that the tag is on `main`, the checkout is clean, tests and the
    full lint/format/type gates pass, and wheel/sdist payloads exactly match the
    approved manifest before trusted publishing is allowed.
