@@ -24,7 +24,7 @@ one repeatable run.
 pip install quantjourney-bt
 ```
 
-Current PyPI release: **0.11.0**. The public package supports Python 3.11 and newer.
+Current PyPI release: **0.12.0**. The public package supports Python 3.11 and newer.
 
 ## Why It Exists
 
