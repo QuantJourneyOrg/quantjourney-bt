@@ -103,6 +103,7 @@ sdist benchmarks/README.md
 sdist benchmarks/strategy_suite.md
 sdist CHANGELOG.md
 sdist CONTRIBUTING.md
+sdist WINDOWS.md
 sdist compare/README.md
 sdist docs/public_scope.md
 sdist docs/release.md
@@ -169,4 +170,6 @@ sdist strategies/example_wf_03_anchored_purge_embargo.py
 sdist strategies/example_wf_04_grid_search_optimization.py
 sdist strategies/example_wf_05_optuna_tpe_optimization.py
 sdist strategies/README.md
+sdist strategy.bat
+sdist strategy.py
 sdist strategy.sh

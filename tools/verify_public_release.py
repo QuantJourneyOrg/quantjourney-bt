@@ -22,8 +22,11 @@ TOP_LEVEL_SDIST = {
     "LICENSE",
     "MANIFEST.in",
     "README.md",
+    "WINDOWS.md",
     "compare/README.md",
     "pyproject.toml",
+    "strategy.bat",
+    "strategy.py",
     "strategy.sh",
 }
 SDIST_ROOT_SUFFIXES = {

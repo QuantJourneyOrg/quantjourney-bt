@@ -2,6 +2,9 @@ include README.md
 include LICENSE
 include CONTRIBUTING.md
 include strategy.sh
+include strategy.bat
+include strategy.py
+include WINDOWS.md
 recursive-include backtester *.py
 include backtester/py.typed
 recursive-include backtester/plots/theme/configs *.py

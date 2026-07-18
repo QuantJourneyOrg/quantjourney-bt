@@ -133,7 +133,8 @@ pip install quantjourney-bt
 ```
 
 The wheel installs the `backtester` library. The runnable strategy catalog and
-`strategy.sh` launcher are repository assets; clone this repository when you
+the `strategy.sh` (macOS/Linux) and `strategy.bat` (Windows) launchers are
+repository assets; clone this repository when you
 want to run or modify the examples below.
 
 The install also exposes `qj-bt data`, an unauthenticated terminal helper for
@@ -204,7 +205,9 @@ availability catalog.
 ```text
 backtester/               Runtime package imported as backtester
 strategies/               Runnable strategy examples
-strategy.sh               Strategy launcher and report runner
+strategy.sh               macOS/Linux strategy launcher
+strategy.bat              Windows strategy launcher
+strategy.py               Shared cross-platform launcher logic
 benchmarks/               Benchmark-suite notes
 skills/                   Strategy-authoring skill materials
 tests/                    Import, packaging, and report smoke checks
@@ -222,6 +225,7 @@ it gives the package a quick install/import/report safety check before release.
 
 ## Documentation
 
+- [Windows setup](WINDOWS.md) - native Windows installation and `strategy.bat` usage without WSL.
 - [Roadmap](docs/ROADMAP.md) - direction of travel by theme, without delivery
   dates or ordering commitments.
 - [Strategy catalog](strategies/README.md) - runnable examples with source and
@@ -261,6 +265,10 @@ List available strategies:
 ```bash
 ./strategy.sh --list
 ```
+
+On Windows use `strategy.bat --list` in Command Prompt or
+`.\strategy.bat --list` in PowerShell. See [WINDOWS.md](WINDOWS.md) for the
+complete native Windows workflow.
 
 Check one strategy import without credentials or a data call:
 

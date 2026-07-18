@@ -2,6 +2,12 @@
 
 ## 0.10.2 - 2026-07-18
 
+### Added
+- Added native Windows repository support through `strategy.bat`, backed by the
+  same cross-platform Python launcher used by `strategy.sh`.
+- Added `WINDOWS.md`, automatic non-executing `.env` loading, and Windows CI
+  coverage for listing and import-checking strategies.
+
 ### Fixed
 - Preserved long and short directions when applying pure inverse-volatility
   weighting to active instruments.

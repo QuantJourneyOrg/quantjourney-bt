@@ -90,6 +90,17 @@ def test_sdist_rejects_unapproved_test_or_private_file(tmp_path: Path) -> None:
         release_verifier.verify_sdist(sdist, sdist_payload)
 
 
+def test_windows_launcher_files_are_approved_sdist_sources() -> None:
+    _, sdist_payload = _approved_payloads()
+
+    assert "WINDOWS.md" in sdist_payload
+    assert "strategy.bat" in sdist_payload
+    assert "strategy.py" in sdist_payload
+    assert release_verifier._is_sdist_source("WINDOWS.md")
+    assert release_verifier._is_sdist_source("strategy.bat")
+    assert release_verifier._is_sdist_source("strategy.py")
+
+
 def test_wheel_rejects_modified_console_entry_point(tmp_path: Path) -> None:
     wheel_payload, _ = _approved_payloads()
     wheel = tmp_path / "package.whl"
