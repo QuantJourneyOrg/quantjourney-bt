@@ -3,7 +3,7 @@
 A Python-native backtesting engine for reproducible portfolio research.
 
 [![Python](https://img.shields.io/badge/Python-%3E%3D3.11-3776AB?logo=python&logoColor=white)](https://python.org)
-[![PyPI](https://img.shields.io/pypi/v/quantjourney-bt?color=orange&cacheSeconds=300&v=0.12.2)](https://pypi.org/project/quantjourney-bt/0.12.2/)
+[![PyPI](https://img.shields.io/pypi/v/quantjourney-bt?color=orange&cacheSeconds=300&v=0.12.3)](https://pypi.org/project/quantjourney-bt/0.12.3/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()
 [![API](https://img.shields.io/badge/API-QuantJourney%20Cloud-1B4F72)](https://quantjourney.cloud)
@@ -24,7 +24,7 @@ one repeatable run.
 pip install quantjourney-bt
 ```
 
-Current PyPI release: **0.12.2**. The public package supports Python 3.11 and newer.
+Current PyPI release: **0.12.3**. The public package supports Python 3.11 and newer.
 
 ## Why It Exists
 
