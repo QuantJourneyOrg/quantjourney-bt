@@ -152,6 +152,88 @@ class APIError(Exception):
         return " ".join(parts)
 
 
+class PrepareValidationError(APIError):
+    """Actionable validation failure returned by ``POST /bt/prepare``."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        field_errors: list[dict[str, str]],
+        request_id: str | None = None,
+        error_code: str | None = None,
+        status_code: int = 422,
+    ):
+        super().__init__(message, request_id=request_id, error_code=error_code)
+        self.status_code = status_code
+        self.field_errors = field_errors
+        self.validation_errors = field_errors
+        self.endpoint = "/bt/prepare"
+
+    @classmethod
+    def from_api_error(cls, error: Exception) -> "PrepareValidationError | None":
+        body = getattr(error, "response_body", None)
+        if not isinstance(body, dict):
+            return None
+
+        raw_errors = body.get("errors") or body.get("field_errors")
+        if not isinstance(raw_errors, list):
+            return None
+
+        field_errors: list[dict[str, str]] = []
+        for raw in raw_errors:
+            if not isinstance(raw, dict):
+                continue
+            field = str(raw.get("field") or "configuration").strip()[:160]
+            code = str(raw.get("code") or "value_error").strip()[:80]
+            message = str(raw.get("message") or "This value is invalid.").strip()[:500]
+            hint = str(raw.get("hint") or "Check this field and try again.").strip()[:500]
+            field_errors.append(
+                {
+                    "field": field or "configuration",
+                    "code": code or "value_error",
+                    "message": message or "This value is invalid.",
+                    "hint": hint or "Check this field and try again.",
+                }
+            )
+        if not field_errors:
+            return None
+
+        status_code = getattr(error, "status_code", None) or body.get("status") or 422
+        error_code = (
+            getattr(error, "error_code", None) or body.get("error_code") or body.get("code")
+        )
+        request_id = getattr(error, "request_id", None) or body.get("request_id")
+        detail = str(
+            body.get("detail") or "Backtest preparation configuration is invalid."
+        ).strip()[:500]
+        return cls(
+            detail,
+            field_errors=field_errors,
+            request_id=str(request_id) if request_id else None,
+            error_code=str(error_code) if error_code else None,
+            status_code=int(status_code),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "endpoint": self.endpoint,
+            "status": self.status_code,
+            "error_code": self.error_code,
+            "request_id": self.request_id,
+            "message": str(self.args[0]),
+            "validation_errors": list(self.field_errors),
+        }
+
+    def __str__(self) -> str:
+        lines = [super().__str__()]
+        for issue in self.field_errors:
+            lines.append(f"  - {issue['field']}: {issue['message']}")
+            if issue.get("hint"):
+                lines.append(f"    Hint: {issue['hint']}")
+        return "\n".join(lines)
+
+
 @dataclass
 class APIResponse:
     """Wrapper for API responses."""
@@ -966,6 +1048,7 @@ __all__ = [
     "APIClient",
     "AsyncAPIClient",
     "APIError",
+    "PrepareValidationError",
     "APIResponse",
     "ConnectorEndpoint",
     "DomainResponse",

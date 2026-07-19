@@ -84,6 +84,21 @@ class SDKClientMixin:
         quota_exc._qj_quota_message = message
         raise quota_exc from exc
 
+    @classmethod
+    def _raise_prepare_api_error(cls, exc: Exception) -> None:
+        """Preserve quota behavior and expose structured prepare validation."""
+
+        message = cls._quota_limit_message(exc)
+        if message:
+            cls._raise_quota_limit_error(exc)
+
+        from backtester.sdk.client import PrepareValidationError
+
+        validation_error = PrepareValidationError.from_api_error(exc)
+        if validation_error is not None:
+            raise validation_error from exc
+        raise exc
+
     # ─────────────────────────────────────────────────────────────────
     # SDK Client — uses quantjourney.sdk.client.AsyncAPIClient
     # ─────────────────────────────────────────────────────────────────
@@ -233,7 +248,7 @@ class SDKClientMixin:
         try:
             self._api_response = await client._request("/bt/prepare", payload)
         except Exception as exc:
-            self._raise_quota_limit_error(exc)
+            self._raise_prepare_api_error(exc)
 
         self.session_id = self._api_response.get("session_id")
         self.dataset_id = self._api_response.get("dataset_id")

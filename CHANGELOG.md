@@ -1,5 +1,16 @@
 # QuantJourney Backtester Changelog
 
+## 0.12.2 - 2026-07-19
+
+### Added
+- Added `PrepareValidationError` for structured `/bt/prepare` validation
+  failures, including the affected field, stable code, actionable message,
+  correction hint, request ID and API error code.
+
+### Changed
+- Market-data preparation now preserves safe RFC 7807 field diagnostics from
+  qj-api instead of reducing configuration failures to a generic HTTP 422.
+
 ## 0.12.1 - 2026-07-18
 
 ### Added

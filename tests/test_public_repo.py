@@ -10,6 +10,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 STRATEGIES = ROOT / "strategies"
 sys.path.insert(0, str(ROOT))
@@ -217,6 +219,53 @@ def test_sdk_prepare_payload_uses_normalized_granularity() -> None:
 
     assert captured["path"] == "/bt/prepare"
     assert captured["payload"]["provider"]["granularity"] == "5m"
+
+
+def test_sdk_prepare_validation_error_is_actionable() -> None:
+    from types import SimpleNamespace
+
+    from backtester.mixins.sdk_client import SDKClientMixin
+    from backtester.sdk.client import APIError, PrepareValidationError
+
+    class DummyClient:
+        async def _request(self, path: str, payload: dict) -> dict:
+            error = APIError("HTTP 422", request_id="req-prepare", error_code="ERR_VAL_003")
+            error.status_code = 422
+            error.response_body = {
+                "status": 422,
+                "detail": "Backtest preparation configuration is invalid.",
+                "error_code": "ERR_VAL_003",
+                "request_id": "req-prepare",
+                "errors": [
+                    {
+                        "field": "instruments",
+                        "code": "list_type",
+                        "message": "Instruments must be a list.",
+                        "hint": 'Send symbols as a list, for example ["AAPL"].',
+                    }
+                ],
+            }
+            raise error
+
+    class DummyBacktester(SDKClientMixin):
+        async def _get_sdk_client(self):
+            return DummyClient()
+
+    dummy = DummyBacktester()
+    dummy._source = "yfinance"
+    dummy._granularity = "1d"
+    dummy.backtest_period = SimpleNamespace(start="2026-01-01", end="2026-06-01")
+    dummy.instruments = ["AAPL"]
+    dummy._persist = True
+    dummy._dedupe = True
+    dummy._force_refresh = False
+
+    with pytest.raises(PrepareValidationError) as raised:
+        asyncio.run(dummy._fetch_market_data())
+
+    assert raised.value.field_errors[0]["field"] == "instruments"
+    assert "Instruments must be a list" in str(raised.value)
+    assert "req-prepare" in str(raised.value)
 
 
 def test_sample_data_payload_loads_without_credentials(monkeypatch) -> None:
