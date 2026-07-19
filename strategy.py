@@ -195,7 +195,7 @@ def run_strategy(
     destination.flush()
 
     completed = subprocess.run(
-        [sys.executable, str(path)],
+        [sys.executable, "-m", "backtester.cli.strategy_runner", str(path)],
         cwd=ROOT,
         env=os.environ.copy(),
         stdout=output,

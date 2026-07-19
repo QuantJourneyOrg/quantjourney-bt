@@ -65,3 +65,9 @@ def test_shell_wrapper_uses_the_same_python_launcher() -> None:
     wrapper = (ROOT / "strategy.sh").read_text(encoding="utf-8")
 
     assert '"$SCRIPT_DIR/strategy.py" "$@"' in wrapper
+
+
+def test_python_launcher_uses_the_friendly_isolated_runner() -> None:
+    source = (ROOT / "strategy.py").read_text(encoding="utf-8")
+
+    assert '"-m", "backtester.cli.strategy_runner"' in source

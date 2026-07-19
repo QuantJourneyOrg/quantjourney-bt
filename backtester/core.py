@@ -2291,9 +2291,17 @@ class Backtester(SDKClientMixin, ReportingMixin):
         except Exception as e:
             self._timings["data_fetch_seconds"] = time.perf_counter() - stage_started
             self._timings["total_seconds"] = time.perf_counter() - total_started
-            logger.error(
-                f"[Backtester] Could not fetch market data — skipping strategy.\n  Error: {e}"
+            from backtester.sdk.client import PrepareValidationError
+
+            friendly_prepare_error = (
+                isinstance(e, PrepareValidationError)
+                and _env_flag("QJ_FRIENDLY_ERRORS", False)
+                and os.getenv("QJ_LOG_LEVEL", "").strip().upper() != "DEBUG"
             )
+            if not friendly_prepare_error:
+                logger.error(
+                    f"[Backtester] Could not fetch market data — skipping strategy.\n  Error: {e}"
+                )
             if self._strict_data_fetch:
                 raise
             return

@@ -1,5 +1,17 @@
 # QuantJourney Backtester Changelog
 
+## 0.12.3 - 2026-07-19
+
+### Added
+- Added a cross-platform strategy-process boundary that renders rejected
+  `/bt/prepare` configurations in a yellow `Configuration needs attention`
+  panel with the affected field and a concrete correction.
+
+### Changed
+- Repository launchers now stop invalid configurations before execution
+  without a duplicate generic market-data error or traceback. Debug logging
+  retains the technical endpoint, status, error code and request ID.
+
 ## 0.12.2 - 2026-07-19
 
 ### Added

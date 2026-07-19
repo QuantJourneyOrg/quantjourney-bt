@@ -303,6 +303,12 @@ export QJ_API_KEY="..."
 ./strategy.sh example_weights_01_sma_daily --output /tmp/qj-reports
 ```
 
+If market-data preparation rejects the strategy configuration, the launcher
+stops before execution and shows a yellow `Configuration needs attention`
+panel with the affected field and a suggested fix. Normal runs omit the raw
+response and traceback; set `QJ_LOG_LEVEL=DEBUG` when technical request details
+are needed.
+
 Run all strategies sequentially through the same launcher:
 
 ```bash

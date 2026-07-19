@@ -115,3 +115,10 @@ py -3.11 -m venv .venv
 
 Use `--sample-data` for the offline demo, or add `QJ_API_KEY` to `.env` for the
 authenticated real-data path.
+
+### `Configuration needs attention`
+
+The strategy configuration was rejected before market data was prepared. Fix
+the field and suggested correction shown in the yellow panel, then run the same
+command again. No trades or report were created. Set
+`$env:QJ_LOG_LEVEL = "DEBUG"` only when technical request details are needed.
