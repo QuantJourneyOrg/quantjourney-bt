@@ -126,7 +126,14 @@ top of the same engine results. More examples at
 pip install quantjourney-bt
 ```
 
-Optional extras: `pip install "quantjourney-bt[wf]"` adds Optuna for the
+With `uv`:
+
+```bash
+uv pip install quantjourney-bt
+```
+
+Optional extras: `pip install "quantjourney-bt[wf]"` or
+`uv pip install "quantjourney-bt[data,wf]"` adds Optuna for the
 walk-forward optimization examples (WF05); `[data]` adds the yfinance
 benchmark fallback.
 
