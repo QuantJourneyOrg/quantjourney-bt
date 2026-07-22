@@ -6,12 +6,7 @@ change the backtest path, fills, NAV accounting, or execution timing. It only
 controls frequency-dependent report statistics such as rolling volatility,
 rolling beta, tail-risk windows, and correlation snapshots.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
@@ -19,13 +14,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 import numpy as np
 import pandas as pd
 
 
-class ReportingFrequency(str, Enum):
+class ReportingFrequency(str, Enum):  # noqa: UP042 - preserve pre-3.11 Enum string semantics
     """Supported report calculation cadences."""
 
     DAILY = "daily"
@@ -34,7 +28,7 @@ class ReportingFrequency(str, Enum):
     QUARTERLY = "quarterly"
 
     @classmethod
-    def parse(cls, value: "ReportingFrequency | str | None") -> "ReportingFrequency":
+    def parse(cls, value: ReportingFrequency | str | None) -> ReportingFrequency:
         if isinstance(value, cls):
             return value
         if value is None or str(value).strip() == "":
@@ -71,7 +65,7 @@ class ReportingFrequencyConfig:
     """Resolved report cadence, windows, annualisation and labels."""
 
     frequency: ReportingFrequency
-    pandas_freq: Optional[str]
+    pandas_freq: str | None
     label: str
     short_label: str
     periods_per_year: int
@@ -106,6 +100,37 @@ _BASE = {
 }
 
 
+def infer_periods_per_year(index: pd.Index) -> int:
+    """Infer annual observations, including intraday bars and 24/7 data."""
+    idx = pd.DatetimeIndex(pd.to_datetime(index)).dropna().sort_values().unique()
+    if len(idx) < 2:
+        return 252
+
+    day_index = pd.DatetimeIndex(idx).normalize()
+    unique_days = day_index.unique()
+    weekend_share = float((unique_days.dayofweek >= 5).mean())
+    sessions_per_year = 365 if weekend_share > 0.10 else 252
+
+    deltas_seconds = pd.Series(idx).diff().dropna().dt.total_seconds()
+    median_seconds = float(deltas_seconds.median())
+    if median_seconds < 20 * 60 * 60:
+        observations_per_session = float(
+            pd.Series(1, index=day_index).groupby(level=0).sum().median()
+        )
+        return max(1, int(round(observations_per_session * sessions_per_year)))
+
+    median_days = median_seconds / 86400.0
+    if median_days <= 3.5:
+        return sessions_per_year
+    if median_days <= 10.5:
+        return 52
+    if median_days <= 45.0:
+        return 12
+    if median_days <= 120.0:
+        return 4
+    return 1
+
+
 def infer_native_frequency(index: pd.Index) -> ReportingFrequency:
     """Infer native sampling frequency from the median distance between observations."""
     if not isinstance(index, pd.DatetimeIndex):
@@ -128,7 +153,7 @@ def infer_native_frequency(index: pd.Index) -> ReportingFrequency:
 def resolve_reporting_frequency(
     value: ReportingFrequency | str | None,
     *,
-    index: Optional[pd.Index] = None,
+    index: pd.Index | None = None,
     long_threshold_years: float = 5.0,
 ) -> ReportingFrequencyConfig:
     """Resolve a requested reporting cadence into windows and annualisation."""
@@ -143,7 +168,9 @@ def resolve_reporting_frequency(
     is_long_period = years >= long_threshold_years
 
     if is_long_period:
-        rolling_window = periods_per_year if freq == ReportingFrequency.DAILY else periods_per_year * 3
+        rolling_window = (
+            periods_per_year if freq == ReportingFrequency.DAILY else periods_per_year * 3
+        )
         beta_window = periods_per_year * 3
         regime_frequency = "QE"
     else:
@@ -238,14 +265,31 @@ def resample_nav_series(
 
 
 def resample_optional_frame(
-    frame: Optional[pd.DataFrame],
+    frame: pd.DataFrame | None,
     config: ReportingFrequencyConfig,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame | None:
     """Sample state-like frames such as weights/positions at report frequency."""
     if frame is None or config.frequency == ReportingFrequency.DAILY:
         return frame
     sampled = frame.resample(config.pandas_freq).last().dropna(how="all")
     return sampled.ffill()
+
+
+def resample_optional_event_series(
+    series: pd.Series | None,
+    config: ReportingFrequencyConfig,
+    index: pd.DatetimeIndex,
+) -> pd.Series | None:
+    """Aggregate lifecycle flags with logical OR over each report period."""
+    if series is None:
+        return None
+    if config.frequency == ReportingFrequency.DAILY:
+        return series.reindex(index).fillna(False).astype(bool)
+    sampled = series.astype(bool).resample(config.pandas_freq).max()
+    result = sampled.reindex(index).fillna(False).astype(bool)
+    if len(index) and index[0] in series.index:
+        result.loc[index[0]] = bool(series.loc[index[0]])
+    return result
 
 
 def make_reporting_portfolio_data(portfolio_data, config: ReportingFrequencyConfig):
@@ -258,22 +302,68 @@ def make_reporting_portfolio_data(portfolio_data, config: ReportingFrequencyConf
     nav = resample_nav_series(portfolio_data.net_asset_value, config)
     weights = resample_optional_frame(portfolio_data.weights, config)
     positions = resample_optional_frame(portfolio_data.positions, config)
+    position_values = resample_optional_frame(
+        getattr(portfolio_data, "position_values", None), config
+    )
+    exposure_values = resample_optional_frame(
+        getattr(portfolio_data, "exposure_values", None), config
+    )
+    exposure_weights = resample_optional_frame(
+        getattr(portfolio_data, "exposure_weights", None), config
+    )
+    margin_by_instrument = resample_optional_frame(
+        getattr(portfolio_data, "margin_by_instrument", None), config
+    )
+    rebalance_flags = resample_optional_event_series(
+        portfolio_data.rebalance_flags, config, nav.index
+    )
+    rebalance_decision_flags = resample_optional_event_series(
+        getattr(portfolio_data, "rebalance_decision_flags", None),
+        config,
+        nav.index,
+    )
+    rebalance_submission_flags = resample_optional_event_series(
+        getattr(portfolio_data, "rebalance_submission_flags", None),
+        config,
+        nav.index,
+    )
+    rebalance_fill_flags = resample_optional_event_series(
+        getattr(portfolio_data, "rebalance_fill_flags", None),
+        config,
+        nav.index,
+    )
 
     cash = portfolio_data.cash
     if isinstance(cash, pd.Series):
         cash = resample_nav_series(cash, config).reindex(nav.index).ffill()
+    margin_used = getattr(portfolio_data, "margin_used", None)
+    if isinstance(margin_used, pd.Series):
+        margin_used = resample_nav_series(margin_used, config).reindex(nav.index).ffill()
+    buying_power = getattr(portfolio_data, "buying_power", None)
+    if isinstance(buying_power, pd.Series):
+        buying_power = resample_nav_series(buying_power, config).reindex(nav.index).ffill()
 
     out = PortfolioData(
         instruments=portfolio_data.instruments,
         net_asset_value=nav,
         input_weights=portfolio_data.input_weights,
-        rebalance_flags=portfolio_data.rebalance_flags,
+        rebalance_flags=rebalance_flags,
+        rebalance_decision_flags=rebalance_decision_flags,
+        rebalance_submission_flags=rebalance_submission_flags,
+        rebalance_fill_flags=rebalance_fill_flags,
         asset_name_map=portfolio_data.asset_name_map,
         trading_calendar=portfolio_data.trading_calendar,
+        periods_per_year=config.periods_per_year,
         weights=weights,
         positions=positions,
+        position_values=position_values,
+        exposure_values=exposure_values,
+        exposure_weights=exposure_weights,
         cash_buffer=portfolio_data.cash_buffer,
         cash=cash,
+        margin_by_instrument=margin_by_instrument,
+        margin_used=margin_used,
+        buying_power=buying_power,
         _skip_initial_metrics=False,
     )
     return out
@@ -285,7 +375,7 @@ class ReportingInstrumentView:
     def __init__(self, source, config: ReportingFrequencyConfig) -> None:
         self._source = source
         self._config = config
-        self._returns_cache: Optional[pd.DataFrame] = None
+        self._returns_cache: pd.DataFrame | None = None
 
     @property
     def returns(self) -> pd.DataFrame:

@@ -9,12 +9,7 @@ runs locally.
 Usage:
     from backtester import Backtester
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
@@ -27,12 +22,15 @@ from typing import Any
 from backtester.version import __version__
 
 __all__ = [
+    "__version__",
     "Backtester",
-    "CloudBacktester",          # deprecated alias
+    "CloudBacktester",  # deprecated alias
     "InstrumentData",
     "PortfolioData",
     "InstrumentCalculations",
     "PortfolioCalculations",
+    "StrategyBook",
+    "StrategyBookResult",
     "ReportingFrequency",
     "ReportingFrequencyConfig",
 ]
@@ -43,8 +41,7 @@ def __getattr__(name: str) -> Any:
         return importlib.import_module("backtester.core").Backtester
     if name == "CloudBacktester":
         warnings.warn(
-            "CloudBacktester is deprecated — use Backtester instead. "
-            "Will be removed in v1.0.",
+            "CloudBacktester is deprecated — use Backtester instead. Will be removed in v1.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -57,6 +54,8 @@ def __getattr__(name: str) -> Any:
         return importlib.import_module("backtester.portfolio.instr_calc").InstrumentCalculations
     if name == "PortfolioCalculations":
         return importlib.import_module("backtester.portfolio.portf_calc").PortfolioCalculations
+    if name in {"StrategyBook", "StrategyBookResult"}:
+        return getattr(importlib.import_module("backtester.portfolio.book"), name)
     if name == "ReportingFrequency":
         return importlib.import_module("backtester.reporting_frequency").ReportingFrequency
     if name == "ReportingFrequencyConfig":

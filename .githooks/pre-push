@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+root="$(git rev-parse --show-toplevel)"
+if [ -e "$root/RELEASE_BLOCKED" ] \
+   && ! git -C "$root" ls-files --error-unmatch RELEASE_BLOCKED >/dev/null 2>&1; then
+    echo "Push blocked: RELEASE_BLOCKED exists but is not tracked." >&2
+    echo "Commit the release freeze with the reviewed hardening changes first." >&2
+    exit 1
+fi
+
+if [ -x "$root/.venv/bin/python" ]; then
+    exec "$root/.venv/bin/python" "$root/tools/verify_public_release.py"
+fi
+exec python3 "$root/tools/verify_public_release.py"

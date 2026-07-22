@@ -10,8 +10,7 @@ Mode: weights.
 Idea: SMA(50/200) trend on a diversified ETF basket, rebalanced monthly, with a
 circuit breaker that flattens the book on a large drawdown and waits out a
 cooldown before re-engaging.
-Universe: equities, bonds, gold, commodities.
-Rebalance: business month-end (BME) + max-drawdown circuit breaker (L4).
+Universe: canonical multi-asset ETFs: SPY, EFA, EEM, TLT, IEF, GLD, DBC and VNQ.
 
 This demonstrates the risk-off layer of the rebalance engine: normal months
 rebalance on the calendar, but a -15% drawdown flattens exposure and a 10-day
@@ -60,22 +59,22 @@ async def main() -> None:
         strategy_name="ExampleWeights10_MonthlyCircuitBreaker",
         strategy_type="Long / Cash",
         initial_capital=100_000,
-        instruments=["SPY", "QQQ", "TLT", "IEF", "GLD", "DBC"],
-        backtest_period={"start": "2010-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "EFA", "EEM", "TLT", "IEF", "GLD", "DBC", "VNQ"],
+        backtest_period={"start": "2007-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=0.30,
         rebalance_policy=RebalancePolicy(
             frequency="BME",
-            max_drawdown_trigger=0.15,        # flatten if drawdown exceeds 15%
+            max_drawdown_trigger=0.15,  # flatten if drawdown exceeds 15%
             max_drawdown_action="flatten",
             circuit_breaker_cooldown_days=10,  # wait 10 trading days before re-engaging
         ),
         indicators_config=[
             {"function": "SMA", "price_cols": ["close"], "params": {"periods": [50, 200]}},
         ],
-        benchmark_symbol="SPY",
-        benchmark_name="S&P 500 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

@@ -8,8 +8,7 @@ Example Weights 03 - Weekly RSI Mean Reversion
 
 Mode: weights.
 Idea: enter when RSI(14) is below 35, stay long until RSI rises above 60.
-Universe: five liquid mega-cap stocks.
-Rebalance: weekly on Friday.
+Universe: canonical US sector ETFs: XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV and XLY.
 
 This example uses a small state machine inside _compute_signals instead of a
 one-bar condition, so entries and exits can have different thresholds.
@@ -69,8 +68,10 @@ async def main() -> None:
         strategy_name="ExampleWeights03_WeeklyRSIReversion",
         strategy_type="Long / Cash",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "META", "AMZN"],
-        backtest_period={"start": "2018-01-01", "end": "2025-01-01"},
+        instruments=["XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY"],
+        backtest_period={"start": "2000-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=0.25,
@@ -78,8 +79,6 @@ async def main() -> None:
         indicators_config=[
             {"function": "RSI", "price_cols": ["close"], "params": {"periods": [14]}},
         ],
-        benchmark_symbol="QQQ",
-        benchmark_name="Nasdaq 100 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

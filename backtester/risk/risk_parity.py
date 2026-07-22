@@ -21,19 +21,13 @@ We use the standard iterative algorithm:
 
 This converges in 5–15 iterations for typical 5–20 asset portfolios.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -63,12 +57,20 @@ class RiskParityModel(RiskModel):
     tol: float = 1e-8
     rebalance_freq: str = "BMS"
 
+    def __post_init__(self) -> None:
+        if self.lookback < 2:
+            raise ValueError("lookback must be at least 2")
+        if self.max_iter < 1:
+            raise ValueError("max_iter must be positive")
+        if self.tol <= 0:
+            raise ValueError("tol must be positive")
+
     def adjust(
         self,
         weights: pd.DataFrame,
         returns: pd.DataFrame,
         *,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> pd.DataFrame:
         n = len(weights)
         if n == 0:
@@ -82,52 +84,64 @@ class RiskParityModel(RiskModel):
         else:
             periods = pd.Series(
                 weights.index.to_period(
-                    {"BMS": "M", "W-MON": "W", "MS": "M", "QS": "Q"}.get(
-                        self.rebalance_freq, "M"
-                    )
+                    {"BMS": "M", "W-MON": "W", "MS": "M", "QS": "Q"}.get(self.rebalance_freq, "M")
                 ),
                 index=weights.index,
             )
             is_rescore = periods != periods.shift(1)
 
         prev_rp_weights = None
+        prev_signature = None
+
+        weight_values = weights.to_numpy(dtype=float, copy=True)
+        output_values = weight_values.copy()
+        rescore_values = is_rescore.to_numpy(dtype=bool)
 
         for i in range(self.lookback, n):
-            row_w = weights.iloc[i]
-            active_mask = row_w.abs() > 1e-10
-            n_active = active_mask.sum()
+            row_w = weight_values[i]
+            active_mask = np.abs(row_w) > 1e-10
+            n_active = int(active_mask.sum())
+            signature = tuple(np.sign(row_w))
 
             if n_active < 2:
                 # Single or no asset — pass through
-                out.iloc[i] = row_w
+                output_values[i] = row_w
+                prev_rp_weights = None
+                prev_signature = signature
                 continue
 
-            if is_rescore.iloc[i] or prev_rp_weights is None:
+            if rescore_values[i] or prev_rp_weights is None or signature != prev_signature:
                 # Compute new risk-parity weights for active instruments
-                window = returns.iloc[max(0, i - self.lookback):i]
-                active_cols = row_w.index[active_mask]
+                window = returns.iloc[max(0, i - self.lookback) : i]
+                active_cols = weights.columns[active_mask]
                 sub_returns = window[active_cols]
 
-                cov = sub_returns.cov().values
+                # ERC solves for positive magnitudes. Transform each return
+                # series by the strategy's sign, then restore those signs to
+                # the solution. This preserves long/short intent while making
+                # risk contributions consistent with the signed portfolio.
+                signs = np.sign(row_w[active_mask])
+                cov = sub_returns.mul(signs, axis=1).cov().values
                 rp_w = self._solve_erc(cov, n_active)
 
                 # Build full weight vector
-                full_rp = pd.Series(0.0, index=row_w.index)
-                for j, col in enumerate(active_cols):
-                    full_rp[col] = rp_w[j]
+                full_rp = np.zeros(len(weights.columns), dtype=float)
+                full_rp[active_mask] = signs * rp_w
 
                 # Preserve original total exposure
-                original_exposure = row_w.abs().sum()
+                original_exposure = float(np.nansum(np.abs(row_w)))
                 full_rp = full_rp * original_exposure
 
                 prev_rp_weights = full_rp
+                prev_signature = signature
 
-            out.iloc[i] = prev_rp_weights
+            output_values[i] = prev_rp_weights
+
+        out.iloc[:] = output_values
 
         return out
 
-    @staticmethod
-    def _solve_erc(cov: np.ndarray, n: int) -> np.ndarray:
+    def _solve_erc(self, cov: np.ndarray, n: int) -> np.ndarray:
         """
         Solve for Equal Risk Contribution weights via iterative method.
 
@@ -139,7 +153,7 @@ class RiskParityModel(RiskModel):
         w = 1.0 / np.sqrt(diag)
         w = w / w.sum()
 
-        for _ in range(50):
+        for _ in range(self.max_iter):
             sigma_w = cov @ w
             # Marginal risk contribution
             mrc = w * sigma_w
@@ -157,7 +171,7 @@ class RiskParityModel(RiskModel):
             w_new = np.maximum(w_new, 1e-10)
             w_new = w_new / w_new.sum()
 
-            if np.max(np.abs(w_new - w)) < 1e-8:
+            if np.max(np.abs(w_new - w)) < self.tol:
                 return w_new
             w = w_new
 

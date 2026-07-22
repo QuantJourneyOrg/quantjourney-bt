@@ -14,24 +14,19 @@ Available schemes:
 
 CommissionConfig is a Pydantic model for clean YAML/JSON/env configuration.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Protocol, Tuple, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
 
-
 # ── Protocol ───────────────────────────────────────────────────────────
+
 
 @runtime_checkable
 class CommissionScheme(Protocol):
@@ -43,6 +38,7 @@ class CommissionScheme(Protocol):
 
 
 # ── Implementations ───────────────────────────────────────────────────
+
 
 @dataclass(frozen=True, slots=True)
 class ZeroCommission:
@@ -106,7 +102,7 @@ class TieredCommission:
         ])
     """
 
-    tiers: List[Tuple[float, float]]
+    tiers: list[tuple[float, float]]
     min_per_order: float = 0.35
 
     def compute(self, price: float, quantity: float, notional: float) -> float:
@@ -126,6 +122,7 @@ class TieredCommission:
 
 
 # ── Pydantic Config ───────────────────────────────────────────────────
+
 
 class CommissionConfig(BaseModel):
     """
@@ -158,7 +155,7 @@ class CommissionConfig(BaseModel):
     cost_per_share: float = Field(0.005, description="Cost per share for per_share scheme")
     min_per_order: float = Field(1.0, description="Minimum commission per order")
     max_pct: float = Field(0.005, description="Max commission as fraction of notional")
-    tiers: Optional[List[Tuple[float, float]]] = Field(
+    tiers: list[tuple[float, float]] | None = Field(
         None, description="Volume tiers: [(threshold, rate), ...]"
     )
 

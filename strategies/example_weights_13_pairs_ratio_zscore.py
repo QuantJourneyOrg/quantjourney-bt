@@ -10,7 +10,7 @@ Mode: weights (market-neutral long/short).
 Idea: trade the mean-reverting spread between two closely related names using a
 log-ratio z-score. When the spread stretches, short the rich leg and long the
 cheap leg; unwind when it reverts.
-Universe: KO / PEP (a classic consumer-staples pair).
+Universe: predeclared KO / PEP consumer-staples pair (pedagogical, not data-mined).
 
 Signal: spread = log(KO) - log(PEP); z-score over a 60-bar window.
 - z > +2  -> short KO, long PEP  (KO rich relative to PEP)
@@ -86,14 +86,14 @@ async def main() -> None:
         strategy_type="Market Neutral",
         initial_capital=100_000,
         instruments=["KO", "PEP"],
-        backtest_period={"start": "2015-01-01", "end": "2025-01-01"},
+        backtest_period={"start": "2000-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=1.0,
         rebalance_policy=RebalancePolicy(frequency="D"),
         indicators_config=[],
-        benchmark_symbol="^GSPC",
-        benchmark_name="S&P 500 Index",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

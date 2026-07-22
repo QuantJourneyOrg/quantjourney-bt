@@ -10,8 +10,7 @@ Mode: weights.
 Idea: on hourly bars, hold each name only while its SMA(10) is above its
 SMA(30), equal weight across active names. A slower intraday-to-swing trend
 template.
-Universe: four liquid large-caps.
-Granularity: 1h intraday data (yfinance keeps a long hourly history).
+Universe: three predeclared liquid ETFs: SPY, QQQ and IWM.
 
 Timeframe-grid note: 1h is the slowest cadence in the intraday grid
 (1m -> 5m -> 30m -> 1h). With ~7 bars per session it behaves like a fast swing
@@ -25,7 +24,7 @@ Usage:
 
 import asyncio
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
 
@@ -43,7 +42,7 @@ def _credentials() -> dict:
 
 
 def _recent_period(days: int = 60) -> dict[str, str]:
-    end = datetime.now(timezone.utc).date()
+    end = datetime.now(UTC).date()
     start = end - timedelta(days=days)
     return {"start": start.isoformat(), "end": end.isoformat()}
 
@@ -69,18 +68,18 @@ async def main() -> None:
         strategy_name="ExampleWeights09_IntradaySMATrend1h",
         strategy_type="Long / Cash",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "AMZN"],
-        backtest_period=_recent_period(days=60),
-        source="yfinance",
+        instruments=["SPY", "QQQ", "IWM"],
+        backtest_period={"start": "2026-05-11", "end": "2026-07-11"},
         granularity="1h",
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
+        source="yfinance",
         execution_mode="weights",
         max_position_size=0.25,
         rebalance_policy=RebalancePolicy(frequency=None, rebalance_on_signal_change=True),
         indicators_config=[
             {"function": "SMA", "price_cols": ["close"], "params": {"periods": [10, 30]}},
         ],
-        benchmark_symbol="QQQ",
-        benchmark_name="Nasdaq 100 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

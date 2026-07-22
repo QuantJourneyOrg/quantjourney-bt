@@ -10,7 +10,7 @@ Mode: weights + optimization.
 Idea: find the best SMA fast/slow window pair for a trend strategy with an
 exhaustive GRID SEARCH. Each candidate is scored by running a real backtest and
 reading its annualized Sharpe.
-Universe: five large US technology stocks.
+Universe: canonical US sector ETFs: XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV and XLY.
 
 What this teaches: grid search evaluates every combination in a discrete grid.
 It is simple and complete, but the cost grows with the product of the grid
@@ -65,8 +65,10 @@ def _build(fast: int, slow: int) -> SMACrossoverTunable:
         **_credentials(),
         strategy_name=f"SMA_{fast}_{slow}",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
-        backtest_period={"start": "2015-01-01", "end": "2025-01-01"},
+        instruments=["XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY"],
+        backtest_period={"start": "2000-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=0.25,
@@ -74,7 +76,6 @@ def _build(fast: int, slow: int) -> SMACrossoverTunable:
         indicators_config=[
             {"function": "SMA", "price_cols": ["close"], "params": {"periods": [fast, slow]}},
         ],
-        benchmark_symbol="^GSPC",
         show_text_reports=False,
         save_portfolio_plots=False,
     )

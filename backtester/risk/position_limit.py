@@ -16,19 +16,13 @@ Multiple constraint types:
 After capping, excess is redistributed proportionally among
 uncapped instruments to preserve total exposure.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -58,18 +52,33 @@ class PositionLimitModel(RiskModel):
     max_weight: float = 0.40
     min_weight: float = 0.0
     max_total_leverage: float = 2.0
-    sector_limits: Dict[str, float] = field(default_factory=dict)
+    sector_limits: dict[str, float] = field(default_factory=dict)
 
     def adjust(
         self,
         weights: pd.DataFrame,
         returns: pd.DataFrame,
         *,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> pd.DataFrame:
         out = weights.copy()
 
-        for i in range(len(out)):
+        # Vectorized pre-screen: only rows where a constraint can actually
+        # bind go through the per-row adjustment path. Rows that provably
+        # satisfy every limit are returned untouched (identical to running
+        # the loop body, which would be a no-op for them).
+        abs_w = out.abs()
+        row_total = abs_w.sum(axis=1)
+        needs_work = (row_total >= 1e-10) & (
+            (abs_w.max(axis=1) > self.max_weight) | (row_total > self.max_total_leverage)
+        )
+        if self.min_weight > 0:
+            needs_work |= ((abs_w > 1e-10) & (abs_w < self.min_weight)).any(axis=1)
+        if self.sector_limits and metadata and "sectors" in metadata:
+            needs_work |= row_total >= 1e-10
+
+        for raw_index in np.flatnonzero(needs_work.to_numpy()):
+            i = int(raw_index)
             row = out.iloc[i].copy()
 
             if row.abs().sum() < 1e-10:
@@ -102,6 +111,9 @@ class PositionLimitModel(RiskModel):
     def _apply_cap(self, row: pd.Series) -> pd.Series:
         """Cap each weight at max_weight, redistributing until no cap is breached."""
         capped = row.astype(float).copy()
+        # A risk overlay may resize an existing position, but it must never
+        # create exposure in an instrument the strategy left inactive.
+        active = capped.abs() > 1e-10
         target_abs_total = float(capped.abs().sum())
         if target_abs_total < 1e-10:
             return capped
@@ -115,7 +127,7 @@ class PositionLimitModel(RiskModel):
             if excess <= 1e-10:
                 break
             room = (self.max_weight - capped.abs()).clip(lower=0.0)
-            candidates = room > 1e-10
+            candidates = active & (room > 1e-10)
             if not candidates.any():
                 break
             weights = capped[candidates].abs()
@@ -137,14 +149,10 @@ class PositionLimitModel(RiskModel):
 
         return row
 
-    def _apply_sector_limits(
-        self, row: pd.Series, sectors: Dict[str, str]
-    ) -> pd.Series:
+    def _apply_sector_limits(self, row: pd.Series, sectors: dict[str, str]) -> pd.Series:
         """Cap aggregate weight per sector."""
         for sector, limit in self.sector_limits.items():
-            sector_instruments = [
-                inst for inst, s in sectors.items() if s == sector
-            ]
+            sector_instruments = [inst for inst, s in sectors.items() if s == sector]
             sector_mask = row.index.isin(sector_instruments)
             sector_total = row[sector_mask].abs().sum()
 

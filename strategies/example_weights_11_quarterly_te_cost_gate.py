@@ -11,9 +11,7 @@ Idea: quarterly momentum rotation on a broad ETF universe, but layered with a
 tracking-error trigger (rebalance early if the book drifts too far from the
 benchmark) and an annual-turnover budget (a cost gate that suppresses trading
 once the rolling turnover budget is spent).
-Universe: broad asset-class ETFs.
-Rebalance: business quarter-end (BQE) + tracking-error trigger (L2b) + turnover
-budget (L5).
+Universe: canonical multi-asset ETFs: SPY, EFA, EEM, TLT, IEF, GLD, DBC and VNQ.
 
 This demonstrates the two rebalance layers most useful to institutional
 mandates: staying within a tracking-error band vs a benchmark, and respecting a
@@ -68,20 +66,20 @@ async def main() -> None:
         strategy_name="ExampleWeights11_QuarterlyTECostGate",
         strategy_type="Long Only",
         initial_capital=100_000,
-        instruments=["SPY", "QQQ", "IWM", "EFA", "EEM", "TLT", "GLD", "DBC"],
-        backtest_period={"start": "2010-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "EFA", "EEM", "TLT", "IEF", "GLD", "DBC", "VNQ"],
+        backtest_period={"start": "2007-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=0.40,
         rebalance_policy=RebalancePolicy(
             frequency="BQE",
-            tracking_error_threshold=0.06,   # rebalance early if annualized TE vs benchmark > 6%
+            tracking_error_threshold=0.06,  # rebalance early if annualized TE vs benchmark > 6%
             tracking_error_window=63,
-            max_annual_turnover=4.0,         # cost gate: cap rolling 252d turnover at 4x
+            max_annual_turnover=4.0,  # cost gate: cap rolling 252d turnover at 4x
         ),
         indicators_config=[],
-        benchmark_symbol="SPY",
-        benchmark_name="S&P 500 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

@@ -4,19 +4,14 @@ Base types for walk-forward fold generation.
 ``Fold`` is the immutable data contract describing one IS/OOS split.
 ``FoldScheme`` is the Protocol that all fold generators implement.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import pandas as pd
 
@@ -28,22 +23,22 @@ class Fold:
 
     Dates are inclusive calendar dates (``pd.Timestamp``).
     The *effective* IS window is ``[train_start, effective_is_end]``
-    after purge/embargo have been applied.
+    after the fixed and percentage-based pre-OOS purge has been applied.
     """
 
     fold_id: int
     scheme: str
 
-    # Raw boundaries (before purge/embargo)
+    # Raw boundaries (before pre-OOS purging)
     train_start: pd.Timestamp
     train_end: pd.Timestamp
     oos_start: pd.Timestamp
     oos_end: pd.Timestamp
 
-    # After purge/embargo (None when no dates are excluded)
+    # After pre-OOS purging (None when no dates are excluded)
     effective_is_end: pd.Timestamp
-    purge_start: Optional[pd.Timestamp]   # first excluded date
-    purge_end: Optional[pd.Timestamp]     # last excluded date (= oos_start - 1 trading day)
+    purge_start: pd.Timestamp | None  # first excluded date
+    purge_end: pd.Timestamp | None  # last excluded date (= oos_start - 1 trading day)
 
 
 @runtime_checkable
@@ -55,7 +50,7 @@ class FoldScheme(Protocol):
         start: pd.Timestamp,
         end: pd.Timestamp,
         trading_dates: pd.DatetimeIndex,
-    ) -> List[Fold]:
+    ) -> list[Fold]:
         """
         Generate all folds for the given date range.
 

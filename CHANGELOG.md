@@ -1,5 +1,191 @@
 # QuantJourney Backtester Changelog
 
+## 0.12.4 - 2026-07-21
+
+### Changed
+- Deferred optional reporting and plotting imports until their public exports
+  are requested, removing their startup cost from lightweight backtests.
+- Pre-aligned simulator OHLCV data as NumPy arrays and preallocated ledger
+  history while preserving execution callbacks and accounting results.
+- Cached immutable contract specifications, vectorized inverse-volatility
+  estimation, reduced risk-parity pandas indexing, and reused rolling
+  portfolio returns for tracking-error checks.
+
+## 0.12.3 - 2026-07-19
+
+### Added
+- Added a cross-platform strategy-process boundary that renders rejected
+  `/bt/prepare` configurations in a yellow `Configuration needs attention`
+  panel with the affected field and a concrete correction.
+
+### Changed
+- Repository launchers now stop invalid configurations before execution
+  without a duplicate generic market-data error or traceback. Debug logging
+  retains the technical endpoint, status, error code and request ID.
+
+## 0.12.2 - 2026-07-19
+
+### Added
+- Added `PrepareValidationError` for structured `/bt/prepare` validation
+  failures, including the affected field, stable code, actionable message,
+  correction hint, request ID and API error code.
+
+### Changed
+- Market-data preparation now preserves safe RFC 7807 field diagnostics from
+  qj-api instead of reducing configuration failures to a generic HTTP 422.
+
+## 0.12.1 - 2026-07-18
+
+### Added
+- Added `deflated_sharpe_method` to serialized walk-forward results so each
+  reported probability carries its statistical construction.
+
+### Changed
+- Walk-forward trial objectives pooled across chronological folds are now
+  labelled `pooled_walk_forward_dsr_style`, rather than canonical DSR for one
+  common trial population.
+- An N=1 Sharpe probability is labelled `probabilistic_sharpe_n1`, making clear
+  that multiple-testing deflation has vanished and the statistic is PSR.
+
+## 0.12.0 - 2026-07-18
+
+### Added
+- Added `extra_pre_oos_purge_pct`, an honestly named percentage extension of
+  the exclusion immediately before each OOS window. The historical
+  `embargo_pct` input remains a compatibility alias for 0.12.x and does not
+  claim classical post-test embargo semantics.
+- Added `rank_stability_trials` and
+  `walk_forward_top_k_rank_failure_rate` for the rolling top-K OOS rank
+  diagnostic, plus deprecated read aliases for the former `pbo_*` names.
+- Added `dsr_effective_n_trials` and result fields that report both the raw
+  finite completed-trial count and the effective trial count used by DSR.
+
+### Changed
+- Renamed the rolling top-K rank diagnostic so it is no longer presented as
+  canonical CSCV PBO. Canonical PBO requires a complete configuration matrix
+  and symmetric CSCV combinations; no CSCV threshold is applied to this
+  rolling sensitivity metric.
+- Documented the raw completed-trial count as a conservative DSR approximation
+  when dependence between parameter variants is not estimated.
+
+### Fixed
+- Per-fold refit examples now propagate the runner's ISO `train_start` and
+  `oos_end` values into each strategy's `backtest_period`.
+- Per-fold refits and top-K candidate reruns now fail closed when returned NAV
+  is undated, contains `NaT`, or escapes the requested fold date bounds.
+- Corrected public documentation that previously described the percentage
+  pre-OOS purge extension as classical post-test embargo.
+
+## 0.11.0 - 2026-07-18
+
+### Added
+- Added `volume_lookback` and `expected_open_volume_fraction` controls for
+  forecasting the liquidity available to fills at the open from lagged data.
+
+### Changed
+- Fast-weight costs, implied quantities, positions and NAV now share one
+  recursive post-cost capital path. Costed quantity deltas reconcile with
+  reported position changes instead of being scaled from a separate gross NAV.
+- `min_trade_value` is a cost-materiality threshold: sub-threshold implied
+  trades remain visible in the quantity and notional audit while incurring no
+  modeled cost.
+
+### Fixed
+- Opening fills no longer expose the current bar's later high, low or close to
+  range-sensitive slippage models.
+- Opening participation caps now use lagged observed volume rather than the
+  completed current bar's future full-day volume, and fail closed when no
+  lagged observation exists.
+
+## 0.10.2 - 2026-07-18
+
+### Added
+- Added native Windows repository support through `strategy.bat`, backed by the
+  same cross-platform Python launcher used by `strategy.sh`.
+- Added `WINDOWS.md`, automatic non-executing `.env` loading, and Windows CI
+  coverage for listing and import-checking strategies.
+
+### Fixed
+- Preserved long and short directions when applying pure inverse-volatility
+  weighting to active instruments.
+
+## 0.10.1 - 2026-07-11
+
+### Added
+- Added `qj-bt data`, an unauthenticated public data-catalog CLI.
+- Added an optional terminal browser with Rich tables and keyboard navigation.
+- Added deterministic `overview`, `sources`, `granularities`, `datasets`,
+  `asset-classes`, `universes`, `example-symbols`, and `all` commands.
+- Added `--json` output for scripts, agents, and automation.
+- Added `RebalancePolicy(calendar_dates=...)` for explicit rebalance timestamps
+  alongside frequency-based schedules.
+- Added a public six-engine benchmark harness under `compare/native/`: five
+  strategies implemented natively in QJ, VectorBT, pmorissette/bt, Zipline,
+  Backtrader and QuantConnect LEAN, with an invariant-gated runner and a QJ
+  adapter that runs on this package. The harness is repository-only and is not
+  included in the wheel.
+
+### Changed
+- Interactive browsing is enabled only for terminal sessions; non-interactive
+  calls return the catalog overview without prompting.
+- Public catalog requests do not require, read, or transmit an API key.
+- Catalog output identifies symbols derived from example universes as example
+  symbols rather than an exhaustive list of available instruments.
+- Registered the `qj-bt` console entry point and updated the locked dependency
+  set and public release manifest.
+- Weight-mode accounting runs on a vectorized path. Results are unchanged and
+  were verified bit-identical across the full benchmark suite.
+- Position-limit risk checks skip rows where no limit can bind.
+
+### Fixed
+- Extended release verification to validate the exact console entry point in
+  wheel and source-distribution artifacts.
+- Added coverage for metadata normalization, fallback data, terminal and
+  non-terminal behavior, JSON output, errors, and release artifacts.
+- Start-anchored rebalance frequencies (`MS`, `QS`, `YS`, ...) snap forward to
+  the next trading session instead of backward into the prior period.
+
+## 0.10.0 - 2026-07-10
+
+### Added
+- Added the shared execution simulator, contract-aware portfolio ledger,
+  portfolio-of-strategies book, and pre-trade risk controls to the explicitly
+  approved Apache-2.0 public scope.
+- Expanded the runnable catalog to 50 examples: 25 weight-based, 20
+  order-based, and 5 walk-forward/optimization strategies, including the new
+  FX and continuous-futures research examples.
+- Added a fail-closed release boundary: local commit/push guards, a reviewed
+  source manifest, clean-tag publishing, and exact wheel/sdist verification.
+
+### Fixed
+- Rejected unsupported cross-currency FX accounting in core and standalone
+  ledger paths instead of treating quote-currency PnL as portfolio currency;
+  incomplete or invalid external FX/futures contract metadata now fails closed.
+- Standardized strategy storage on `(strategy, field, instrument)`, rejected
+  silently misaligned strategy output, and preserved valid all-zero strategies.
+- Scoped ETag response caches to one immutable per-request tenant/principal
+  snapshot, including during concurrent context changes; cache keys are fully
+  opaque and invalidated whenever the security context changes.
+
+### Changed
+- Restored the public README and changelog boundary, then documented only the
+  approved public runtime and strategy additions.
+- Modernized Python 3.11 typing syntax, removed the Ruff backlog, and made full
+  lint/format checks blocking.
+- Added a locked full-package mypy baseline gate that fails on every
+  unreviewed diagnostic change while the existing typing debt is reduced.
+- Declared and continuously tests Python 3.11 through 3.14.
+- External PyPI artifacts are built only from a clean version-matched tag after
+  tests and artifact-manifest checks; local uploads are unsupported.
+
+## 0.9.1 - 2026-07-09
+
+### Changed
+- Hardened missing-data accounting with frozen/held semantics so portfolio NAV, risk triggers and reported weights stay consistent through temporary price gaps.
+- Normalized timezone alignment before reindexing benchmark and cash-buffer inputs.
+- Improved order-mode idempotency and bracket/OCA lifecycle handling.
+- Tightened circuit-breaker re-entry, weekly holiday scheduling and PBO failed-candidate handling.
+
 ## 0.8.9 - 2026-07-08
 
 ### Changed

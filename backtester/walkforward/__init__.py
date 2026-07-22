@@ -15,23 +15,19 @@ Public API::
     result = engine.run(portfolio_data=pd_data)
     print(result.summary())
 
-Supports rolling, expanding, anchored, and purged/embargoed fold schemes,
+Supports rolling, expanding, anchored, and pre-OOS-purged fold schemes,
 grid-search and Optuna parameter optimization, and overfitting diagnostics
-(deflated Sharpe ratio, PBO). See strategies/example_wf_*.py for usage.
-
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
+(deflated Sharpe ratio, rolling top-K rank stability). Canonical CSCV PBO
+is not computed by this rolling engine. See strategies/example_wf_*.py.
 
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 from backtester.walkforward.config import WalkForwardConfig
 from backtester.walkforward.engine import WalkForwardEngine
-from backtester.walkforward.result import FoldResult, WalkForwardResult
 from backtester.walkforward.folds.base import Fold
+from backtester.walkforward.result import FoldResult, WalkForwardResult
 
 __all__ = [
     "WalkForwardConfig",

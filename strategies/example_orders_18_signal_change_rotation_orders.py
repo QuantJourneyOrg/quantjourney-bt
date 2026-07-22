@@ -11,8 +11,7 @@ Order type: MARKET.
 Idea: an event-driven strategy with no calendar at all. Each name has an SMA
 trend signal; the strategy trades only when a signal flips — buy on a flat->long
 flip, sell on a long->flat flip. Between flips it does nothing.
-Universe: five large-cap stocks.
-Rebalance: event-driven on signal change (no calendar, no periodic rebalance).
+Universe: three predeclared liquid ETFs: SPY, QQQ and IWM.
 
 This is the order-mode counterpart to the weights "signal-change" policy: the
 rebalance trigger is the event (the signal flip), and turnover is driven purely
@@ -83,8 +82,10 @@ async def main() -> None:
         strategy_name="ExampleOrders18_SignalChangeRotationOrders",
         strategy_type="Long / Cash",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
-        backtest_period={"start": "2015-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "QQQ", "IWM"],
+        backtest_period={"start": "2001-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="orders",
         max_position_size=0.20,
@@ -93,8 +94,6 @@ async def main() -> None:
         ],
         slippage_model=FixedBpsSlippage(bps=3.0),
         commission_scheme=PerShareCommission(cost_per_share=0.005, min_per_order=1.0),
-        benchmark_symbol="^GSPC",
-        benchmark_name="S&P 500 Index",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

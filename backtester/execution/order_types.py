@@ -5,12 +5,7 @@ OCO, Bracket.
 All types are pure dataclasses with no side-effects.
 The FillEngine is responsible for matching orders against bars.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
@@ -19,20 +14,20 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
-
 
 # ── Enums ──────────────────────────────────────────────────────────────
 
+
 class OrderType(Enum):
     """Supported order types."""
+
     MARKET = "market"
     LIMIT = "limit"
     STOP = "stop"
     STOP_LIMIT = "stop_limit"
     STOP_TRAIL = "stop_trail"
     STOP_TRAIL_LIMIT = "stop_trail_limit"
-    OCO = "oco"          # one-cancels-other (pair reference)
+    OCO = "oco"  # one-cancels-other (pair reference)
     BRACKET = "bracket"  # entry + TP + SL
 
 
@@ -52,6 +47,7 @@ class OrderStatus(Enum):
 
 class TimeInForce(Enum):
     """Order validity policy."""
+
     GTC = "GTC"  # good till cancelled
     DAY = "DAY"  # first eligible bar only in bar-based simulation
     GTD = "GTD"  # good till date/time
@@ -59,9 +55,11 @@ class TimeInForce(Enum):
 
 # ── Bar Data ───────────────────────────────────────────────────────────
 
+
 @dataclass(frozen=True, slots=True)
 class BarData:
     """Single OHLCV bar for fill simulation."""
+
     timestamp: object  # pd.Timestamp or datetime
     open: float
     high: float
@@ -72,40 +70,45 @@ class BarData:
 
 # ── Fill ───────────────────────────────────────────────────────────────
 
+
 @dataclass(frozen=True, slots=True)
 class Fill:
     """Result of an order execution."""
+
     order_id: str
     instrument: str
     side: OrderSide
     quantity: float
-    fill_price: float          # price after slippage
-    slippage: float = 0.0      # slippage cost (absolute per share)
-    commission: float = 0.0    # commission cost (total)
+    fill_price: float  # price after slippage
+    slippage: float = 0.0  # slippage cost (absolute per share)
+    commission: float = 0.0  # commission cost (total)
     timestamp: object = None
-    theoretical_price: Optional[float] = None
+    theoretical_price: float | None = None
     remaining_qty: float = 0.0
     order_status: OrderStatus = OrderStatus.FILLED
 
 
 # ── Bracket Spec ───────────────────────────────────────────────────────
 
+
 @dataclass(slots=True)
 class BracketSpec:
     """Bracket order specification: entry + take-profit + stop-loss."""
-    take_profit_price: Optional[float] = None
-    stop_loss_price: Optional[float] = None
-    take_profit_pct: Optional[float] = None
-    stop_loss_pct: Optional[float] = None
+
+    take_profit_price: float | None = None
+    stop_loss_price: float | None = None
+    take_profit_pct: float | None = None
+    stop_loss_pct: float | None = None
     take_profit_type: OrderType = OrderType.LIMIT
     stop_loss_type: OrderType = OrderType.STOP
-    stop_limit_price: Optional[float] = None
-    stop_limit_offset: Optional[float] = None
-    trail_amount: Optional[float] = None
-    trail_percent: Optional[float] = None
+    stop_limit_price: float | None = None
+    stop_limit_offset: float | None = None
+    trail_amount: float | None = None
+    trail_percent: float | None = None
 
 
 # ── Order ──────────────────────────────────────────────────────────────
+
 
 @dataclass
 class Order:
@@ -150,34 +153,35 @@ class Order:
     order_type: OrderType = OrderType.MARKET
 
     # ── Price parameters ──
-    limit_price: Optional[float] = None
-    stop_price: Optional[float] = None
-    limit_offset: Optional[float] = None  # used by STOP_TRAIL_LIMIT
+    limit_price: float | None = None
+    stop_price: float | None = None
+    limit_offset: float | None = None  # used by STOP_TRAIL_LIMIT
 
     # ── Trailing stop ──
-    trail_amount: Optional[float] = None    # absolute $ distance
-    trail_percent: Optional[float] = None   # percentage distance (0.02 = 2%)
-    _trail_anchor: Optional[float] = None   # internal: current anchor price
-    _limit_activated: bool = False          # internal: stop-limit was triggered
-    _activated_limit_price: Optional[float] = None
+    trail_amount: float | None = None  # absolute $ distance
+    trail_percent: float | None = None  # percentage distance (0.02 = 2%)
+    _trail_anchor: float | None = None  # internal: current anchor price
+    _limit_activated: bool = False  # internal: stop-limit was triggered
+    _activated_limit_price: float | None = None
 
     # ── Bracket ──
-    bracket: Optional[BracketSpec] = None
+    bracket: BracketSpec | None = None
 
     # ── OCO ──
-    oco_pair_id: Optional[str] = None  # links two orders as OCO pair
+    oco_pair_id: str | None = None  # links two orders as OCO pair
 
     # ── Metadata ──
     order_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     status: OrderStatus = OrderStatus.PENDING
     filled_qty: float = 0.0
-    avg_fill_price: Optional[float] = None
-    created_at: object = None   # timestamp
-    expire_at: object = None    # GTD timestamp/date
+    avg_fill_price: float | None = None
+    created_at: object = None  # timestamp
+    expire_at: object = None  # GTD timestamp/date
     time_in_force: TimeInForce | str = TimeInForce.GTC
-    expires_after_bars: Optional[int] = None
-    _bars_live: int = 0          # internal: bars processed since submission
-    tag: str = ""               # user-defined label
+    expires_after_bars: int | None = None
+    _bars_live: int = 0  # internal: bars processed since submission
+    tag: str = ""  # user-defined label
+    rejection_reason: str | None = None
 
     @property
     def remaining_qty(self) -> float:

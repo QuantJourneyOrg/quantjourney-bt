@@ -7,9 +7,8 @@ Example Weights 01 - Daily SMA Trend
 ====================================
 
 Mode: weights.
-Idea: hold each stock only when SMA(50) is above SMA(200).
-Universe: five large US technology stocks.
-Rebalance: daily calendar rebalance.
+Idea: hold each sector ETF only when SMA(50) is above SMA(200).
+Universe: canonical US sector ETFs: XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV and XLY.
 
 This is the simplest weight-based template: compute binary signals, convert
 active names to equal weights, and let the engine translate weights to trades.
@@ -70,8 +69,18 @@ async def main() -> None:
         strategy_name="ExampleWeights01_DailySMATrend",
         strategy_type="Long / Cash",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
-        backtest_period={"start": "2015-01-01", "end": "2025-01-01"},
+        instruments=(
+            ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"]
+            if sample_mode
+            else ["XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY"]
+        ),
+        backtest_period=(
+            {"start": "2015-01-01", "end": "2025-01-01"}
+            if sample_mode
+            else {"start": "2000-01-03", "end": "2026-01-01"}
+        ),
+        benchmark_symbol="^GSPC" if sample_mode else "SPY",
+        benchmark_name="S&P 500 Index" if sample_mode else "SPDR S&P 500 ETF Trust",
         source="sample" if sample_mode else "yfinance",
         execution_mode="weights",
         max_position_size=0.25,
@@ -79,8 +88,6 @@ async def main() -> None:
         indicators_config=[
             {"function": "SMA", "price_cols": ["close"], "params": {"periods": [50, 200]}},
         ],
-        benchmark_symbol="^GSPC",
-        benchmark_name="S&P 500 Index",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

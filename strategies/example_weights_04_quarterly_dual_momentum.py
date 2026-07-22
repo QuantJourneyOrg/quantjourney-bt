@@ -8,8 +8,7 @@ Example Weights 04 - Quarterly Dual Momentum
 
 Mode: weights.
 Idea: rank ETFs by 12-month return, hold the top two only if return is positive.
-Universe: broad asset-class ETFs.
-Rebalance: business quarter-end.
+Universe: canonical multi-asset ETFs: SPY, EFA, EEM, TLT, IEF, GLD, DBC and VNQ.
 
 Dual momentum combines relative momentum (which asset is strongest) and
 absolute momentum (do not own it if its own trend is negative).
@@ -67,15 +66,15 @@ async def main() -> None:
         strategy_name="ExampleWeights04_QuarterlyDualMomentum",
         strategy_type="Long / Cash",
         initial_capital=100_000,
-        instruments=["SPY", "QQQ", "IWM", "EFA", "EEM", "TLT", "GLD"],
-        backtest_period={"start": "2010-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "EFA", "EEM", "TLT", "IEF", "GLD", "DBC", "VNQ"],
+        backtest_period={"start": "2007-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=0.50,
         rebalance_policy=RebalancePolicy(frequency="BQE"),
         indicators_config=[],
-        benchmark_symbol="SPY",
-        benchmark_name="SPDR S&P 500 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

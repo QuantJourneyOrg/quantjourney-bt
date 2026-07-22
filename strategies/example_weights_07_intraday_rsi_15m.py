@@ -9,8 +9,7 @@ Example Weights 07 - Intraday RSI 15m
 Mode: weights.
 Idea: use yfinance-backed 15-minute bars from /bt/prepare and hold an equal
 weight basket when RSI(14) is oversold.
-Universe: liquid mega-cap stocks.
-Granularity: 15m historical intraday data.
+Universe: three predeclared liquid ETFs: SPY, QQQ and IWM.
 
 This example intentionally keeps the trading rule small: enter when RSI is
 below 35, stay invested until RSI rises above 55, and rebalance when the signal
@@ -22,7 +21,7 @@ Usage:
 
 import asyncio
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
 
@@ -40,7 +39,7 @@ def _credentials() -> dict:
 
 
 def _recent_period(days: int = 21) -> dict[str, str]:
-    end = datetime.now(timezone.utc).date()
+    end = datetime.now(UTC).date()
     start = end - timedelta(days=days)
     return {"start": start.isoformat(), "end": end.isoformat()}
 
@@ -77,18 +76,18 @@ async def main() -> None:
         strategy_name="ExampleWeights07_IntradayRSI15m",
         strategy_type="Long / Cash",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "META"],
-        backtest_period=_recent_period(days=21),
-        source="yfinance",
+        instruments=["SPY", "QQQ", "IWM"],
+        backtest_period={"start": "2026-06-19", "end": "2026-07-11"},
         granularity="15m",
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
+        source="yfinance",
         execution_mode="weights",
         max_position_size=0.25,
         rebalance_policy=RebalancePolicy(frequency=None, rebalance_on_signal_change=True),
         indicators_config=[
             {"function": "RSI", "price_cols": ["close"], "params": {"periods": [14]}},
         ],
-        benchmark_symbol="QQQ",
-        benchmark_name="Nasdaq 100 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

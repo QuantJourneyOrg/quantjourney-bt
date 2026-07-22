@@ -10,7 +10,7 @@ Mode: weights + risk overlay.
 Idea: a simple SMA(50/200) trend basket, but instead of holding fixed weights,
 scale total exposure so the portfolio targets ~10% annualized volatility. In
 calm markets the strategy leans in; in turbulent markets it de-risks.
-Universe: diversified multi-asset ETFs.
+Universe: canonical multi-asset ETFs: SPY, EFA, EEM, TLT, IEF, GLD, DBC and VNQ.
 
 Risk overlay: `VolTargetModel(target_vol=0.10, lookback=63, max_leverage=1.5)`
 is attached via `risk_model=`; the engine applies it between weights and
@@ -60,8 +60,10 @@ async def main() -> None:
         strategy_name="ExampleWeights17_VolTargetTrend",
         strategy_type="Long / Cash",
         initial_capital=100_000,
-        instruments=["SPY", "QQQ", "TLT", "IEF", "GLD", "DBC"],
-        backtest_period={"start": "2012-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "EFA", "EEM", "TLT", "IEF", "GLD", "DBC", "VNQ"],
+        backtest_period={"start": "2007-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=0.34,
@@ -70,8 +72,6 @@ async def main() -> None:
         indicators_config=[
             {"function": "SMA", "price_cols": ["close"], "params": {"periods": [50, 200]}},
         ],
-        benchmark_symbol="SPY",
-        benchmark_name="S&P 500 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

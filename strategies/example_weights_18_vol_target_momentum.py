@@ -11,7 +11,7 @@ Idea: hold a momentum-selected basket (top names by 6-month return) and scale
 it to a 15% annualized volatility target, allowing modest leverage. A different
 base strategy and a higher target than the trend example, to show how the same
 overlay adapts.
-Universe: broad asset-class ETFs.
+Universe: canonical multi-asset ETFs: SPY, EFA, EEM, TLT, IEF, GLD, DBC and VNQ.
 
 Risk overlay: `VolTargetModel(target_vol=0.15, lookback=42, max_leverage=2.0)`.
 The base picks the strongest assets; the overlay decides how much to hold.
@@ -66,16 +66,16 @@ async def main() -> None:
         strategy_name="ExampleWeights18_VolTargetMomentum",
         strategy_type="Long / Cash",
         initial_capital=100_000,
-        instruments=["SPY", "QQQ", "IWM", "EFA", "EEM", "TLT", "GLD", "DBC"],
-        backtest_period={"start": "2012-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "EFA", "EEM", "TLT", "IEF", "GLD", "DBC", "VNQ"],
+        backtest_period={"start": "2007-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=0.40,
         rebalance_policy=RebalancePolicy(frequency="BME"),
         risk_model=VolTargetModel(target_vol=0.15, lookback=42, max_leverage=2.0),
         indicators_config=[],
-        benchmark_symbol="SPY",
-        benchmark_name="S&P 500 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

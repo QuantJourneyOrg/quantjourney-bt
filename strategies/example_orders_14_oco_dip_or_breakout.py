@@ -9,7 +9,7 @@ Example Orders 14 - OCO Dip Or Breakout
 Mode: orders.
 Order type: OCO.
 Idea: submit two competing entry orders: buy a dip or buy a breakout.
-Universe: three liquid technology stocks.
+Universe: three predeclared liquid ETFs: SPY, QQQ and IWM.
 
 The limit-buy leg sits 2% below the close. The stop-buy leg sits 2% above the
 close. Whichever fills first cancels the other leg.
@@ -46,7 +46,9 @@ class OCODipOrBreakout(Backtester):
         self._oco_live = {}
 
     def _has_pending(self, instrument: str) -> bool:
-        return any(o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders)
+        return any(
+            o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders
+        )
 
     def _compute_orders(self, date, bars, current_positions, nav) -> None:
         for inst in self.instruments:
@@ -78,24 +80,28 @@ class OCODipOrBreakout(Backtester):
                     continue
 
                 oco_id = f"{inst}_{date:%Y%m%d}_dip_or_breakout"
-                self.fill_engine.submit(Order(
-                    inst,
-                    OrderSide.BUY,
-                    shares,
-                    OrderType.OCO,
-                    limit_price=round(bar.close * 0.98, 2),
-                    oco_pair_id=oco_id,
-                    expires_after_bars=5,
-                ))
-                self.fill_engine.submit(Order(
-                    inst,
-                    OrderSide.BUY,
-                    shares,
-                    OrderType.OCO,
-                    stop_price=round(bar.close * 1.02, 2),
-                    oco_pair_id=oco_id,
-                    expires_after_bars=5,
-                ))
+                self.fill_engine.submit(
+                    Order(
+                        inst,
+                        OrderSide.BUY,
+                        shares,
+                        OrderType.OCO,
+                        limit_price=round(bar.close * 0.98, 2),
+                        oco_pair_id=oco_id,
+                        expires_after_bars=5,
+                    )
+                )
+                self.fill_engine.submit(
+                    Order(
+                        inst,
+                        OrderSide.BUY,
+                        shares,
+                        OrderType.OCO,
+                        stop_price=round(bar.close * 1.02, 2),
+                        oco_pair_id=oco_id,
+                        expires_after_bars=5,
+                    )
+                )
                 self._oco_live[inst] = True
 
 
@@ -104,8 +110,10 @@ async def main() -> None:
         **_credentials(),
         strategy_name="ExampleOrders14_OCODipOrBreakout",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA"],
-        backtest_period={"start": "2020-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "QQQ", "IWM"],
+        backtest_period={"start": "2001-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="orders",
         max_position_size=0.20,

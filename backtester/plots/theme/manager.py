@@ -13,19 +13,14 @@
     - Hex colour validation helper
     - Module-level ``default_theme`` for convenience
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 import colorsys
 from enum import Enum
-from typing import List, Optional
 
+from backtester.plots.theme.configs import THEME_CONFIGS
 from backtester.plots.theme.types import (
     ColorScheme,
     LegendConfig,
@@ -34,8 +29,6 @@ from backtester.plots.theme.types import (
     PlotTheme,
     ThemeConfig,
 )
-from backtester.plots.theme.configs import THEME_CONFIGS
-
 
 __all__ = [
     "PaletteType",
@@ -47,6 +40,7 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # Palette enum (replaces raw strings)
 # ---------------------------------------------------------------------------
+
 
 class PaletteType(Enum):
     CATEGORICAL = "categorical"
@@ -65,6 +59,7 @@ _PALETTE_ACCESSOR = {
 # Hex colour helpers
 # ---------------------------------------------------------------------------
 
+
 def _hex_to_rgb(hex_color: str) -> tuple:
     """Convert ``#RRGGBB`` to an (r, g, b) tuple with values in [0, 1]."""
     h = hex_color.lstrip("#")
@@ -75,25 +70,23 @@ def _hex_to_rgb(hex_color: str) -> tuple:
 
 def _rgb_to_hex(r: float, g: float, b: float) -> str:
     """Convert (r, g, b) floats in [0, 1] to ``#rrggbb``."""
-    return "#%02x%02x%02x" % (int(r * 255), int(g * 255), int(b * 255))
+    return f"#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}"
 
 
-def _generate_colors_from_base(base_color: str, n: int) -> List[str]:
+def _generate_colors_from_base(base_color: str, n: int) -> list[str]:
     """
     Generate *n* colours by rotating the hue of *base_color*.
 
     The base colour itself is included as the first entry.
     """
     h, s, v = colorsys.rgb_to_hsv(*_hex_to_rgb(base_color))
-    return [
-        _rgb_to_hex(*colorsys.hsv_to_rgb((h + i / n) % 1.0, s, v))
-        for i in range(n)
-    ]
+    return [_rgb_to_hex(*colorsys.hsv_to_rgb((h + i / n) % 1.0, s, v)) for i in range(n)]
 
 
 # ---------------------------------------------------------------------------
 # ThemeManager
 # ---------------------------------------------------------------------------
+
 
 class ThemeManager:
     """
@@ -110,10 +103,7 @@ class ThemeManager:
 
     def __init__(self, theme: PlotTheme = PlotTheme.QUANTJOURNEY) -> None:
         if theme not in THEME_CONFIGS:
-            raise ValueError(
-                f"Unknown theme: {theme}. "
-                f"Available: {list(THEME_CONFIGS.keys())}"
-            )
+            raise ValueError(f"Unknown theme: {theme}. Available: {list(THEME_CONFIGS.keys())}")
         self._theme = theme
         # Track the most-recently created instance as class-level default
         ThemeManager._default_theme = self
@@ -143,10 +133,7 @@ class ThemeManager:
     @theme.setter
     def theme(self, value: PlotTheme) -> None:
         if value not in THEME_CONFIGS:
-            raise ValueError(
-                f"Unknown theme: {value}. "
-                f"Available: {list(THEME_CONFIGS.keys())}"
-            )
+            raise ValueError(f"Unknown theme: {value}. Available: {list(THEME_CONFIGS.keys())}")
         self._theme = value
 
     @property
@@ -176,7 +163,7 @@ class ThemeManager:
         self,
         n: int,
         palette: PaletteType = PaletteType.CATEGORICAL,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Return *n* colours from the requested palette.
 
@@ -190,8 +177,7 @@ class ThemeManager:
         accessor = _PALETTE_ACCESSOR.get(palette)
         if accessor is None:
             raise ValueError(
-                f"Unknown palette: {palette}. "
-                f"Options: {[p.value for p in PaletteType]}"
+                f"Unknown palette: {palette}. Options: {[p.value for p in PaletteType]}"
             )
 
         base_colors = list(accessor(self.colors))

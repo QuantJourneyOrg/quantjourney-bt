@@ -10,7 +10,7 @@ Mode: weights (dollar-neutral long/short).
 Idea: the mirror image of momentum. Over short horizons, recent losers tend to
 bounce and recent winners tend to give back. Each week, rank the universe by
 1-month return, LONG the biggest losers and SHORT the biggest winners.
-Universe: twelve liquid large-caps across sectors.
+Universe: canonical US sector ETFs: XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV and XLY.
 
 Signal: 21-bar (~1-month) return per name; long bottom 3, short top 3.
 Weights: +0.5 spread across longs, -0.5 across shorts (gross 1.0, net ~0).
@@ -54,8 +54,8 @@ class CrossSectionalReversal(Backtester):
             ret = (close.iloc[i] / close.iloc[i - self.LOOKBACK] - 1.0).dropna()
             if len(ret) < 2 * self.N_SIDE:
                 continue
-            longs = ret.nsmallest(self.N_SIDE).index    # buy the losers
-            shorts = ret.nlargest(self.N_SIDE).index     # short the winners
+            longs = ret.nsmallest(self.N_SIDE).index  # buy the losers
+            shorts = ret.nlargest(self.N_SIDE).index  # short the winners
             signals.iloc[i, signals.columns.isin(longs)] = 1.0
             signals.iloc[i, signals.columns.isin(shorts)] = -1.0
         return signals
@@ -74,16 +74,15 @@ async def main() -> None:
         strategy_name="ExampleWeights16_CrossSectionalReversal",
         strategy_type="Market Neutral",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META",
-                     "JPM", "XOM", "JNJ", "PG", "WMT", "KO"],
-        backtest_period={"start": "2015-01-01", "end": "2025-01-01"},
+        instruments=["XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY"],
+        backtest_period={"start": "2000-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=1.0,
         rebalance_policy=RebalancePolicy(frequency="W", weekday=4),
         indicators_config=[],
-        benchmark_symbol="^GSPC",
-        benchmark_name="S&P 500 Index",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

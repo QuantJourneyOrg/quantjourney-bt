@@ -9,7 +9,7 @@ Example Orders 05 - Stop Breakout Entry
 Mode: orders.
 Order type: STOP.
 Idea: place buy-stop orders above the recent 20-day high.
-Universe: five large US stocks.
+Universe: three predeclared liquid ETFs: SPY, QQQ and IWM.
 
 A buy stop waits for price confirmation. If the breakout triggers, the
 position is held for 10 bars and then exited at market.
@@ -47,7 +47,9 @@ class StopBreakoutEntry(Backtester):
         self._entry_bar = {}
 
     def _has_pending(self, instrument: str) -> bool:
-        return any(o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders)
+        return any(
+            o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders
+        )
 
     def _compute_orders(self, date, bars, current_positions, nav) -> None:
         close = self.instruments_data.get_feature("adj_close")
@@ -81,14 +83,16 @@ class StopBreakoutEntry(Backtester):
                 stop_price = round(prior_high * 1.002, 2)
                 shares = int(nav * 0.10 / bar.close)
                 if shares > 0:
-                    self.fill_engine.submit(Order(
-                        inst,
-                        OrderSide.BUY,
-                        shares,
-                        OrderType.STOP,
-                        stop_price=stop_price,
-                        expires_after_bars=5,
-                    ))
+                    self.fill_engine.submit(
+                        Order(
+                            inst,
+                            OrderSide.BUY,
+                            shares,
+                            OrderType.STOP,
+                            stop_price=stop_price,
+                            expires_after_bars=5,
+                        )
+                    )
 
 
 async def main() -> None:
@@ -96,8 +100,10 @@ async def main() -> None:
         **_credentials(),
         strategy_name="ExampleOrders05_StopBreakoutEntry",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
-        backtest_period={"start": "2020-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "QQQ", "IWM"],
+        backtest_period={"start": "2001-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="orders",
         max_position_size=0.20,

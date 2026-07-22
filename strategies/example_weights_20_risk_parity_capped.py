@@ -10,8 +10,7 @@ Mode: weights + chained risk overlays.
 Idea: equal-risk-contribution across US sector ETFs, then a hard per-position
 cap so no single sector dominates. This shows how to CHAIN risk models: risk
 parity first, position limit second.
-Universe: US sector ETFs (tech, financials, energy, health care, staples,
-industrials, utilities).
+Universe: canonical US sector ETFs: XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV and XLY.
 
 Risk overlay: `RiskModelChain([RiskParityModel(lookback=126),
 PositionLimitModel(max_weight=0.25)])` — ERC weights are computed, then capped
@@ -29,7 +28,7 @@ import pandas as pd
 
 from backtester import Backtester
 from backtester.portfolio.rebalance import RebalancePolicy
-from backtester.risk import RiskParityModel, PositionLimitModel, RiskModelChain
+from backtester.risk import PositionLimitModel, RiskModelChain, RiskParityModel
 
 
 def _credentials() -> dict:
@@ -49,7 +48,7 @@ class RiskParityCapped(Backtester):
     def _compute_signals(self) -> pd.DataFrame:
         close = self.instruments_data.get_feature("adj_close")
         signals = pd.DataFrame(0.0, index=close.index, columns=close.columns)
-        signals.iloc[self.WARMUP:] = 1.0
+        signals.iloc[self.WARMUP :] = 1.0
         return signals
 
     def _compute_weights(self) -> pd.DataFrame:
@@ -64,19 +63,21 @@ async def main() -> None:
         strategy_name="ExampleWeights20_RiskParityCapped",
         strategy_type="Long Only",
         initial_capital=100_000,
-        instruments=["XLK", "XLF", "XLE", "XLV", "XLP", "XLI", "XLU"],
-        backtest_period={"start": "2012-01-01", "end": "2025-01-01"},
+        instruments=["XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY"],
+        backtest_period={"start": "2000-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=1.0,
         rebalance_policy=RebalancePolicy(frequency="BME"),
-        risk_model=RiskModelChain([
-            RiskParityModel(lookback=126),
-            PositionLimitModel(max_weight=0.25),
-        ]),
+        risk_model=RiskModelChain(
+            [
+                RiskParityModel(lookback=126),
+                PositionLimitModel(max_weight=0.25),
+            ]
+        ),
         indicators_config=[],
-        benchmark_symbol="SPY",
-        benchmark_name="S&P 500 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

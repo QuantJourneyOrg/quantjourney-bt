@@ -1,9 +1,17 @@
 # Compare
 
-Public strategy code for cross-engine comparisons.
+Public code for cross-engine comparisons.
+
+**[`native/`](native/README.md)** contains the six-engine native strategy
+benchmark behind <https://backtester.quantjourney.cloud/compare>: five
+strategies implemented independently in QJ, VectorBT, pmorissette/bt, Zipline,
+Backtrader and QuantConnect LEAN, with a runner that enforces invariant gates
+(complete result matrix, one data hash, one calendar, attributed decision
+divergences only). Every adapter computes its own indicators, signals, state
+and rebalances — nothing is replayed from a shared decision matrix.
 
 These files are intentionally small and strategy-focused. They exist so a reader
-can inspect the exact QuantJourney-style logic behind each comparison, and so the
+can inspect the exact logic behind each comparison, and so the
 same idea can be run on different engines under identical assumptions.
 
 ## The comparison contract

@@ -9,7 +9,7 @@ Example Orders 07 - Stop-Limit Breakout
 Mode: orders.
 Order type: STOP_LIMIT.
 Idea: enter breakouts, but refuse to pay far above the stop trigger.
-Universe: five large stocks.
+Universe: three predeclared liquid ETFs: SPY, QQQ and IWM.
 
 The stop activates above the recent 20-day high. The limit caps the maximum
 entry price. This demonstrates fill risk: the order can trigger but not fill.
@@ -47,7 +47,9 @@ class StopLimitBreakout(Backtester):
         self._entry_bar = {}
 
     def _has_pending(self, instrument: str) -> bool:
-        return any(o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders)
+        return any(
+            o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders
+        )
 
     def _compute_orders(self, date, bars, current_positions, nav) -> None:
         close = self.instruments_data.get_feature("adj_close")
@@ -82,15 +84,17 @@ class StopLimitBreakout(Backtester):
                 limit_price = round(stop_price * 1.004, 2)
                 shares = int(nav * 0.10 / bar.close)
                 if shares > 0:
-                    self.fill_engine.submit(Order(
-                        inst,
-                        OrderSide.BUY,
-                        shares,
-                        OrderType.STOP_LIMIT,
-                        stop_price=stop_price,
-                        limit_price=limit_price,
-                        expires_after_bars=5,
-                    ))
+                    self.fill_engine.submit(
+                        Order(
+                            inst,
+                            OrderSide.BUY,
+                            shares,
+                            OrderType.STOP_LIMIT,
+                            stop_price=stop_price,
+                            limit_price=limit_price,
+                            expires_after_bars=5,
+                        )
+                    )
 
 
 async def main() -> None:
@@ -98,8 +102,10 @@ async def main() -> None:
         **_credentials(),
         strategy_name="ExampleOrders07_StopLimitBreakout",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
-        backtest_period={"start": "2020-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "QQQ", "IWM"],
+        backtest_period={"start": "2001-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="orders",
         max_position_size=0.20,

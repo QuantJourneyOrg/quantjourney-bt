@@ -4,18 +4,13 @@ Overfit diagnostics — overfit ratio, efficiency, sharpe decay.
 These are pure functions operating on scalars or lists of per-fold
 metrics. No dependency on the WF engine or fold geometry.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 from __future__ import annotations
 
-from typing import List, Sequence
+from collections.abc import Sequence
 
 import numpy as np
 

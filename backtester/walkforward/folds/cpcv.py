@@ -1,18 +1,11 @@
 """
 CPCV fold scheme — placeholder for Phase 10.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 from __future__ import annotations
-
-from typing import List
 
 import pandas as pd
 
@@ -31,7 +24,7 @@ class CPCVFoldScheme:
         start: pd.Timestamp,
         end: pd.Timestamp,
         trading_dates: pd.DatetimeIndex,
-    ) -> List[Fold]:
+    ) -> list[Fold]:
         raise NotImplementedError(
             "CPCV fold scheme is planned for Phase 10. "
             "Use 'rolling', 'expanding', or 'anchored' for now."

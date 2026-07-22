@@ -10,8 +10,7 @@ Mode: weights (market-neutral long/short).
 Idea: same mean-reversion premise as the ratio pair, but the spread is built
 from a rolling OLS hedge ratio (beta of A on B) instead of a 1:1 log ratio, so
 the pair stays balanced as the relationship drifts.
-Universe: EWA / EWC (Australia vs Canada country ETFs, a textbook cointegrated
-pair).
+Universe: predeclared EWA / EWC country-ETF pair (pedagogical, not data-mined).
 
 Signal: beta = rollingCov(logA, logB) / rollingVar(logB);
 spread = logA - beta * logB; z-score over a 60-bar window.
@@ -89,14 +88,14 @@ async def main() -> None:
         strategy_type="Market Neutral",
         initial_capital=100_000,
         instruments=["EWA", "EWC"],
-        backtest_period={"start": "2015-01-01", "end": "2025-01-01"},
+        backtest_period={"start": "2000-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=1.0,
         rebalance_policy=RebalancePolicy(frequency="D"),
         indicators_config=[],
-        benchmark_symbol="^GSPC",
-        benchmark_name="S&P 500 Index",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

@@ -22,7 +22,10 @@ PORTFOLIO_PERF_METRICS = {
         "Max Drawdown": ("compute_max_drawdown", "percentage"),
         "Calmar Ratio": ("compute_advanced_calmar_ratio.base_calmar", "ratio"),
         "Recovery Factor": ("compute_recovery_factor", "ratio"),
-        "Annualized Volatility": ("compute_advanced_annualized_volatility.standard", "percentage_raw"),
+        "Annualized Volatility": (
+            "compute_advanced_annualized_volatility.standard",
+            "percentage_raw",
+        ),
     },
     "Consistency": {
         "Winning Days": ("compute_period_stats.win_days", "percentage_raw"),

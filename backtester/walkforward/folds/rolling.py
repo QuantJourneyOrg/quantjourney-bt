@@ -4,25 +4,18 @@ Rolling-window fold scheme.
 IS window has fixed length ``train_months``.  Each successive fold
 slides forward by ``step_months`` (default = ``test_months``).
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 from __future__ import annotations
-
-from typing import List
 
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
 from backtester.walkforward.config import WalkForwardConfig
 from backtester.walkforward.folds.base import Fold
-from backtester.walkforward.folds.purge import compute_purge_embargo
+from backtester.walkforward.folds.purge import compute_pre_oos_purge
 
 
 class RollingFoldScheme:
@@ -36,8 +29,8 @@ class RollingFoldScheme:
         start: pd.Timestamp,
         end: pd.Timestamp,
         trading_dates: pd.DatetimeIndex,
-    ) -> List[Fold]:
-        folds: List[Fold] = []
+    ) -> list[Fold]:
+        folds: list[Fold] = []
         step = relativedelta(months=self._cfg.effective_step_months)
         train_delta = relativedelta(months=self._cfg.train_months)
         test_delta = relativedelta(months=self._cfg.test_months)
@@ -78,11 +71,11 @@ class RollingFoldScheme:
             o_start = oos_dates[0]
             o_end = oos_dates[-1]
 
-            eff_is_end, purge_start, purge_end = compute_purge_embargo(
+            eff_is_end, purge_start, purge_end = compute_pre_oos_purge(
                 is_end=t_end,
                 oos_start=o_start,
                 purge_days=self._cfg.purge_days,
-                embargo_pct=self._cfg.embargo_pct,
+                extra_pre_oos_purge_pct=self._cfg.resolved_extra_pre_oos_purge_pct,
                 trading_dates=trading_dates,
                 is_start=t_start,
                 max_holding_period_days=self._cfg.max_holding_period_days,

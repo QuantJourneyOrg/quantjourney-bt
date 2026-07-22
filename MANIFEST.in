@@ -1,11 +1,25 @@
 include README.md
 include LICENSE
+include CONTRIBUTING.md
 include strategy.sh
+include strategy.bat
+include strategy.py
+include WINDOWS.md
 recursive-include backtester *.py
+include backtester/py.typed
 recursive-include backtester/plots/theme/configs *.py
 recursive-include strategies *.py
+include strategies/README.md
 recursive-include benchmarks *.md
-recursive-include compare *.md
-recursive-include docs *.md
+include compare/README.md
+recursive-include docs *.md *.mdx
 recursive-include skills *.md
 include CHANGELOG.md
+prune tests
+prune tools
+prune release
+prune quality
+prune .githooks
+prune .github
+exclude uv.lock
+exclude RELEASE_BLOCKED

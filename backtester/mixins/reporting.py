@@ -8,12 +8,7 @@ strategy pipeline (data → signals → weights → positions → performance).
 All methods expect the host class to have the attributes set by
 Backtester.__init__ (portfolio_data, instruments_data, blotter, etc.).
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
@@ -25,11 +20,11 @@ import os
 import platform
 import sys
 import time
-import numpy as np
-import pandas as pd
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any
+
+import numpy as np
 
 from backtester.version import __version__ as BACKTESTER_VERSION
 
@@ -50,6 +45,7 @@ class ReportingMixin:
         """Generate performance reports using StrategyPerformanceAnalysis."""
         try:
             from backtester.engines import StrategyPerformanceAnalysis
+
             spa = StrategyPerformanceAnalysis(
                 config={
                     "show_text_reports": self._show_text_reports,
@@ -81,6 +77,7 @@ class ReportingMixin:
             strategy_code = ""
             try:
                 import inspect
+
                 strategy_code = inspect.getsource(self.__class__)
             except Exception:
                 pass
@@ -98,7 +95,7 @@ class ReportingMixin:
             if getattr(self, "_strict_reporting", False):
                 raise
 
-    def _build_strategy_params(self) -> Dict[str, str]:
+    def _build_strategy_params(self) -> dict[str, str]:
         """Build the strategy parameters dict for reports/appendix."""
         params = {
             "Backtester Version": BACKTESTER_VERSION,
@@ -114,14 +111,14 @@ class ReportingMixin:
             "Rebalance Policy": str(self._rebalance_policy),
         }
         # Add rebalance stats if available
-        if hasattr(self, '_rebalance_stats'):
+        if hasattr(self, "_rebalance_stats"):
             rs = self._rebalance_stats
-            params["Rebalance Count"] = str(rs.get('rebalance_count', '-'))
+            params["Rebalance Count"] = str(rs.get("rebalance_count", "-"))
             params["Avg Days Between Rebal"] = f"{rs.get('avg_days_between', 0):.1f}"
-            if rs.get('tracking_error_count', 0):
-                params["TE Triggers"] = str(rs['tracking_error_count'])
-            if rs.get('partial_positions_saved', 0):
-                params["Partial Positions Saved"] = str(rs['partial_positions_saved'])
+            if rs.get("tracking_error_count", 0):
+                params["TE Triggers"] = str(rs["tracking_error_count"])
+            if rs.get("partial_positions_saved", 0):
+                params["Partial Positions Saved"] = str(rs["partial_positions_saved"])
         if self.indicators_config:
             for ind in self.indicators_config:
                 fn = ind.get("function", "?")
@@ -145,12 +142,21 @@ class ReportingMixin:
             timings = dict(metadata.get("timings_seconds") or {})
             timings["metadata_seconds"] = metadata_seconds
             if "total_before_metadata_seconds" in timings:
-                timings["total_seconds"] = timings["total_before_metadata_seconds"] + metadata_seconds
+                timings["total_seconds"] = (
+                    timings["total_before_metadata_seconds"] + metadata_seconds
+                )
             metadata["timings_seconds"] = timings
 
             metadata_path = metadata_folder / "run_metadata.json"
             with metadata_path.open("w", encoding="utf-8") as f:
-                json.dump(self._json_safe(metadata), f, indent=2, sort_keys=True, default=str, allow_nan=False)
+                json.dump(
+                    self._json_safe(metadata),
+                    f,
+                    indent=2,
+                    sort_keys=True,
+                    default=str,
+                    allow_nan=False,
+                )
             logger.info(f"Run metadata saved to {metadata_path}")
         except Exception as e:
             logger.warning(f"[Backtester] Metadata save skipped: {e}")
@@ -173,7 +179,7 @@ class ReportingMixin:
             return number
         return value
 
-    def _build_run_metadata(self) -> Dict[str, Any]:
+    def _build_run_metadata(self) -> dict[str, Any]:
         """Build machine-readable metadata saved next to report results."""
         benchmark = getattr(self, "_benchmark", {}) or {}
         period = getattr(self, "backtest_period", None)
@@ -222,19 +228,20 @@ class ReportingMixin:
             },
             "timings_seconds": dict(getattr(self, "_timings", {}) or {}),
             "run_started_at": getattr(self, "_run_started_at", None),
-            "metadata_generated_at": datetime.now(timezone.utc).isoformat(),
+            "metadata_generated_at": datetime.now(UTC).isoformat(),
         }
 
     # ─────────────────────────────────────────────────────────────────
     # Blotter Utilities
     # ─────────────────────────────────────────────────────────────────
 
-    def save_blotter_csv(self, output_dir: Optional[str] = None) -> Optional[str]:
+    def save_blotter_csv(self, output_dir: str | None = None) -> str | None:
         """Save blotter trades to CSV. Returns the file path or None."""
         if self.blotter is None or not self.blotter.trades:
             logger.info("[Backtester] No blotter trades to save.")
             return None
         from pathlib import Path
+
         out = Path(output_dir) if output_dir else Path(self._reports_directory) / self.strategy_name
         out.mkdir(parents=True, exist_ok=True)
         csv_path = str(out / "blotter_trades.csv")
@@ -242,7 +249,7 @@ class ReportingMixin:
         logger.info(f"[Backtester] Blotter trades saved to {csv_path}")
         return csv_path
 
-    def generate_blotter_plots(self, output_dir: Optional[str] = None) -> None:
+    def generate_blotter_plots(self, output_dir: str | None = None) -> None:
         """Blotter plot pack is not included in this package."""
         logger.info("[Backtester] Blotter plot pack is not included in this package.")
 
@@ -269,7 +276,8 @@ class ReportingMixin:
         print(f"  Initial NAV:  ${self.initial_capital:>14,.2f}")
         print(f"  Final NAV:    ${nav.iloc[-1]:>14,.2f}")
         print(f"  Total Return: {((nav.iloc[-1] / nav.iloc[0]) - 1) * 100:>13.2f}%")
-        print(f"  Ann. Volatility: {ret.std() * np.sqrt(252) * 100:>10.2f}%")
+        periods_per_year = max(int(getattr(self.portfolio_data, "periods_per_year", 252)), 1)
+        print(f"  Ann. Volatility: {ret.std() * np.sqrt(periods_per_year) * 100:>10.2f}%")
         if dd is not None:
             print(f"  Max Drawdown: {dd.min() * 100:>13.2f}%")
         if self.portfolio_data.sharpe_ratio is not None:
@@ -284,18 +292,18 @@ class ReportingMixin:
             if "reporting_seconds" in timings:
                 print(f"  Reporting:     {timings.get('reporting_seconds', 0.0):>12.2f}s")
         # Rebalance stats
-        if hasattr(self, '_rebalance_stats'):
+        if hasattr(self, "_rebalance_stats"):
             rs = self._rebalance_stats
             print(f"{'─' * 60}")
             print(f"  Rebalance Policy: {self._rebalance_policy}")
             print(f"  Rebalances:   {rs['rebalance_count']:>13d}")
             print(f"  Avg Days Btw: {rs['avg_days_between']:>13.1f}")
-            if rs.get('drift_count', 0):
+            if rs.get("drift_count", 0):
                 print(f"  Drift Trigr:  {rs['drift_count']:>13d}")
-            if rs.get('tracking_error_count', 0):
+            if rs.get("tracking_error_count", 0):
                 print(f"  TE Triggers:  {rs['tracking_error_count']:>13d}")
-            if rs.get('circuit_breaker_count', 0):
+            if rs.get("circuit_breaker_count", 0):
                 print(f"  CB Triggers:  {rs['circuit_breaker_count']:>13d}")
-            if rs.get('partial_positions_saved', 0):
+            if rs.get("partial_positions_saved", 0):
                 print(f"  Partial Saved:{rs['partial_positions_saved']:>13d}")
         print(f"{'=' * 60}\n")

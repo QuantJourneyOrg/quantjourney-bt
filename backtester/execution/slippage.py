@@ -13,12 +13,7 @@ Available models:
     VolatilitySlippage — spread proportional to bar range / close
     MarketImpactSlippage — Almgren-style sqrt(participation) model
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
@@ -30,8 +25,8 @@ from typing import Protocol, runtime_checkable
 
 from backtester.execution.order_types import BarData, OrderSide
 
-
 # ── Protocol ───────────────────────────────────────────────────────────
+
 
 @runtime_checkable
 class SlippageModel(Protocol):
@@ -50,12 +45,17 @@ class SlippageModel(Protocol):
 
 # ── Implementations ───────────────────────────────────────────────────
 
+
 @dataclass(frozen=True, slots=True)
 class NoSlippage:
     """No slippage — fill at theoretical price."""
 
     def compute(
-        self, price: float, quantity: float, side: OrderSide, bar: BarData,
+        self,
+        price: float,
+        quantity: float,
+        side: OrderSide,
+        bar: BarData,
     ) -> float:
         return price
 
@@ -73,31 +73,42 @@ class FixedBpsSlippage:
     bps: float = 5.0
 
     def compute(
-        self, price: float, quantity: float, side: OrderSide, bar: BarData,
+        self,
+        price: float,
+        quantity: float,
+        side: OrderSide,
+        bar: BarData,
     ) -> float:
-        spread = price * self.bps / 10_000
+        spread = abs(price) * self.bps / 10_000
         return price + spread if side == OrderSide.BUY else price - spread
 
 
 @dataclass(frozen=True, slots=True)
 class VolatilitySlippage:
     """
-    Slippage proportional to intra-bar volatility.
+    Slippage proportional to an observable bar range.
 
     spread = price × vol_factor × (high - low) / close
 
     Useful for illiquid instruments where spread widens with volatility.
+    ``FillEngine`` supplies the previous completed bar for opening fills and
+    the current completed bar for closing fills, so this model does not read
+    the future high, low or close of an opening-fill bar.
     """
 
     vol_factor: float = 0.1
 
     def compute(
-        self, price: float, quantity: float, side: OrderSide, bar: BarData,
+        self,
+        price: float,
+        quantity: float,
+        side: OrderSide,
+        bar: BarData,
     ) -> float:
         if bar.close == 0:
             return price
-        bar_range = (bar.high - bar.low) / bar.close
-        spread = price * self.vol_factor * bar_range
+        bar_range = abs(bar.high - bar.low) / abs(bar.close)
+        spread = abs(price) * self.vol_factor * bar_range
         return price + spread if side == OrderSide.BUY else price - spread
 
 
@@ -119,8 +130,12 @@ class MarketImpactSlippage:
     eta: float = 0.1
 
     def compute(
-        self, price: float, quantity: float, side: OrderSide, bar: BarData,
+        self,
+        price: float,
+        quantity: float,
+        side: OrderSide,
+        bar: BarData,
     ) -> float:
         participation = abs(quantity) / max(self.adv, 1.0)
-        impact = price * self.eta * self.sigma_daily * math.sqrt(participation)
+        impact = abs(price) * self.eta * self.sigma_daily * math.sqrt(participation)
         return price + impact if side == OrderSide.BUY else price - impact

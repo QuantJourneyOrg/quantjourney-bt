@@ -5,20 +5,13 @@ Risk Model ABC and Chain
 Every risk model implements ``adjust(weights, returns) → weights``.
 ``RiskModelChain`` composes multiple models sequentially.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 from __future__ import annotations
 
 import abc
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 import pandas as pd
 
@@ -39,7 +32,7 @@ class RiskModel(abc.ABC):
         weights: pd.DataFrame,
         returns: pd.DataFrame,
         *,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> pd.DataFrame:
         """
         Adjust *weights* given historical *returns*.
@@ -84,7 +77,7 @@ class RiskModelChain(RiskModel):
         adjusted = chain.adjust(weights, returns)
     """
 
-    def __init__(self, models: List[RiskModel]):
+    def __init__(self, models: list[RiskModel]):
         if not models:
             raise ValueError("RiskModelChain requires at least one model")
         self._models = list(models)
@@ -94,7 +87,7 @@ class RiskModelChain(RiskModel):
         weights: pd.DataFrame,
         returns: pd.DataFrame,
         *,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> pd.DataFrame:
         w = weights
         for model in self._models:

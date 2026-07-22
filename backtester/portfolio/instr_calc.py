@@ -4,15 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import pandas as pd
 
-from backtester.portfolio.instr_data import InstrumentData
-from backtester.portfolio.config import CalcConfig, get_default_config
-
-from backtester.portfolio.calc import rolling_stats as calc_roll
 from backtester.portfolio.calc import metrics as calc_metrics
+from backtester.portfolio.calc import rolling_stats as calc_roll
+from backtester.portfolio.config import CalcConfig, get_default_config
+from backtester.portfolio.instr_data import InstrumentData
 
 
 class InstrumentCalculations:
@@ -21,7 +18,7 @@ class InstrumentCalculations:
     delegates numerical work to calc modules.
     """
 
-    def __init__(self, instrument_data: InstrumentData, config: Optional[CalcConfig] = None):
+    def __init__(self, instrument_data: InstrumentData, config: CalcConfig | None = None):
         self._instrument_data = instrument_data
         self._config: CalcConfig = config or get_default_config()
 

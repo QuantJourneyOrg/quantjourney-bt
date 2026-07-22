@@ -9,7 +9,7 @@ Example Orders 03 - Limit RSI Dip Buyer
 Mode: orders.
 Order type: LIMIT.
 Idea: when RSI is weak, place a passive buy limit below the close.
-Universe: three high-volume technology stocks.
+Universe: three predeclared liquid ETFs: SPY, QQQ and IWM.
 
 Entries are limit buys 1.5% below the signal close. Exits are limit sells 3%
 above average entry. Each order expires after three bars.
@@ -42,7 +42,9 @@ class LimitRSIDipBuyer(Backtester):
     """Passive RSI dip buyer using limit orders for entry and profit-taking."""
 
     def _has_pending(self, instrument: str) -> bool:
-        return any(o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders)
+        return any(
+            o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders
+        )
 
     def _compute_orders(self, date, bars, current_positions, nav) -> None:
         rsi = self.instruments_data.get_feature("RSI_14_close")
@@ -61,24 +63,28 @@ class LimitRSIDipBuyer(Backtester):
             if pos == 0 and not pending and value < 40:
                 shares = int(nav * 0.15 / bar.close)
                 if shares > 0:
-                    self.fill_engine.submit(Order(
-                        instrument=inst,
-                        side=OrderSide.BUY,
-                        quantity=shares,
-                        order_type=OrderType.LIMIT,
-                        limit_price=round(bar.close * 0.985, 2),
-                        expires_after_bars=3,
-                    ))
+                    self.fill_engine.submit(
+                        Order(
+                            instrument=inst,
+                            side=OrderSide.BUY,
+                            quantity=shares,
+                            order_type=OrderType.LIMIT,
+                            limit_price=round(bar.close * 0.985, 2),
+                            expires_after_bars=3,
+                        )
+                    )
             elif pos > 0 and not pending:
                 entry = self.get_average_entry_price(inst) or bar.close
-                self.fill_engine.submit(Order(
-                    instrument=inst,
-                    side=OrderSide.SELL,
-                    quantity=pos,
-                    order_type=OrderType.LIMIT,
-                    limit_price=round(entry * 1.03, 2),
-                    expires_after_bars=3,
-                ))
+                self.fill_engine.submit(
+                    Order(
+                        instrument=inst,
+                        side=OrderSide.SELL,
+                        quantity=pos,
+                        order_type=OrderType.LIMIT,
+                        limit_price=round(entry * 1.03, 2),
+                        expires_after_bars=3,
+                    )
+                )
 
 
 async def main() -> None:
@@ -86,8 +92,10 @@ async def main() -> None:
         **_credentials(),
         strategy_name="ExampleOrders03_LimitRSIDip",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA"],
-        backtest_period={"start": "2020-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "QQQ", "IWM"],
+        backtest_period={"start": "2001-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="orders",
         max_position_size=0.25,

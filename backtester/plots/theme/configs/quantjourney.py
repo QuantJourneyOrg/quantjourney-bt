@@ -1,18 +1,18 @@
 """
     QuantJourney Framework - QuantJourney Theme Configuration
-	------------------------------------------------------------
-
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
+        ------------------------------------------------------------
 
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
-from backtester.plots.theme.types import ThemeConfig, ColorScheme, PlotLineConfig, PlotLabelConfig, LegendConfig
-
+from backtester.plots.theme.types import (
+    ColorScheme,
+    LegendConfig,
+    PlotLabelConfig,
+    PlotLineConfig,
+    ThemeConfig,
+)
 
 QUANTJOURNEY_THEME = ThemeConfig(
     colors=ColorScheme(

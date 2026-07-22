@@ -10,7 +10,7 @@ Mode: weights (dollar-neutral long/short).
 Idea: each month, rank the universe by 12-month price momentum, go long the top
 names and short the bottom names in equal dollar amounts. The classic
 cross-sectional momentum factor.
-Universe: twelve liquid large-caps across sectors.
+Universe: canonical US sector ETFs: XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV and XLY.
 
 Signal: 12-month (252-bar) return per name; long top 3, short bottom 3.
 Weights: +0.5 spread across longs, -0.5 across shorts (gross 1.0, net ~0).
@@ -72,16 +72,15 @@ async def main() -> None:
         strategy_name="ExampleWeights15_CrossSectionalMomentum",
         strategy_type="Market Neutral",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META",
-                     "JPM", "XOM", "JNJ", "PG", "WMT", "KO"],
-        backtest_period={"start": "2015-01-01", "end": "2025-01-01"},
+        instruments=["XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY"],
+        backtest_period={"start": "2000-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=1.0,
         rebalance_policy=RebalancePolicy(frequency="BME"),
         indicators_config=[],
-        benchmark_symbol="^GSPC",
-        benchmark_name="S&P 500 Index",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

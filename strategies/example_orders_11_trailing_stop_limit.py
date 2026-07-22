@@ -9,7 +9,7 @@ Example Orders 11 - Trailing Stop-Limit
 Mode: orders.
 Order types: MARKET entry, STOP_TRAIL_LIMIT exit.
 Idea: trend entry with a trailing stop that converts to a limit order.
-Universe: five large stocks.
+Universe: three predeclared liquid ETFs: SPY, QQQ and IWM.
 
 The stop follows price upward. When triggered, the order sells only at or above
 the activated limit price, so gaps can leave the order open.
@@ -71,14 +71,16 @@ class TrailingStopLimitTrend(Backtester):
                 if shares > 0:
                     self.fill_engine.submit(Order(inst, OrderSide.BUY, shares, OrderType.MARKET))
             elif pos > 0 and not self._has_trail_limit.get(inst, False):
-                self.fill_engine.submit(Order(
-                    inst,
-                    OrderSide.SELL,
-                    pos,
-                    OrderType.STOP_TRAIL_LIMIT,
-                    trail_amount=round(bar.close * 0.04, 2),
-                    limit_offset=round(bar.close * 0.005, 2),
-                ))
+                self.fill_engine.submit(
+                    Order(
+                        inst,
+                        OrderSide.SELL,
+                        pos,
+                        OrderType.STOP_TRAIL_LIMIT,
+                        trail_amount=round(bar.close * 0.04, 2),
+                        limit_offset=round(bar.close * 0.005, 2),
+                    )
+                )
                 self._has_trail_limit[inst] = True
             elif signal == 0 and prev == 1 and pos > 0:
                 self.fill_engine.cancel_all(instrument=inst)
@@ -93,8 +95,10 @@ async def main() -> None:
         **_credentials(),
         strategy_name="ExampleOrders11_TrailingStopLimit",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
-        backtest_period={"start": "2020-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "QQQ", "IWM"],
+        backtest_period={"start": "2001-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="orders",
         max_position_size=0.25,

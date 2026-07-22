@@ -25,12 +25,7 @@ Usage::
         cancel_check=lambda: False,
     )
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
@@ -55,9 +50,11 @@ def optimizer_factory(method: str, **kwargs) -> Optimizer:
     """Create an optimizer instance by method name."""
     if method == "grid":
         from backtester.walkforward.optimization.grid import GridSearchOptimizer
+
         return GridSearchOptimizer(**kwargs)
     elif method == "optuna":
         from backtester.walkforward.optimization.optuna_ import OptunaOptimizer
+
         return OptunaOptimizer(**kwargs)
     else:
         raise ValueError(f"Unknown optimization method: {method!r}")

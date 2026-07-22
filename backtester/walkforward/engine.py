@@ -9,12 +9,7 @@ Responsibilities (and only these):
 
 All computation is delegated — the engine is a thin loop.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
@@ -23,30 +18,33 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from backtester.reporting_frequency import infer_periods_per_year
 from backtester.utils.logger import logger
 from backtester.walkforward.config import WalkForwardConfig
 from backtester.walkforward.folds import fold_scheme_factory
-from backtester.walkforward.runner import FoldRunner
+from backtester.walkforward.persistence import load_checkpoint, save_checkpoint
 from backtester.walkforward.result import FoldResult, WalkForwardResult
+from backtester.walkforward.runner import FoldRunner
 from backtester.walkforward.statistics.aggregation import (
     aggregate_oos_returns,
     bootstrap_sharpe_ci,
     compute_composite_metrics,
 )
+from backtester.walkforward.statistics.deflated_sharpe import deflated_sharpe
 from backtester.walkforward.statistics.overfit import (
-    aggregate_overfit_ratio,
     aggregate_efficiency,
+    aggregate_overfit_ratio,
     sharpe_decay,
 )
-from backtester.walkforward.statistics.deflated_sharpe import deflated_sharpe
-from backtester.walkforward.statistics.pbo import pbo_from_selected_ranks
-from backtester.walkforward.statistics.interpretation import interpret_metrics
-from backtester.walkforward.persistence import save_checkpoint, load_checkpoint
+from backtester.walkforward.statistics.pbo import (
+    walk_forward_top_k_rank_failure_rate,
+)
 
 
 class WalkForwardEngine:
@@ -70,10 +68,10 @@ class WalkForwardEngine:
         blotter: Any = None,
         initial_capital: float = 100_000.0,
         risk_free_rate: float = 0.0,
-        checkpoint_dir: Optional[str] = None,
-        backtester_factory: Optional[Callable[..., Any]] = None,
+        checkpoint_dir: str | None = None,
+        backtester_factory: Callable[..., Any] | None = None,
         optimizer: Any = None,
-        base_config: Optional[dict[str, Any]] = None,
+        base_config: dict[str, Any] | None = None,
     ) -> None:
         self._config = config
         self._blotter = blotter
@@ -83,6 +81,7 @@ class WalkForwardEngine:
         self._backtester_factory = backtester_factory
         self._optimizer = optimizer
         self._base_config = dict(base_config or {})
+        self._periods_per_year = 252
 
     @property
     def mode(self) -> str:
@@ -108,6 +107,16 @@ class WalkForwardEngine:
         trading_dates = portfolio_data.net_asset_value.index.sort_values()
         if len(trading_dates) < 2:
             raise ValueError("Insufficient data for walk-forward (need >= 2 trading days)")
+        self._periods_per_year = max(
+            int(
+                getattr(
+                    portfolio_data,
+                    "periods_per_year",
+                    infer_periods_per_year(trading_dates),
+                )
+            ),
+            1,
+        )
 
         start = trading_dates[0]
         end = trading_dates[-1]
@@ -118,7 +127,9 @@ class WalkForwardEngine:
                 f"{start.date()} → {end.date()}, "
                 f"mode={self.mode}, "
                 f"train={self._config.train_months}m, test={self._config.test_months}m, "
-                f"purge={self._config.purge_days}d, embargo={self._config.embargo_pct:.0%}"
+                f"purge={self._config.purge_days}d, "
+                "extra_pre_oos_purge="
+                f"{self._config.resolved_extra_pre_oos_purge_pct:.0%}"
             )
 
         # 2. Generate folds
@@ -140,9 +151,7 @@ class WalkForwardEngine:
         if resume and self._checkpoint_dir:
             completed_results = load_checkpoint(self._checkpoint_dir)
             if completed_results and self._config.verbose:
-                logger.info(
-                    f"[WalkForward] Resumed {len(completed_results)} folds from checkpoint"
-                )
+                logger.info(f"[WalkForward] Resumed {len(completed_results)} folds from checkpoint")
 
         # 4. Execute folds
         fold_results: list[FoldResult] = []
@@ -169,7 +178,7 @@ class WalkForwardEngine:
                 backtester_factory=self._backtester_factory,
                 optimizer=self._optimizer,
                 base_config=self._base_config,
-                pbo_trials=self._config.pbo_trials,
+                rank_stability_trials=self._config.resolved_rank_stability_trials,
             )
             result = runner.run()
             fold_results.append(result)
@@ -183,13 +192,23 @@ class WalkForwardEngine:
         wf_result = self._aggregate(fold_results)
 
         if self._config.verbose:
-            dsr_str = f", DSR={wf_result.deflated_sharpe:.2f}" if wf_result.deflated_sharpe is not None else ""
-            pbo_str = f", PBO={wf_result.pbo:.2f}" if wf_result.pbo is not None else ""
+            dsr_label = (
+                "pooled-WF-DSR-style"
+                if wf_result.deflated_sharpe_method == "pooled_walk_forward_dsr_style"
+                else "PSR-N1"
+            )
+            dsr_str = (
+                f", {dsr_label}={wf_result.deflated_sharpe:.2f}"
+                if wf_result.deflated_sharpe is not None
+                else ""
+            )
+            rank_failure = wf_result.walk_forward_top_k_rank_failure_rate
+            rank_str = f", WF-rank-failure={rank_failure:.2f}" if rank_failure is not None else ""
             logger.info(
                 f"[WalkForward] Complete: OOS Sharpe={wf_result.oos_sharpe:.2f}, "
                 f"Overfit Ratio={wf_result.overfit_ratio:.2f}, "
                 f"Efficiency={wf_result.efficiency:.2f}"
-                f"{dsr_str}{pbo_str}"
+                f"{dsr_str}{rank_str}"
             )
 
         return wf_result
@@ -209,6 +228,16 @@ class WalkForwardEngine:
         trading_dates = portfolio_data.net_asset_value.index.sort_values()
         if len(trading_dates) < 2:
             raise ValueError("Insufficient data for walk-forward (need >= 2 trading days)")
+        self._periods_per_year = max(
+            int(
+                getattr(
+                    portfolio_data,
+                    "periods_per_year",
+                    infer_periods_per_year(trading_dates),
+                )
+            ),
+            1,
+        )
 
         start = trading_dates[0]
         end = trading_dates[-1]
@@ -219,7 +248,9 @@ class WalkForwardEngine:
                 f"{start.date()} → {end.date()}, "
                 f"mode={self.mode}, "
                 f"train={self._config.train_months}m, test={self._config.test_months}m, "
-                f"purge={self._config.purge_days}d, embargo={self._config.embargo_pct:.0%}"
+                f"purge={self._config.purge_days}d, "
+                "extra_pre_oos_purge="
+                f"{self._config.resolved_extra_pre_oos_purge_pct:.0%}"
             )
 
         scheme = fold_scheme_factory(self._config)
@@ -239,9 +270,7 @@ class WalkForwardEngine:
         if resume and self._checkpoint_dir:
             completed_results = load_checkpoint(self._checkpoint_dir)
             if completed_results and self._config.verbose:
-                logger.info(
-                    f"[WalkForward] Resumed {len(completed_results)} folds from checkpoint"
-                )
+                logger.info(f"[WalkForward] Resumed {len(completed_results)} folds from checkpoint")
 
         fold_results: list[FoldResult] = []
 
@@ -266,7 +295,7 @@ class WalkForwardEngine:
                 backtester_factory=self._backtester_factory,
                 optimizer=self._optimizer,
                 base_config=self._base_config,
-                pbo_trials=self._config.pbo_trials,
+                rank_stability_trials=self._config.resolved_rank_stability_trials,
             )
             result = await runner.run_async()
             fold_results.append(result)
@@ -278,13 +307,23 @@ class WalkForwardEngine:
         wf_result = self._aggregate(fold_results)
 
         if self._config.verbose:
-            dsr_str = f", DSR={wf_result.deflated_sharpe:.2f}" if wf_result.deflated_sharpe is not None else ""
-            pbo_str = f", PBO={wf_result.pbo:.2f}" if wf_result.pbo is not None else ""
+            dsr_label = (
+                "pooled-WF-DSR-style"
+                if wf_result.deflated_sharpe_method == "pooled_walk_forward_dsr_style"
+                else "PSR-N1"
+            )
+            dsr_str = (
+                f", {dsr_label}={wf_result.deflated_sharpe:.2f}"
+                if wf_result.deflated_sharpe is not None
+                else ""
+            )
+            rank_failure = wf_result.walk_forward_top_k_rank_failure_rate
+            rank_str = f", WF-rank-failure={rank_failure:.2f}" if rank_failure is not None else ""
             logger.info(
                 f"[WalkForward] Complete: OOS Sharpe={wf_result.oos_sharpe:.2f}, "
                 f"Overfit Ratio={wf_result.overfit_ratio:.2f}, "
                 f"Efficiency={wf_result.efficiency:.2f}"
-                f"{dsr_str}{pbo_str}"
+                f"{dsr_str}{rank_str}"
             )
 
         return wf_result
@@ -329,7 +368,9 @@ class WalkForwardEngine:
             composite = {"sharpe": nan, "cagr": nan, "max_dd": nan, "volatility": nan}
         else:
             composite = compute_composite_metrics(
-                oos_returns, risk_free_rate=self._risk_free_rate
+                oos_returns,
+                risk_free_rate=self._risk_free_rate,
+                trading_days=self._periods_per_year,
             )
 
         # Bootstrap CI for the composite Sharpe (stationary block
@@ -340,6 +381,7 @@ class WalkForwardEngine:
                 oos_returns,
                 seed=self._config.seed,
                 risk_free_rate=self._risk_free_rate,
+                trading_days=self._periods_per_year,
             )
 
         # Overfit diagnostics (ok folds only)
@@ -357,16 +399,17 @@ class WalkForwardEngine:
             eff_val = float("nan")
             decay = float("nan")
 
-        # ── Deflated Sharpe Ratio (Bailey & López de Prado 2014) ──────
+        # ── Sharpe selection diagnostic ───────────────────────────────
         # Candidate: the aggregated OOS daily return series (T, skew, raw
         # kurtosis, and per-day Sharpe all come from the SAME series).
-        # Trial population: per-trial IS objective values pooled across
-        # folds — the same population defines both √V[SR] and N, so the
-        # E[max SR] deflation is internally consistent.  Objective values
-        # are annualized Sharpes, so they are de-annualized (√252) to the
-        # daily units of the candidate.  No optimizer → N = 1 → the DSR
-        # honestly reduces to the PSR of the OOS Sharpe.  Folds are NOT
-        # trials and are never used as the trial population.
+        # Trial objectives are pooled across chronological training folds.
+        # That keeps the implemented calculation internally consistent, but
+        # it is an extension rather than canonical DSR for one common trial
+        # population. It is therefore labelled ``pooled_walk_forward_dsr_style``.
+        # Objective values are annualized Sharpes, so they are de-annualized
+        # to the native return cadence. No usable optimizer population means
+        # N = 1 and the statistic is labelled as PSR, not DSR. Folds themselves
+        # are never counted as trials.
         #
         # Mode caveats:
         # - slice_diagnostics: the "OOS" series is an in-sample slice of
@@ -377,15 +420,16 @@ class WalkForwardEngine:
         #   whole tune-then-trade process, not one fixed parameterization.
         dsr_val = None
         dsr_reason = None
+        dsr_method = None
+        dsr_raw_completed_trials = None
+        dsr_effective_trials = None
         if self.mode == "slice_diagnostics":
-            dsr_reason = (
-                "in-sample; DSR not meaningful without independent trials"
-            )
+            dsr_reason = "in-sample; DSR not meaningful without independent trials"
         elif self._config.compute_deflated_sharpe and len(oos_returns) >= 3:
             ret_std = float(oos_returns.std(ddof=1))
             if ret_std > 0.0:
-                ann = math.sqrt(252.0)
-                rfr_daily = self._risk_free_rate / 252.0
+                ann = math.sqrt(float(self._periods_per_year))
+                rfr_daily = self._risk_free_rate / float(self._periods_per_year)
                 sr_daily = (float(oos_returns.mean()) - rfr_daily) / ret_std
                 skew = float(oos_returns.skew())
                 kurt_raw = float(oos_returns.kurt()) + 3.0  # pandas kurt() is excess
@@ -406,44 +450,54 @@ class WalkForwardEngine:
                         "unavailable"
                     )
 
+                dsr_raw_completed_trials = len(pooled_trials) if pooled_trials else 1
+                dsr_effective_trials = (
+                    self._config.dsr_effective_n_trials
+                    if self._config.dsr_effective_n_trials is not None
+                    else float(dsr_raw_completed_trials)
+                )
+                dsr_method = (
+                    "pooled_walk_forward_dsr_style"
+                    if pooled_trials and optimizer_used
+                    else "probabilistic_sharpe_n1"
+                )
                 dsr_val = deflated_sharpe(
                     pooled_trials,
-                    n_trials=len(pooled_trials) if pooled_trials else 1,
+                    n_trials=dsr_raw_completed_trials,
+                    effective_n_trials=dsr_effective_trials,
                     observed_sr=sr_daily,
                     n_obs=len(oos_returns),
                     skewness=skew,
                     kurtosis=kurt_raw,
                 )
 
-        # ── Probability of Backtest Overfitting (rank-based) ──────────
-        # Real PBO needs the IS-selected trial's OOS rank among candidate
-        # trials per fold (WalkForwardConfig.pbo_trials).  Without that
-        # data PBO is reported as unavailable — never as a reassuring 0.
-        pbo_val = None
-        pbo_reason = None
-        if self._config.compute_pbo:
+        # ── Rolling top-K OOS rank-stability diagnostic ───────────────
+        # This is a fold-wise rank failure rate, not canonical CSCV PBO.
+        # It ranks the IS winner only within the top-K trials selected IS
+        # and uses rolling folds rather than symmetric CSCV combinations.
+        rank_failure = None
+        rank_reason = None
+        if self._config.rank_stability_enabled:
             logits = [
-                fr.pbo_selected_logit
-                for fr in fold_results
-                if fr.pbo_selected_logit is not None
+                fr.rank_stability_selected_logit
+                for fr in ok_folds
+                if fr.rank_stability_selected_logit is not None
             ]
             if len(logits) >= 4:
-                pbo_val = pbo_from_selected_ranks(logits)
-                if math.isnan(pbo_val):
-                    pbo_val = None
-                    pbo_reason = "no finite selection-rank logits across folds"
+                rank_failure = walk_forward_top_k_rank_failure_rate(logits)
+                if math.isnan(rank_failure):
+                    rank_failure = None
+                    rank_reason = "no finite selection-rank logits across folds"
             elif logits:
-                pbo_reason = (
-                    f"only {len(logits)} folds have per-trial OOS ranks (need >= 4)"
-                )
+                rank_reason = f"only {len(logits)} folds have per-trial OOS ranks (need >= 4)"
             else:
-                pbo_reason = (
+                rank_reason = (
                     "requires per-trial OOS evaluation; set "
-                    "WalkForwardConfig.pbo_trials=K (>=2) with an optimizer to "
+                    "WalkForwardConfig.rank_stability_trials=K (>=2) with an optimizer to "
                     "evaluate top-K trials OOS per fold"
                 )
-            if pbo_val is None and pbo_reason:
-                all_warnings.append(f"PBO unavailable: {pbo_reason}")
+            if rank_failure is None and rank_reason:
+                all_warnings.append(f"WF top-K rank failure unavailable: {rank_reason}")
         if self._backtester_factory is None:
             all_warnings.append(
                 "Walk-forward mode=slice_diagnostics: metrics are computed from "
@@ -495,9 +549,12 @@ class WalkForwardEngine:
             sharpe_decay=decay,
             deflated_sharpe=dsr_val,
             deflated_sharpe_reason=dsr_reason,
-            pbo=pbo_val,
-            pbo_available=pbo_val is not None,
-            pbo_reason=pbo_reason,
+            deflated_sharpe_method=dsr_method,
+            dsr_raw_completed_trials=dsr_raw_completed_trials,
+            dsr_effective_trials=dsr_effective_trials,
+            walk_forward_top_k_rank_failure_rate=rank_failure,
+            rank_stability_available=rank_failure is not None,
+            rank_stability_reason=rank_reason,
             fingerprint=fingerprint,
             warnings=all_warnings,
             mode=self.mode,

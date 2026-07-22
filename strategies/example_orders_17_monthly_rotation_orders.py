@@ -11,9 +11,7 @@ Order type: MARKET.
 Idea: an event-driven monthly rotation executed with explicit orders. On the
 first bar of each new month, rank the universe by 6-month momentum, then sell
 names that dropped out of the top set and buy the new entrants at market.
-Universe: broad asset-class ETFs.
-Rebalance: event-driven — the "rebalance" is a month-boundary event handled
-inside _compute_orders, not the weights RebalancePolicy engine.
+Universe: canonical multi-asset ETFs: SPY, EFA, EEM, TLT, IEF, GLD, DBC and VNQ.
 
 This shows how to express calendar rebalancing in order mode: you detect the
 event yourself and emit the trades, getting realistic fills, slippage and
@@ -25,8 +23,6 @@ Usage:
 
 import asyncio
 import os
-
-import pandas as pd
 
 from backtester import Backtester
 from backtester.execution.commission import PerShareCommission
@@ -92,16 +88,16 @@ async def main() -> None:
         strategy_name="ExampleOrders17_MonthlyRotationOrders",
         strategy_type="Momentum Rotation",
         initial_capital=100_000,
-        instruments=["SPY", "QQQ", "IWM", "EFA", "EEM", "TLT", "GLD", "DBC"],
-        backtest_period={"start": "2012-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "EFA", "EEM", "TLT", "IEF", "GLD", "DBC", "VNQ"],
+        backtest_period={"start": "2007-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="orders",
         max_position_size=0.40,
         indicators_config=[],
         slippage_model=FixedBpsSlippage(bps=3.0),
         commission_scheme=PerShareCommission(cost_per_share=0.005, min_per_order=1.0),
-        benchmark_symbol="SPY",
-        benchmark_name="S&P 500 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

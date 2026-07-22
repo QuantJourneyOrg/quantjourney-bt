@@ -17,47 +17,49 @@ Style contract
 6. Legends use ``Line2D`` handles (no leaking artists).
 7. ``fig.tight_layout()`` is called before ``add_watermark``.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 import matplotlib
+
 matplotlib.use("Agg")
 
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
+import calendar
+
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
-import calendar
-from typing import Optional, Tuple, List, Dict
-from scipy import stats
 from matplotlib.lines import Line2D
+from scipy import stats
 
 try:
     import seaborn as sns
 except ModuleNotFoundError:  # pragma: no cover - exercised in minimal envs
     sns = None
 
-from backtester.portfolio.portf_calc import PortfolioCalculations
-from backtester.portfolio.instr_calc import InstrumentCalculations
 from backtester.plots.plot_compat import (
-    C, ensure_style, add_watermark, style_ax, smart_date_axis,
-    endpoint_annotation, endpoint_annotations_pair,
-    stats_box as _stats_box, fmt_pct, fmt_ratio, make_figure, diverging_cmap,
+    C,
+    add_watermark,
+    diverging_cmap,
+    endpoint_annotation,
+    ensure_style,
+    smart_date_axis,
+    style_ax,
 )
-from backtester.utils.logger import logger
-
+from backtester.plots.plot_compat import (
+    stats_box as _stats_box,
+)
+from backtester.portfolio.instr_calc import InstrumentCalculations
+from backtester.portfolio.portf_calc import PortfolioCalculations
 
 # ---------------------------------------------------------------------------
 # Helpers (module-private)
 # ---------------------------------------------------------------------------
+
 
 def _safe_float(v) -> float:
     """Convert a scalar / 0-d array / single-element Series to plain float."""
@@ -65,7 +67,6 @@ def _safe_float(v) -> float:
         return float(v)
     except (TypeError, ValueError):
         return float(np.nanmean(np.asarray(v)))
-
 
     # _stats_box is now imported from plot_compat as _stats_box
 
@@ -76,9 +77,25 @@ def _clean_label(label) -> str:
     return s.split("-")[0]
 
 
-def _heatmap(data, *, ax, mask=None, annot=False, fmt=".2f", cmap=None,
-             vmin=None, vmax=None, center=None, square=False, annot_kws=None,
-             cbar=True, cbar_kws=None, linewidths=0.0, linecolor=None, **kwargs):
+def _heatmap(
+    data,
+    *,
+    ax,
+    mask=None,
+    annot=False,
+    fmt=".2f",
+    cmap=None,
+    vmin=None,
+    vmax=None,
+    center=None,
+    square=False,
+    annot_kws=None,
+    cbar=True,
+    cbar_kws=None,
+    linewidths=0.0,
+    linecolor=None,
+    **kwargs,
+):
     """Draw a seaborn heatmap when available, otherwise use Matplotlib."""
     if sns is not None:
         return sns.heatmap(
@@ -131,8 +148,7 @@ def _heatmap(data, *, ax, mask=None, annot=False, fmt=".2f", cmap=None,
                 value = frame.iat[row, col]
                 if mask_values[row, col] or pd.isna(value):
                     continue
-                ax.text(col, row, format(float(value), fmt), ha="center",
-                        va="center", **text_style)
+                ax.text(col, row, format(float(value), fmt), ha="center", va="center", **text_style)
 
     if cbar:
         cbar_kws = cbar_kws or {}
@@ -185,14 +201,13 @@ def _asset_color(label, *, asset_alpha: float = 0.92, cash_alpha: float = 0.38) 
 
 
 def _allocation_colors(
-    labels: List[str],
+    labels: list[str],
     *,
     asset_alpha: float = 0.88,
     cash_alpha: float = 0.62,
-) -> List[tuple]:
+) -> list[tuple]:
     """Return high-contrast allocation colours with neutral cash."""
-    return [_asset_color(label, asset_alpha=asset_alpha, cash_alpha=cash_alpha)
-            for label in labels]
+    return [_asset_color(label, asset_alpha=asset_alpha, cash_alpha=cash_alpha) for label in labels]
 
 
 def _gradient_fill(ax, x, y, baseline, color, alpha_max=0.25):
@@ -200,12 +215,12 @@ def _gradient_fill(ax, x, y, baseline, color, alpha_max=0.25):
     ax.fill_between(x, y, baseline, color=color, alpha=alpha_max, zorder=1)
 
 
-def _true_runs(mask: pd.Series) -> List[Tuple[pd.Timestamp, pd.Timestamp, int]]:
+def _true_runs(mask: pd.Series) -> list[tuple[pd.Timestamp, pd.Timestamp, int]]:
     """Return contiguous true runs as (start, end, length)."""
     if mask is None or len(mask) == 0:
         return []
     m = pd.Series(mask).fillna(False).astype(bool)
-    runs: List[Tuple[pd.Timestamp, pd.Timestamp, int]] = []
+    runs: list[tuple[pd.Timestamp, pd.Timestamp, int]] = []
     start = None
     length = 0
     prev_idx = None
@@ -249,7 +264,7 @@ def _infer_periods_per_year(index: pd.Index) -> int:
 
 def _benchmark_regime_series(
     benchmark_returns: pd.Series,
-    target_index: Optional[pd.Index] = None,
+    target_index: pd.Index | None = None,
     smooth_window: int = 21,
 ) -> pd.Series:
     """Classify benchmark trend into Bull / Sideways / Bear regimes."""
@@ -293,8 +308,7 @@ def _shade_regimes(
         if full_height:
             r, g, b, a = color
             color = (r, g, b, min(a, 0.085))
-        ax.axvspan(start, end, color=color,
-                   ymin=ymin, ymax=ymax, lw=0, zorder=0)
+        ax.axvspan(start, end, color=color, ymin=ymin, ymax=ymax, lw=0, zorder=0)
 
 
 def _regime_summary_text(regime: pd.Series, benchmark_name: str = "Benchmark") -> str:
@@ -310,12 +324,12 @@ def _regime_summary_text(regime: pd.Series, benchmark_name: str = "Benchmark") -
     )
 
 
-def _regime_runs(regime: pd.Series) -> List[Tuple[pd.Timestamp, pd.Timestamp, str]]:
+def _regime_runs(regime: pd.Series) -> list[tuple[pd.Timestamp, pd.Timestamp, str]]:
     """Return contiguous regime runs as (start, end, label)."""
     clean = regime.dropna()
     if clean.empty:
         return []
-    runs: List[Tuple[pd.Timestamp, pd.Timestamp, str]] = []
+    runs: list[tuple[pd.Timestamp, pd.Timestamp, str]] = []
     start = clean.index[0]
     current = str(clean.iloc[0])
     prev = clean.index[0]
@@ -330,7 +344,7 @@ def _regime_runs(regime: pd.Series) -> List[Tuple[pd.Timestamp, pd.Timestamp, st
     return runs
 
 
-def _regime_legend_handles() -> List[mpatches.Patch]:
+def _regime_legend_handles() -> list[mpatches.Patch]:
     """Legend handles for benchmark-regime background shading."""
     return [
         mpatches.Patch(facecolor=_REGIME_COLORS["Bull"], edgecolor="none", label="Bull Regime"),
@@ -343,6 +357,7 @@ def _regime_legend_handles() -> List[mpatches.Patch]:
 # PortfolioPlots
 # ============================================================================
 
+
 class PortfolioPlots:
     """Static methods producing institutional-quality portfolio charts."""
 
@@ -350,8 +365,8 @@ class PortfolioPlots:
     @staticmethod
     def plot_cumulative_returns(
         portfolio_calc: PortfolioCalculations,
-        instrument_calc: Optional[InstrumentCalculations] = None,
-        benchmark_returns: Optional[pd.Series] = None,
+        instrument_calc: InstrumentCalculations | None = None,
+        benchmark_returns: pd.Series | None = None,
         benchmark_name: str = "S&P 500",
     ) -> plt.Figure:
         """Plot portfolio cumulative returns with optional benchmark overlay.
@@ -387,7 +402,7 @@ class PortfolioPlots:
         ann_ret = ((cum.iloc[-1] / cum.iloc[0]) ** (1 / n_years) - 1) * 100
         ann_vol = returns.std() * np.sqrt(252) * 100
         sharpe = ann_ret / ann_vol if ann_vol > 0 else 0
-        dd = (cum / cum.cummax() - 1)
+        dd = cum / cum.cummax() - 1
         max_dd = dd.min() * 100
         subtitle = (
             f"Total: {total_ret:+.1f}%  |  "
@@ -403,13 +418,27 @@ class PortfolioPlots:
             try:
                 bench_ret = benchmark_returns.reindex(cum.index).fillna(0)
                 bench_cum = (1 + bench_ret).cumprod()
-                ax.plot(bench_cum.index, bench_cum.values, color=C.BENCHMARK,
-                        linewidth=C.LW_SECONDARY, linestyle=C.BENCHMARK_LS, alpha=0.90, zorder=3)
-                endpoint_annotation(ax, bench_cum, benchmark_name, C.BENCHMARK,
-                                    fmt="ratio", offset=(8, -14))
+                ax.plot(
+                    bench_cum.index,
+                    bench_cum.values,
+                    color=C.BENCHMARK,
+                    linewidth=C.LW_SECONDARY,
+                    linestyle=C.BENCHMARK_LS,
+                    alpha=0.90,
+                    zorder=3,
+                )
+                endpoint_annotation(
+                    ax, bench_cum, benchmark_name, C.BENCHMARK, fmt="ratio", offset=(8, -14)
+                )
                 handles.append(
-                    Line2D([], [], color=C.BENCHMARK, lw=C.LW_THIN, ls=C.BENCHMARK_LS,
-                           label=benchmark_name)
+                    Line2D(
+                        [],
+                        [],
+                        color=C.BENCHMARK,
+                        lw=C.LW_THIN,
+                        ls=C.BENCHMARK_LS,
+                        label=benchmark_name,
+                    )
                 )
             except Exception:
                 pass
@@ -418,24 +447,36 @@ class PortfolioPlots:
             try:
                 bench_ret = instrument_calc.returns.iloc[:, 0].dropna()
                 bench_cum = (1 + bench_ret).cumprod()
-                ax.plot(bench_cum.index, bench_cum.values, color=C.BENCHMARK,
-                        linewidth=C.LW_SECONDARY, linestyle=C.BENCHMARK_LS, alpha=0.90, zorder=3)
-                endpoint_annotation(ax, bench_cum, "Benchmark", C.BENCHMARK,
-                                    fmt="ratio", offset=(8, -14))
+                ax.plot(
+                    bench_cum.index,
+                    bench_cum.values,
+                    color=C.BENCHMARK,
+                    linewidth=C.LW_SECONDARY,
+                    linestyle=C.BENCHMARK_LS,
+                    alpha=0.90,
+                    zorder=3,
+                )
+                endpoint_annotation(
+                    ax, bench_cum, "Benchmark", C.BENCHMARK, fmt="ratio", offset=(8, -14)
+                )
                 handles.append(
-                    Line2D([], [], color=C.BENCHMARK, lw=C.LW_THIN, ls=C.BENCHMARK_LS,
-                           label="Benchmark")
+                    Line2D(
+                        [],
+                        [],
+                        color=C.BENCHMARK,
+                        lw=C.LW_THIN,
+                        ls=C.BENCHMARK_LS,
+                        label="Benchmark",
+                    )
                 )
             except Exception:
                 pass
 
         endpoint_annotation(ax, cum, "Portfolio", C.BLUE, fmt="ratio")
 
-        style_ax(ax, title="Cumulative Returns", ylabel="Growth of $1",
-                 subtitle=subtitle)
+        style_ax(ax, title="Cumulative Returns", ylabel="Growth of $1", subtitle=subtitle)
         smart_date_axis(ax, cum)
-        ax.legend(handles=handles, loc="upper left", frameon=False,
-                  fontsize=C.FONT_TICK)
+        ax.legend(handles=handles, loc="upper left", frameon=False, fontsize=C.FONT_TICK)
 
         fig.tight_layout()
         add_watermark(fig)
@@ -464,10 +505,8 @@ class PortfolioPlots:
         log_ret = np.log1p(returns)
         cum_log = log_ret.cumsum()
 
-        ax.plot(cum_log.index, cum_log.values, color=C.BLUE,
-                linewidth=C.LW_MAIN, zorder=4)
-        ax.fill_between(cum_log.index, cum_log.values, 0.0,
-                        color=C.BLUE, alpha=0.055, zorder=1)
+        ax.plot(cum_log.index, cum_log.values, color=C.BLUE, linewidth=C.LW_MAIN, zorder=4)
+        ax.fill_between(cum_log.index, cum_log.values, 0.0, color=C.BLUE, alpha=0.055, zorder=1)
         ax.axhline(0.0, color=C.SPINE, lw=C.LW_HAIR, ls=":", alpha=0.65, zorder=1)
 
         total_log = cum_log.iloc[-1] * 100
@@ -475,14 +514,11 @@ class PortfolioPlots:
 
         endpoint_annotation(ax, cum_log, "Log Return", C.BLUE, fmt="ratio")
 
-        style_ax(ax, title="Cumulative Log Returns", ylabel="Log Return",
-                 subtitle=subtitle)
+        style_ax(ax, title="Cumulative Log Returns", ylabel="Log Return", subtitle=subtitle)
         smart_date_axis(ax, cum_log)
 
-        handles = [Line2D([], [], color=C.BLUE, lw=C.LW_MAIN,
-                          label="Cumulative Log Returns")]
-        ax.legend(handles=handles, loc="upper left", frameon=False,
-                  fontsize=C.FONT_TICK)
+        handles = [Line2D([], [], color=C.BLUE, lw=C.LW_MAIN, label="Cumulative Log Returns")]
+        ax.legend(handles=handles, loc="upper left", frameon=False, fontsize=C.FONT_TICK)
 
         fig.tight_layout()
         add_watermark(fig)
@@ -511,57 +547,64 @@ class PortfolioPlots:
         dd_pct = dd * 100  # convert to %
 
         # Fill with severity colouring
-        ax.fill_between(dd_pct.index, dd_pct.values, 0,
-                        color=C.RED, alpha=0.14, zorder=2)
+        ax.fill_between(dd_pct.index, dd_pct.values, 0, color=C.RED, alpha=0.14, zorder=2)
         ax.plot(dd_pct.index, dd_pct.values, color=C.RED, lw=C.LW_SECONDARY - 0.1, zorder=3)
 
         # 30-day MA
         ma30 = dd_pct.rolling(30, min_periods=1).mean()
-        ax.plot(ma30.index, ma30.values, color=C.BENCHMARK, ls=C.BENCHMARK_LS, lw=C.LW_SECONDARY,
-                zorder=4)
+        ax.plot(
+            ma30.index,
+            ma30.values,
+            color=C.BENCHMARK,
+            ls=C.BENCHMARK_LS,
+            lw=C.LW_SECONDARY,
+            zorder=4,
+        )
 
         # Max DD annotation
         max_dd_val = dd_pct.min()
         max_dd_date = dd_pct.idxmin()
-        ax.plot(max_dd_date, max_dd_val, "o", color=C.RED, markersize=C.MARKER_SM,
-                zorder=6)
+        ax.plot(max_dd_date, max_dd_val, "o", color=C.RED, markersize=C.MARKER_SM, zorder=6)
         ax.annotate(
             f"Max DD: {max_dd_val:.1f}%\n{max_dd_date.strftime('%Y-%m-%d')}",
             xy=(max_dd_date, max_dd_val),
-            xytext=(15, -10), textcoords="offset points",
-            fontsize=C.FONT_ANNOT - 1, fontweight="bold", color=C.RED,
+            xytext=(15, -10),
+            textcoords="offset points",
+            fontsize=C.FONT_ANNOT - 1,
+            fontweight="bold",
+            color=C.RED,
             arrowprops=dict(arrowstyle="->", color=C.RED, lw=0.8),
-            bbox=dict(boxstyle="round,pad=0.3", fc=C.FIG_BG, ec=C.RED,
-                      alpha=0.9, lw=0.6),
+            bbox=dict(boxstyle="round,pad=0.3", fc=C.FIG_BG, ec=C.RED, alpha=0.9, lw=0.6),
         )
 
         # Severity zone lines
-        for level, col in [(-5, C.DD_LIGHT), (-10, C.DD_MED),
-                           (-20, C.DD_HEAVY)]:
+        for level, col in [(-5, C.DD_LIGHT), (-10, C.DD_MED), (-20, C.DD_HEAVY)]:
             if max_dd_val < level:
                 ax.axhline(level, color=col, ls=":", lw=C.LW_HAIR + 0.2, alpha=0.6, zorder=1)
-                ax.text(dd_pct.index[-1], level, f" {level}%", fontsize=C.FONT_SMALL,
-                        color=col, va="center", ha="left")
+                ax.text(
+                    dd_pct.index[-1],
+                    level,
+                    f" {level}%",
+                    fontsize=C.FONT_SMALL,
+                    color=col,
+                    va="center",
+                    ha="left",
+                )
 
         # Stats box
         time_in_dd = (dd_pct < -1).mean() * 100  # % time in >1% DD
         avg_dd = dd_pct[dd_pct < 0].mean() if (dd_pct < 0).any() else 0
-        stats_text = (
-            f"Time in DD (>1%): {time_in_dd:.0f}%\n"
-            f"Avg DD when negative: {avg_dd:.1f}%"
-        )
+        stats_text = f"Time in DD (>1%): {time_in_dd:.0f}%\nAvg DD when negative: {avg_dd:.1f}%"
         _stats_box(ax, stats_text, loc="lower right")
 
         handles = [
             Line2D([], [], color=C.RED, lw=C.LW_THIN, label="Drawdown"),
             Line2D([], [], color=C.BENCHMARK, lw=C.LW_THIN, ls=C.BENCHMARK_LS, label="30-day MA"),
         ]
-        ax.legend(handles=handles, loc="lower left", frameon=False,
-                  fontsize=C.FONT_TICK)
+        ax.legend(handles=handles, loc="lower left", frameon=False, fontsize=C.FONT_TICK)
 
         subtitle = f"Max Drawdown: {max_dd_val:.1f}%  |  Current: {dd_pct.iloc[-1]:.1f}%"
-        style_ax(ax, title="Portfolio Drawdown", ylabel="Drawdown (%)",
-                 subtitle=subtitle)
+        style_ax(ax, title="Portfolio Drawdown", ylabel="Drawdown (%)", subtitle=subtitle)
         smart_date_axis(ax, dd_pct)
 
         fig.tight_layout()
@@ -583,7 +626,7 @@ class PortfolioPlots:
         wealth = (1 + returns).cumprod()
         dd = wealth / wealth.cummax() - 1
 
-        events: List[Dict[str, object]] = []
+        events: list[dict[str, object]] = []
         in_dd = False
         start = trough = None
         trough_dd = 0.0
@@ -596,15 +639,17 @@ class PortfolioPlots:
                 if in_dd:
                     recovery = dt
                     window = dd.loc[start:recovery]
-                    events.append({
-                        "start": start,
-                        "peak": peak_date,
-                        "trough": trough,
-                        "recovery": recovery,
-                        "max_dd": trough_dd,
-                        "days": len(window),
-                        "open": False,
-                    })
+                    events.append(
+                        {
+                            "start": start,
+                            "peak": peak_date,
+                            "trough": trough,
+                            "recovery": recovery,
+                            "max_dd": trough_dd,
+                            "days": len(window),
+                            "open": False,
+                        }
+                    )
                     in_dd = False
                     start = trough = None
                     trough_dd = 0.0
@@ -622,25 +667,35 @@ class PortfolioPlots:
 
         if in_dd and start is not None:
             window = dd.loc[start:]
-            events.append({
-                "start": start,
-                "peak": peak_date,
-                "trough": trough,
-                "recovery": None,
-                "max_dd": trough_dd,
-                "days": len(window),
-                "open": True,
-            })
+            events.append(
+                {
+                    "start": start,
+                    "peak": peak_date,
+                    "trough": trough,
+                    "recovery": None,
+                    "max_dd": trough_dd,
+                    "days": len(window),
+                    "open": True,
+                }
+            )
 
         # Remove tiny one-day noise; keep open events even if shallow.
         filtered = [
-            e for e in events
+            e
+            for e in events
             if e["open"] or abs(float(e["max_dd"])) >= 0.005 or int(e["days"]) >= 5
         ]
         if not filtered:
-            ax.text(0.5, 0.5, "No meaningful drawdown events",
-                    transform=ax.transAxes, ha="center", va="center",
-                    fontsize=12, color=C.MUTED)
+            ax.text(
+                0.5,
+                0.5,
+                "No meaningful drawdown events",
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                fontsize=12,
+                color=C.MUTED,
+            )
             style_ax(ax, title="Drawdown Recovery Analysis")
             fig.tight_layout()
             add_watermark(fig)
@@ -656,29 +711,33 @@ class PortfolioPlots:
         labels = [
             f"{pd.Timestamp(e['start']):%Y-%m} -> "
             f"{'Open' if e['open'] else pd.Timestamp(e['recovery']):%Y-%m}"
-            if not e["open"] else f"{pd.Timestamp(e['start']):%Y-%m} -> Open"
+            if not e["open"]
+            else f"{pd.Timestamp(e['start']):%Y-%m} -> Open"
             for e in selected
         ]
         days = [int(e["days"]) for e in selected]
         depths = [float(e["max_dd"]) * 100 for e in selected]
         y = np.arange(len(selected))
 
-        colors = [
-            mcolors.to_rgba(C.RED, min(0.88, 0.38 + abs(d) / 45))
-            for d in depths
-        ]
-        bars = ax.barh(y, days, color=colors, edgecolor=C.EDGE,
-                       linewidth=C.LW_EDGE, height=0.62, zorder=3)
+        colors = [mcolors.to_rgba(C.RED, min(0.88, 0.38 + abs(d) / 45)) for d in depths]
+        bars = ax.barh(
+            y, days, color=colors, edgecolor=C.EDGE, linewidth=C.LW_EDGE, height=0.62, zorder=3
+        )
 
-        for bar, e, depth in zip(bars, selected, depths):
+        for bar, e, depth in zip(bars, selected, depths, strict=True):
             label = f"{int(e['days'])}d | {depth:.1f}%"
             if e["open"]:
                 label += " open"
                 bar.set_hatch("//")
-            ax.text(bar.get_width() + max(days) * 0.015,
-                    bar.get_y() + bar.get_height() / 2,
-                    label, va="center", ha="left",
-                    fontsize=C.FONT_ANNOT, color=C.LABEL)
+            ax.text(
+                bar.get_width() + max(days) * 0.015,
+                bar.get_y() + bar.get_height() / 2,
+                label,
+                va="center",
+                ha="left",
+                fontsize=C.FONT_ANNOT,
+                color=C.LABEL,
+            )
 
         ax.set_yticks(y)
         ax.set_yticklabels(labels, fontsize=C.FONT_TICK)
@@ -693,9 +752,13 @@ class PortfolioPlots:
             f"{med_days:.0f}d | Longest shown: {max_days}d | Open: {open_count}"
         )
 
-        style_ax(ax, title="Drawdown Recovery Analysis",
-                 xlabel="Trading Days Underwater", ylabel="",
-                 subtitle=subtitle)
+        style_ax(
+            ax,
+            title="Drawdown Recovery Analysis",
+            xlabel="Trading Days Underwater",
+            ylabel="",
+            subtitle=subtitle,
+        )
         fig.tight_layout()
         add_watermark(fig)
         return fig
@@ -712,9 +775,16 @@ class PortfolioPlots:
         returns = portfolio_calc.returns.dropna()
         wealth = (1 + returns).cumprod()
         if wealth.empty:
-            ax.text(0.5, 0.5, "No portfolio data available",
-                    transform=ax.transAxes, ha="center", va="center",
-                    fontsize=12, color=C.MUTED)
+            ax.text(
+                0.5,
+                0.5,
+                "No portfolio data available",
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                fontsize=12,
+                color=C.MUTED,
+            )
             style_ax(ax, title="Time Under Water")
             fig.tight_layout()
             add_watermark(fig)
@@ -729,10 +799,10 @@ class PortfolioPlots:
             tuw_values.append(count)
         tuw = pd.Series(tuw_values, index=wealth.index, dtype=float)
 
-        ax.fill_between(tuw.index, tuw.values, 0, color=C.BLUE,
-                        alpha=0.10, zorder=1)
-        ax.plot(tuw.index, tuw.values, color=C.BLUE,
-                lw=C.LW_MAIN, zorder=3, label="Time Under Water")
+        ax.fill_between(tuw.index, tuw.values, 0, color=C.BLUE, alpha=0.10, zorder=1)
+        ax.plot(
+            tuw.index, tuw.values, color=C.BLUE, lw=C.LW_MAIN, zorder=3, label="Time Under Water"
+        )
 
         max_tuw = int(tuw.max())
         current_tuw = int(tuw.iloc[-1])
@@ -741,15 +811,16 @@ class PortfolioPlots:
         median_run = np.median(run_lengths) if run_lengths else np.nan
 
         max_date = tuw.idxmax()
-        ax.plot(max_date, max_tuw, "o", color=C.BLUE, markersize=C.MARKER_SM,
-                zorder=5)
+        ax.plot(max_date, max_tuw, "o", color=C.BLUE, markersize=C.MARKER_SM, zorder=5)
         ax.annotate(
             f"Longest: {max_tuw}d",
             xy=(max_date, max_tuw),
-            xytext=(12, 10), textcoords="offset points",
-            fontsize=C.FONT_ANNOT, fontweight="bold", color=C.BLUE,
-            bbox=dict(boxstyle="round,pad=0.22", fc=C.FIG_BG,
-                      ec="none", alpha=0.76, lw=0),
+            xytext=(12, 10),
+            textcoords="offset points",
+            fontsize=C.FONT_ANNOT,
+            fontweight="bold",
+            color=C.BLUE,
+            bbox=dict(boxstyle="round,pad=0.22", fc=C.FIG_BG, ec="none", alpha=0.76, lw=0),
         )
 
         if np.isfinite(median_run):
@@ -770,9 +841,12 @@ class PortfolioPlots:
 
         ax.axhline(0, color=C.SPINE, lw=C.LW_HAIR, zorder=2)
         ax.yaxis.set_major_formatter(mticker.StrMethodFormatter("{x:,.0f}d"))
-        style_ax(ax, title="Running Time Under Water",
-                 ylabel="Trading Days Since Last High",
-                 subtitle="Continuous recovery-duration clock, resets at each new equity high")
+        style_ax(
+            ax,
+            title="Running Time Under Water",
+            ylabel="Trading Days Since Last High",
+            subtitle="Continuous recovery-duration clock, resets at each new equity high",
+        )
         smart_date_axis(ax, tuw)
 
         fig.tight_layout()
@@ -786,7 +860,7 @@ class PortfolioPlots:
         window: int = 252,
         confidence: float = 0.95,
         reporting_label: str = "daily",
-        benchmark_returns: Optional[pd.Series] = None,
+        benchmark_returns: pd.Series | None = None,
         benchmark_name: str = "Benchmark",
         show_regime: bool = False,
     ) -> plt.Figure:
@@ -797,7 +871,7 @@ class PortfolioPlots:
         returns = portfolio_calc.returns.dropna()
         active = returns[returns.abs() > 1e-12]
         if not active.empty:
-            returns = returns.loc[active.index[0]:]
+            returns = returns.loc[active.index[0] :]
         tail_q = 1.0 - confidence
         var = returns.rolling(window, min_periods=window).quantile(tail_q)
 
@@ -820,13 +894,24 @@ class PortfolioPlots:
             regime = _benchmark_regime_series(benchmark_returns.dropna(), risk.index)
             _shade_regimes(ax, regime, full_height=True)
 
-        ax.fill_between(risk.index, risk["CVaR"].values, 0,
-                        color=C.RED, alpha=0.10, zorder=1)
-        ax.plot(risk.index, risk["VaR"].values, color=C.RED,
-                lw=C.LW_MAIN, zorder=4, label=f"VaR {confidence:.0%}")
-        ax.plot(risk.index, risk["CVaR"].values, color=C.DARK,
-                lw=C.LW_SECONDARY, ls="--", zorder=5,
-                label=f"CVaR {confidence:.0%}")
+        ax.fill_between(risk.index, risk["CVaR"].values, 0, color=C.RED, alpha=0.10, zorder=1)
+        ax.plot(
+            risk.index,
+            risk["VaR"].values,
+            color=C.RED,
+            lw=C.LW_MAIN,
+            zorder=4,
+            label=f"VaR {confidence:.0%}",
+        )
+        ax.plot(
+            risk.index,
+            risk["CVaR"].values,
+            color=C.DARK,
+            lw=C.LW_SECONDARY,
+            ls="--",
+            zorder=5,
+            label=f"CVaR {confidence:.0%}",
+        )
         ax.axhline(0, color=C.SPINE, lw=C.LW_HAIR, zorder=2)
 
         endpoint_annotation(ax, risk["VaR"], "VaR", C.RED, fmt="pct")
@@ -834,13 +919,19 @@ class PortfolioPlots:
 
         handles = [
             Line2D([], [], color=C.RED, lw=C.LW_MAIN, label=f"VaR {confidence:.0%}"),
-            Line2D([], [], color=C.DARK, lw=C.LW_SECONDARY, ls="--",
-                   label=f"CVaR {confidence:.0%}"),
+            Line2D(
+                [], [], color=C.DARK, lw=C.LW_SECONDARY, ls="--", label=f"CVaR {confidence:.0%}"
+            ),
         ]
         if regime is not None and not regime.empty:
             handles.extend(_regime_legend_handles())
-        ax.legend(handles=handles, loc="lower left", frameon=False,
-                  fontsize=C.FONT_TICK, ncol=2 if regime is not None else 1)
+        ax.legend(
+            handles=handles,
+            loc="lower left",
+            frameon=False,
+            fontsize=C.FONT_TICK,
+            ncol=2 if regime is not None else 1,
+        )
 
         subtitle = (
             f"Window: {window} {reporting_label} obs | Current VaR: {risk['VaR'].iloc[-1]:.2f}% | "
@@ -848,8 +939,12 @@ class PortfolioPlots:
         )
         if regime is not None and not regime.empty:
             subtitle += f" | {_regime_summary_text(regime, benchmark_name)}"
-        style_ax(ax, title="Rolling VaR / CVaR",
-                 ylabel=f"{reporting_label.title()} Return Tail Risk (%)", subtitle=subtitle)
+        style_ax(
+            ax,
+            title="Rolling VaR / CVaR",
+            ylabel=f"{reporting_label.title()} Return Tail Risk (%)",
+            subtitle=subtitle,
+        )
         smart_date_axis(ax, risk["VaR"])
 
         fig.tight_layout()
@@ -887,11 +982,20 @@ class PortfolioPlots:
 
         cmap = diverging_cmap()
         _heatmap(
-            corr, mask=mask, annot=True, fmt=".2f", cmap=cmap,
-            vmin=-1, vmax=1, center=0, ax=ax, square=True,
+            corr,
+            mask=mask,
+            annot=True,
+            fmt=".2f",
+            cmap=cmap,
+            vmin=-1,
+            vmax=1,
+            center=0,
+            ax=ax,
+            square=True,
             annot_kws={"size": C.FONT_TICK, "fontweight": "bold"},
             cbar_kws={"label": "Correlation", "shrink": 0.8},
-            linewidths=0.45, linecolor=C.FIG_BG,
+            linewidths=0.45,
+            linecolor=C.FIG_BG,
         )
 
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
@@ -903,11 +1007,7 @@ class PortfolioPlots:
             avg_c = np.nanmean(no_diag)
             max_c = np.nanmax(no_diag)
             min_c = np.nanmin(no_diag)
-            stats_text = (
-                f"Avg Corr: {avg_c:.2f}\n"
-                f"Max Corr: {max_c:.2f}\n"
-                f"Min Corr: {min_c:.2f}"
-            )
+            stats_text = f"Avg Corr: {avg_c:.2f}\nMax Corr: {max_c:.2f}\nMin Corr: {min_c:.2f}"
             _stats_box(ax, stats_text, loc="lower left")
 
         style_ax(ax, title="Correlation Matrix")
@@ -949,13 +1049,21 @@ class PortfolioPlots:
             (axes[1], trailing_corr, f"Trailing {trailing_obs}d"),
         ]:
             _heatmap(
-                corr, annot=returns.shape[1] <= 8, fmt=".2f", cmap=cmap,
-                vmin=-1, vmax=1, center=0, ax=ax, square=True,
+                corr,
+                annot=returns.shape[1] <= 8,
+                fmt=".2f",
+                cmap=cmap,
+                vmin=-1,
+                vmax=1,
+                center=0,
+                ax=ax,
+                square=True,
                 annot_kws={"size": C.FONT_TICK - 0.5, "fontweight": "bold"},
-                cbar=False, linewidths=0.45, linecolor=C.FIG_BG,
+                cbar=False,
+                linewidths=0.45,
+                linecolor=C.FIG_BG,
             )
-            ax.set_title(title, color=C.TITLE, fontsize=C.FONT_LABEL,
-                         fontweight="bold", pad=10)
+            ax.set_title(title, color=C.TITLE, fontsize=C.FONT_LABEL, fontweight="bold", pad=10)
             plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
             plt.setp(ax.get_yticklabels(), rotation=0)
 
@@ -973,28 +1081,51 @@ class PortfolioPlots:
             f"Delta: {delta:+.2f}\n"
             f"Assets: {returns.shape[1]}"
         )
-        ax_stats.text(0.0, 0.86, "Summary",
-                      transform=ax_stats.transAxes, ha="left", va="top",
-                      fontsize=C.FONT_LABEL, fontweight="bold", color=C.TITLE)
         ax_stats.text(
-            0.0, 0.76, stats_text,
-            transform=ax_stats.transAxes, ha="left", va="top",
-            fontsize=C.FONT_ANNOT, color=C.LABEL, linespacing=1.55,
-            bbox=dict(boxstyle="round,pad=0.38", fc=C.FIG_BG, ec=C.GRID,
-                      alpha=0.92, lw=0.6),
+            0.0,
+            0.86,
+            "Summary",
+            transform=ax_stats.transAxes,
+            ha="left",
+            va="top",
+            fontsize=C.FONT_LABEL,
+            fontweight="bold",
+            color=C.TITLE,
+        )
+        ax_stats.text(
+            0.0,
+            0.76,
+            stats_text,
+            transform=ax_stats.transAxes,
+            ha="left",
+            va="top",
+            fontsize=C.FONT_ANNOT,
+            color=C.LABEL,
+            linespacing=1.55,
+            bbox=dict(boxstyle="round,pad=0.38", fc=C.FIG_BG, ec=C.GRID, alpha=0.92, lw=0.6),
         )
 
-        fig.suptitle("Correlation Snapshot", x=0.06, y=0.98,
-                     ha="left", fontsize=C.FONT_TITLE, fontweight="bold",
-                     color=C.TITLE)
-        fig.text(0.94, 0.965,
-                 f"Full sample vs recent diversification | Window: {trailing_obs} {reporting_label} obs",
-                 ha="right", va="top", fontsize=C.FONT_ANNOT, color=C.SUBTITLE,
-                 bbox=dict(boxstyle="round,pad=0.22", fc=C.FIG_BG,
-                           ec=C.GRID, alpha=0.78, lw=0.45))
+        fig.suptitle(
+            "Correlation Snapshot",
+            x=0.06,
+            y=0.98,
+            ha="left",
+            fontsize=C.FONT_TITLE,
+            fontweight="bold",
+            color=C.TITLE,
+        )
+        fig.text(
+            0.94,
+            0.965,
+            f"Full sample vs recent diversification | Window: {trailing_obs} {reporting_label} obs",
+            ha="right",
+            va="top",
+            fontsize=C.FONT_ANNOT,
+            color=C.SUBTITLE,
+            bbox=dict(boxstyle="round,pad=0.22", fc=C.FIG_BG, ec=C.GRID, alpha=0.78, lw=0.45),
+        )
 
-        fig.subplots_adjust(left=0.06, right=0.97, top=0.84,
-                            bottom=0.16, wspace=0.34)
+        fig.subplots_adjust(left=0.06, right=0.97, top=0.84, bottom=0.16, wspace=0.34)
         add_watermark(fig)
         return fig
 
@@ -1002,7 +1133,7 @@ class PortfolioPlots:
     @staticmethod
     def plot_portfolio_weights(
         portfolio_calc: PortfolioCalculations,
-        instrument_calc: Optional[InstrumentCalculations] = None,
+        instrument_calc: InstrumentCalculations | None = None,
     ) -> plt.Figure:
         """Stacked area of raw (un-normalised) portfolio weights over time.
 
@@ -1044,18 +1175,28 @@ class PortfolioPlots:
         else:
             w_step = w
 
-        ax.stackplot(w_step.index,
-                     *[w_step.iloc[:, i] for i in range(w_step.shape[1])],
-                     colors=colors, alpha=1.0, linewidth=0,
-                     edgecolor="none")
+        ax.stackplot(
+            w_step.index,
+            *[w_step.iloc[:, i] for i in range(w_step.shape[1])],
+            colors=colors,
+            alpha=1.0,
+            linewidth=0,
+            edgecolor="none",
+        )
 
         style_ax(ax, title="Portfolio Weights Over Time", ylabel="Weight")
         smart_date_axis(ax, w)
 
-        handles = [mpatches.Patch(facecolor=colors[i], label=labels[i])
-                   for i in range(len(labels))]
-        ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.01, 0.5),
-                  framealpha=0.95, fontsize=9.5, edgecolor=C.SPINE, borderpad=0.5)
+        handles = [mpatches.Patch(facecolor=colors[i], label=labels[i]) for i in range(len(labels))]
+        ax.legend(
+            handles=handles,
+            loc="center left",
+            bbox_to_anchor=(1.01, 0.5),
+            framealpha=0.95,
+            fontsize=9.5,
+            edgecolor=C.SPINE,
+            borderpad=0.5,
+        )
 
         fig.tight_layout()
         add_watermark(fig)
@@ -1065,7 +1206,7 @@ class PortfolioPlots:
     @staticmethod
     def plot_percentage_weights(
         portfolio_calc: PortfolioCalculations,
-        instrument_calc: Optional[InstrumentCalculations] = None,
+        instrument_calc: InstrumentCalculations | None = None,
     ) -> plt.Figure:
         """Stacked area of portfolio allocation over time.
 
@@ -1122,23 +1263,26 @@ class PortfolioPlots:
         else:
             w_step = w
 
-        ax.stackplot(w_step.index,
-                     *[w_step.iloc[:, i] for i in range(w_step.shape[1])],
-                     colors=colors, alpha=1.0, linewidth=0,
-                     edgecolor="none")
+        ax.stackplot(
+            w_step.index,
+            *[w_step.iloc[:, i] for i in range(w_step.shape[1])],
+            colors=colors,
+            alpha=1.0,
+            linewidth=0,
+            edgecolor="none",
+        )
         ax.set_ylim(0, 1)
         ax.yaxis.set_major_formatter(mticker.PercentFormatter(1.0, decimals=0))
 
         # Subtitle with allocation stats
-        invested = (1.0 - cash)
+        invested = 1.0 - cash
         avg_invested = invested.mean()
         cash_only_runs = _true_runs(cash >= 0.995)
-        cash_only_days = int((cash >= 0.995).sum())
-        longest_cash = max((r[2] for r in cash_only_runs), default=0)
         first_invested = invested[invested > 0.005]
         first_invested_ts = first_invested.index[0] if not first_invested.empty else None
         runtime_cash_runs = [
-            run for run in cash_only_runs
+            run
+            for run in cash_only_runs
             if first_invested_ts is not None and run[0] > first_invested_ts
         ]
         material_runtime_runs = [run for run in runtime_cash_runs if run[2] >= 20]
@@ -1161,24 +1305,34 @@ class PortfolioPlots:
                 va="top",
                 fontsize=C.FONT_ANNOT,
                 color=C.TITLE,
-                bbox=dict(boxstyle="round,pad=0.34", fc=C.FIG_BG,
-                          ec=_CASH_COLOR, alpha=0.92, lw=0.8),
+                bbox=dict(
+                    boxstyle="round,pad=0.34", fc=C.FIG_BG, ec=_CASH_COLOR, alpha=0.92, lw=0.8
+                ),
                 arrowprops=dict(arrowstyle="-", color=_CASH_COLOR, lw=0.9),
                 zorder=7,
             )
-        subtitle = (f"Avg invested {avg_invested:.0%}  ·  "
-                    f"Avg cash {1 - avg_invested:.0%}  ·  "
-                    f"Risk-off cash {runtime_cash_days}d / longest {runtime_longest_cash}d  ·  "
-                    f"{len(weights.columns)} instruments")
+        subtitle = (
+            f"Avg invested {avg_invested:.0%}  ·  "
+            f"Avg cash {1 - avg_invested:.0%}  ·  "
+            f"Risk-off cash {runtime_cash_days}d / longest {runtime_longest_cash}d  ·  "
+            f"{len(weights.columns)} instruments"
+        )
 
-        style_ax(ax, title="Portfolio Allocation Over Time",
-                 subtitle=subtitle, ylabel="Allocation (%)")
+        style_ax(
+            ax, title="Portfolio Allocation Over Time", subtitle=subtitle, ylabel="Allocation (%)"
+        )
         smart_date_axis(ax, w)
 
-        handles = [mpatches.Patch(facecolor=colors[i], label=labels[i])
-                   for i in range(len(labels))]
-        ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.01, 0.5),
-                  framealpha=0.95, fontsize=9.5, edgecolor=C.SPINE, borderpad=0.5)
+        handles = [mpatches.Patch(facecolor=colors[i], label=labels[i]) for i in range(len(labels))]
+        ax.legend(
+            handles=handles,
+            loc="center left",
+            bbox_to_anchor=(1.01, 0.5),
+            framealpha=0.95,
+            fontsize=9.5,
+            edgecolor=C.SPINE,
+            borderpad=0.5,
+        )
 
         fig.tight_layout()
         add_watermark(fig)
@@ -1228,21 +1382,27 @@ class PortfolioPlots:
 
         # Build matrix: rows = years, columns = months
         matrix = (
-            monthly
-            .groupby([monthly.index.year, monthly.index.month])
+            monthly.groupby([monthly.index.year, monthly.index.month])
             .first()
             .unstack()
             .reindex(columns=range(1, 13))
         )
-        matrix.index.name = None     # remove auto "date" y-label
-        matrix.columns.name = None   # remove auto "date" x-label
+        matrix.index.name = None  # remove auto "date" y-label
+        matrix.columns.name = None  # remove auto "date" x-label
 
         cmap = diverging_cmap()
 
         _heatmap(
-            matrix, annot=True, fmt=".1%", cmap=cmap, center=0, ax=ax,
+            matrix,
+            annot=True,
+            fmt=".1%",
+            cmap=cmap,
+            center=0,
+            ax=ax,
             mask=matrix.isna(),
-            cbar=False, linewidths=0.45, linecolor=C.FIG_BG,
+            cbar=False,
+            linewidths=0.45,
+            linecolor=C.FIG_BG,
             annot_kws={"size": C.FONT_TICK, "fontweight": "bold"},
         )
 
@@ -1253,9 +1413,14 @@ class PortfolioPlots:
                 continue
             color = C.BLUE if yr_ret >= 0 else C.RED
             ax.text(
-                13, i + 0.5, f"{yr_ret:+.1%}",
-                va="center", ha="left", fontweight="bold",
-                fontsize=9.5, color=color,
+                13,
+                i + 0.5,
+                f"{yr_ret:+.1%}",
+                va="center",
+                ha="left",
+                fontweight="bold",
+                fontsize=9.5,
+                color=color,
             )
 
         ax.set_xlim(0, 14)
@@ -1272,8 +1437,7 @@ class PortfolioPlots:
         subtitle = f"Win Rate: {win_rate:.0f}% ({pos_m}/{total_m} active months)"
         if first_active_month is not None:
             subtitle += f"  |  Active from {first_active_month:%b %Y}"
-        style_ax(ax, title="Monthly Returns Heatmap",
-                 subtitle=subtitle)
+        style_ax(ax, title="Monthly Returns Heatmap", subtitle=subtitle)
 
         fig.tight_layout()
         add_watermark(fig)
@@ -1300,10 +1464,9 @@ class PortfolioPlots:
 
         returns = portfolio_calc.returns.replace([np.inf, -np.inf], np.nan).dropna()
 
-        rules = {"D": "Daily", "W": "Weekly", "ME": "Monthly",
-                 "QE": "Quarterly", "YE": "Yearly"}
-        data_list: List[np.ndarray] = []
-        tick_labels: List[str] = []
+        rules = {"D": "Daily", "W": "Weekly", "ME": "Monthly", "QE": "Quarterly", "YE": "Yearly"}
+        data_list: list[np.ndarray] = []
+        tick_labels: list[str] = []
         for rule, label in rules.items():
             r = returns.resample(rule).last().dropna()
             r = r.replace([np.inf, -np.inf], np.nan).dropna()
@@ -1315,16 +1478,24 @@ class PortfolioPlots:
             raise ValueError("All resampled datasets are empty.")
 
         bp = ax.boxplot(
-            data_list, tick_labels=tick_labels, patch_artist=True, notch=True,
+            data_list,
+            tick_labels=tick_labels,
+            patch_artist=True,
+            notch=True,
             medianprops=dict(color=C.TITLE, lw=1.2),
             whiskerprops=dict(color=C.NAVY, lw=0.8),
             capprops=dict(color=C.NAVY, lw=0.8),
-            flierprops=dict(marker="o", markersize=3, markerfacecolor=C.MUTED,
-                            markeredgecolor=C.MUTED, alpha=0.5),
+            flierprops=dict(
+                marker="o",
+                markersize=3,
+                markerfacecolor=C.MUTED,
+                markeredgecolor=C.MUTED,
+                alpha=0.5,
+            ),
         )
 
-        box_colors = [C.ICE, C.PALE, C.LIGHT, C.STEEL, C.BLUE][:len(data_list)]
-        for patch, color in zip(bp["boxes"], box_colors):
+        box_colors = [C.ICE, C.PALE, C.LIGHT, C.STEEL, C.BLUE][: len(data_list)]
+        for patch, color in zip(bp["boxes"], box_colors, strict=True):
             patch.set_facecolor(color)
             patch.set_alpha(0.80)
             patch.set_edgecolor(C.NAVY)
@@ -1333,8 +1504,12 @@ class PortfolioPlots:
         ax.axhline(0, color=C.SPINE, ls="-", lw=0.7)
 
         daily_median = np.median(data_list[0]) if data_list else 0
-        style_ax(ax, title="Return Quantiles by Period", ylabel="Return (%)",
-                 subtitle=f"Daily Median: {daily_median:+.3f}%  |  Periods: {len(tick_labels)}")
+        style_ax(
+            ax,
+            title="Return Quantiles by Period",
+            ylabel="Return (%)",
+            subtitle=f"Daily Median: {daily_median:+.3f}%  |  Periods: {len(tick_labels)}",
+        )
 
         fig.tight_layout()
         add_watermark(fig)
@@ -1365,23 +1540,44 @@ class PortfolioPlots:
         annual = (1 + returns).groupby(returns.index.year).prod() - 1
 
         bar_colors = [C.BLUE if v >= 0 else C.RED for v in annual.values]
-        bars = ax.bar(annual.index.astype(str), annual.values, color=bar_colors,
-                      edgecolor=C.EDGE, linewidth=C.LW_EDGE + 0.3, width=0.75, zorder=3,
-                      alpha=C.FILL_HEAVY + 0.05)
+        bars = ax.bar(
+            annual.index.astype(str),
+            annual.values,
+            color=bar_colors,
+            edgecolor=C.EDGE,
+            linewidth=C.LW_EDGE + 0.3,
+            width=0.75,
+            zorder=3,
+            alpha=C.FILL_HEAVY + 0.05,
+        )
 
         # Value labels
-        for bar, val in zip(bars, annual.values):
+        for bar, val in zip(bars, annual.values, strict=True):
             y_offset = 0.005 if val >= 0 else -0.005
             va = "bottom" if val >= 0 else "top"
-            ax.text(bar.get_x() + bar.get_width() / 2, val + y_offset,
-                    f"{val:.1%}", ha="center", va=va, fontsize=C.FONT_ANNOT - 1,
-                    fontweight="bold", color=C.LABEL)
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                val + y_offset,
+                f"{val:.1%}",
+                ha="center",
+                va=va,
+                fontsize=C.FONT_ANNOT - 1,
+                fontweight="bold",
+                color=C.LABEL,
+            )
 
         # Average line
         avg = annual.mean()
         ax.axhline(avg, color=C.BENCHMARK, ls=C.BENCHMARK_LS, lw=C.LW_THIN, zorder=4)
-        ax.text(len(annual) - 0.5, avg, f"  Avg: {avg:.1%}",
-                fontsize=8.5, color=C.BENCHMARK, va="center", fontweight="bold")
+        ax.text(
+            len(annual) - 0.5,
+            avg,
+            f"  Avg: {avg:.1%}",
+            fontsize=8.5,
+            color=C.BENCHMARK,
+            va="center",
+            fontweight="bold",
+        )
 
         ax.axhline(0, color=C.SPINE, lw=0.7)
         ax.yaxis.set_major_formatter(mticker.PercentFormatter(1.0, decimals=0))
@@ -1395,11 +1591,9 @@ class PortfolioPlots:
             Line2D([], [], color=C.RED, lw=6, label="Negative"),
             Line2D([], [], color=C.BENCHMARK, lw=C.LW_THIN, ls=C.BENCHMARK_LS, label="Average"),
         ]
-        ax.legend(handles=handles, loc="upper right", frameon=False,
-                  fontsize=C.FONT_TICK)
+        ax.legend(handles=handles, loc="upper right", frameon=False, fontsize=C.FONT_TICK)
 
-        style_ax(ax, title="Annual Returns", ylabel="Return (%)",
-                 subtitle=subtitle)
+        style_ax(ax, title="Annual Returns", ylabel="Return (%)", subtitle=subtitle)
 
         fig.tight_layout()
         add_watermark(fig)
@@ -1432,15 +1626,28 @@ class PortfolioPlots:
         n_bins = min(50, max(15, len(m_pct) // 3))
         bins_arr = np.linspace(m_pct.min(), m_pct.max(), n_bins)
         n_vals, bin_edges, patches = ax.hist(
-            m_pct, bins=bins_arr, density=True, alpha=0.82,
-            edgecolor=C.EDGE, linewidth=C.LW_EDGE, color=C.BLUE, zorder=2,
+            m_pct,
+            bins=bins_arr,
+            density=True,
+            alpha=0.82,
+            edgecolor=C.EDGE,
+            linewidth=C.LW_EDGE,
+            color=C.BLUE,
+            zorder=2,
         )
 
         # Normal overlay
         mu, sigma = m_pct.mean(), m_pct.std()
         x_norm = np.linspace(m_pct.min() - 2, m_pct.max() + 2, 300)
-        ax.plot(x_norm, stats.norm.pdf(x_norm, mu, sigma),
-                color=C.MUTED, ls="--", lw=C.LW_SECONDARY - 0.2, zorder=3, label="Normal")
+        ax.plot(
+            x_norm,
+            stats.norm.pdf(x_norm, mu, sigma),
+            color=C.MUTED,
+            ls="--",
+            lw=C.LW_SECONDARY - 0.2,
+            zorder=3,
+            label="Normal",
+        )
 
         # Mean / zero lines
         ax.axvline(mu, color=C.BENCHMARK, ls=C.BENCHMARK_LS, lw=C.LW_THIN, zorder=5)
@@ -1462,14 +1669,23 @@ class PortfolioPlots:
         handles = [
             Line2D([], [], color=C.BLUE, lw=6, alpha=0.75, label="Monthly Returns"),
             Line2D([], [], color=C.MUTED, lw=1.0, ls="--", label="Normal"),
-            Line2D([], [], color=C.BENCHMARK, lw=C.LW_THIN, ls=C.BENCHMARK_LS,
-                   label=f"Mean ({mu:.2f}%)"),
+            Line2D(
+                [],
+                [],
+                color=C.BENCHMARK,
+                lw=C.LW_THIN,
+                ls=C.BENCHMARK_LS,
+                label=f"Mean ({mu:.2f}%)",
+            ),
         ]
-        ax.legend(handles=handles, loc="upper left", frameon=False,
-                  fontsize=C.FONT_TICK)
+        ax.legend(handles=handles, loc="upper left", frameon=False, fontsize=C.FONT_TICK)
 
-        style_ax(ax, title="Distribution of Monthly Returns",
-                 xlabel="Monthly Return (%)", ylabel="Density")
+        style_ax(
+            ax,
+            title="Distribution of Monthly Returns",
+            xlabel="Monthly Return (%)",
+            ylabel="Density",
+        )
 
         fig.tight_layout()
         add_watermark(fig)
@@ -1515,19 +1731,21 @@ class PortfolioPlots:
         if others != 0:
             main_w["Others"] = others
 
-        labels = [_clean_label(l) for l in main_w.index]
+        labels = [_clean_label(label) for label in main_w.index]
         colors = _allocation_colors(labels, asset_alpha=0.96, cash_alpha=0.68)
 
         pie_values = main_w.abs()
         pie_total = float(pie_values.sum())
         wedges, texts, autotexts = ax.pie(
-            pie_values.values, labels=None,
+            pie_values.values,
+            labels=None,
             autopct=lambda p: f"{p:.1f}%" if p >= 6 else "",
-            startangle=90, colors=colors,
+            startangle=90,
+            colors=colors,
             wedgeprops=dict(width=0.42, edgecolor=C.FIG_BG, linewidth=1.4),
             pctdistance=0.75,
         )
-        for wedge, at in zip(wedges, autotexts):
+        for wedge, at in zip(wedges, autotexts, strict=True):
             at.set_fontsize(C.FONT_TICK)
             if at.get_text():
                 r, g, b, _ = wedge.get_facecolor()
@@ -1539,19 +1757,34 @@ class PortfolioPlots:
 
         # Centre text
         strategy_name = getattr(portfolio_calc.portfolio_data, "name", "Portfolio")
-        ax.text(0, 0, strategy_name, ha="center", va="center",
-                fontsize=C.FONT_LABEL, fontweight="bold", color=C.TITLE)
+        ax.text(
+            0,
+            0,
+            strategy_name,
+            ha="center",
+            va="center",
+            fontsize=C.FONT_LABEL,
+            fontweight="bold",
+            color=C.TITLE,
+        )
 
         # Legend
         leg_labels = [
-            f"{labels[i]}  {pie_values.iloc[i] / pie_total:.1%}"
-            for i in range(len(labels))
+            f"{labels[i]}  {pie_values.iloc[i] / pie_total:.1%}" for i in range(len(labels))
         ]
-        handles = [mpatches.Patch(facecolor=colors[i], label=leg_labels[i])
-                   for i in range(len(labels))]
-        ax.legend(handles=handles, loc="center left", bbox_to_anchor=(0.95, 0.5),
-                  framealpha=0.88, fontsize=C.FONT_TICK, edgecolor=C.GRID, borderpad=0.5,
-                  labelspacing=0.6)
+        handles = [
+            mpatches.Patch(facecolor=colors[i], label=leg_labels[i]) for i in range(len(labels))
+        ]
+        ax.legend(
+            handles=handles,
+            loc="center left",
+            bbox_to_anchor=(0.95, 0.5),
+            framealpha=0.88,
+            fontsize=C.FONT_TICK,
+            edgecolor=C.GRID,
+            borderpad=0.5,
+            labelspacing=0.6,
+        )
 
         style_ax(ax, title="Portfolio Composition")
 
@@ -1574,9 +1807,9 @@ class PortfolioPlots:
     def plot_rolling_sortino_ratio(
         portfolio_calc: PortfolioCalculations,
         window: int = 252,
-        periods_per_year: Optional[int] = None,
+        periods_per_year: int | None = None,
         reporting_label: str = "daily",
-        benchmark_returns: Optional[pd.Series] = None,
+        benchmark_returns: pd.Series | None = None,
         benchmark_name: str = "Benchmark",
         show_regime: bool = False,
     ) -> plt.Figure:
@@ -1603,9 +1836,10 @@ class PortfolioPlots:
             roll_mean = ret.rolling(window).mean() * periods_per_year
             neg = ret.copy()
             neg[neg >= 0] = np.nan  # NaN out positives (don't zero them)
-            roll_down_std = neg.rolling(window, min_periods=max(2, window // 10)).std() * np.sqrt(periods_per_year)
-            sortino = (roll_mean / roll_down_std).replace(
-                [np.inf, -np.inf], np.nan)
+            roll_down_std = neg.rolling(window, min_periods=max(2, window // 10)).std() * np.sqrt(
+                periods_per_year
+            )
+            sortino = (roll_mean / roll_down_std).replace([np.inf, -np.inf], np.nan)
 
         sortino = sortino.dropna()
 
@@ -1616,46 +1850,79 @@ class PortfolioPlots:
 
         ax.plot(sortino.index, sortino.values, color=C.BLUE, lw=C.LW_MAIN, zorder=4)
 
-        ax.fill_between(sortino.index, sortino.values, 0,
-                        where=sortino.values >= 0, color=C.BLUE, alpha=0.045,
-                        interpolate=True, zorder=1)
-        ax.fill_between(sortino.index, sortino.values, 0,
-                        where=sortino.values < 0, color=C.RED, alpha=0.055,
-                        interpolate=True, zorder=1)
+        ax.fill_between(
+            sortino.index,
+            sortino.values,
+            0,
+            where=sortino.values >= 0,
+            color=C.BLUE,
+            alpha=0.045,
+            interpolate=True,
+            zorder=1,
+        )
+        ax.fill_between(
+            sortino.index,
+            sortino.values,
+            0,
+            where=sortino.values < 0,
+            color=C.RED,
+            alpha=0.055,
+            interpolate=True,
+            zorder=1,
+        )
 
         for lev in [0, 1.0]:
             ax.axhline(lev, color=C.SPINE, ls=":", lw=0.55, alpha=0.55)
 
         avg_sort = _safe_float(sortino.mean())
-        ax.axhline(avg_sort, color=C.BENCHMARK, ls=C.BENCHMARK_LS,
-                   lw=C.LW_THIN, alpha=0.9, zorder=3)
+        ax.axhline(
+            avg_sort, color=C.BENCHMARK, ls=C.BENCHMARK_LS, lw=C.LW_THIN, alpha=0.9, zorder=3
+        )
 
         endpoint_annotation(ax, sortino, "Current", C.BLUE, fmt="ratio")
-        endpoint_annotation(ax, pd.Series(avg_sort, index=[sortino.index[-1]]),
-                            "Average", C.BENCHMARK, fmt="ratio", offset=(8, -16))
+        endpoint_annotation(
+            ax,
+            pd.Series(avg_sort, index=[sortino.index[-1]]),
+            "Average",
+            C.BENCHMARK,
+            fmt="ratio",
+            offset=(8, -16),
+        )
 
         time_above_1 = (sortino > 1).mean() * 100
         time_above_0 = (sortino > 0).mean() * 100
-        stats_text = (f"Time > 1.0: {time_above_1:.0f}%\n"
-                      f"Time > 0.0: {time_above_0:.0f}%")
+        stats_text = f"Time > 1.0: {time_above_1:.0f}%\nTime > 0.0: {time_above_0:.0f}%"
         _stats_box(ax, stats_text, loc="upper right")
 
         handles = [
             Line2D([], [], color=C.BLUE, lw=C.LW_MAIN, label="Sortino Ratio"),
-            Line2D([], [], color=C.BENCHMARK, lw=C.LW_THIN, ls=C.BENCHMARK_LS,
-                   label=f"Average ({avg_sort:.2f})"),
+            Line2D(
+                [],
+                [],
+                color=C.BENCHMARK,
+                lw=C.LW_THIN,
+                ls=C.BENCHMARK_LS,
+                label=f"Average ({avg_sort:.2f})",
+            ),
         ]
         if regime is not None and not regime.empty:
             handles.extend(_regime_legend_handles())
-        ax.legend(handles=handles, loc="upper left", frameon=False,
-                  fontsize=C.FONT_TICK, ncol=2 if regime is not None else 1)
+        ax.legend(
+            handles=handles,
+            loc="upper left",
+            frameon=False,
+            fontsize=C.FONT_TICK,
+            ncol=2 if regime is not None else 1,
+        )
 
-        subtitle = (f"Window: {window} {reporting_label} obs  |  Current: {_safe_float(sortino.iloc[-1]):.2f}  |  "
-                    f"Average: {avg_sort:.2f}")
+        subtitle = (
+            f"Window: {window} {reporting_label} obs  |  "
+            f"Current: {_safe_float(sortino.iloc[-1]):.2f}  |  "
+            f"Average: {avg_sort:.2f}"
+        )
         if regime is not None and not regime.empty:
             subtitle += f"  |  {_regime_summary_text(regime, benchmark_name)}"
-        style_ax(ax, title="Rolling Sortino Ratio", ylabel="Sortino Ratio",
-                 subtitle=subtitle)
+        style_ax(ax, title="Rolling Sortino Ratio", ylabel="Sortino Ratio", subtitle=subtitle)
         smart_date_axis(ax, sortino)
 
         fig.tight_layout()
@@ -1694,8 +1961,8 @@ class PortfolioPlots:
         n_assets = len(cols)
 
         # Build all pairwise rolling correlations
-        pairs: List[Tuple[str, str]] = []
-        pair_corrs: List[pd.Series] = []
+        pairs: list[tuple[str, str]] = []
+        pair_corrs: list[pd.Series] = []
         for i in range(n_assets):
             for j in range(i + 1, n_assets):
                 rc = returns.iloc[:, i].rolling(window).corr(returns.iloc[:, j])
@@ -1703,9 +1970,16 @@ class PortfolioPlots:
                 pair_corrs.append(rc)
 
         if not pair_corrs:
-            ax.text(0.5, 0.5, "Insufficient assets for correlations",
-                    transform=ax.transAxes, ha="center", va="center",
-                    fontsize=12, color=C.MUTED)
+            ax.text(
+                0.5,
+                0.5,
+                "Insufficient assets for correlations",
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                fontsize=12,
+                color=C.MUTED,
+            )
             style_ax(ax, title="Rolling Asset Correlations")
             fig.tight_layout()
             add_watermark(fig)
@@ -1713,38 +1987,44 @@ class PortfolioPlots:
 
         # Select top-5 most volatile pairs
         volatilities = [pc.std() for pc in pair_corrs]
-        top_idx = np.argsort(volatilities)[-min(5, len(volatilities)):]
+        top_idx = np.argsort(volatilities)[-min(5, len(volatilities)) :]
 
         for idx_i, pidx in enumerate(top_idx):
             pc = pair_corrs[pidx].dropna()
             label = f"{pairs[pidx][0]} / {pairs[pidx][1]}"
             color = mcolors.to_rgba(_ALLOCATION_COLORS[idx_i % len(_ALLOCATION_COLORS)], 0.96)
-            ax.plot(pc.index, pc.values, color=color, lw=C.LW_SECONDARY,
-                    label=label, zorder=3)
+            ax.plot(pc.index, pc.values, color=color, lw=C.LW_SECONDARY, label=label, zorder=3)
 
         # Aggregate band
         all_corrs = pd.concat(pair_corrs, axis=1).dropna(how="all")
         mean_corr = all_corrs.mean(axis=1)
         std_corr = all_corrs.std(axis=1)
-        ax.fill_between(mean_corr.index,
-                        (mean_corr - std_corr).values,
-                        (mean_corr + std_corr).values,
-                        color=C.BLUE, alpha=0.09, zorder=1,
-                        label="Mean +/- 1 Sigma")
-        ax.plot(mean_corr.index, mean_corr.values, color=C.BLUE, lw=C.LW_HAIR + 0.4,
-                ls="--", zorder=2)
+        ax.fill_between(
+            mean_corr.index,
+            (mean_corr - std_corr).values,
+            (mean_corr + std_corr).values,
+            color=C.BLUE,
+            alpha=0.09,
+            zorder=1,
+            label="Mean +/- 1 Sigma",
+        )
+        ax.plot(
+            mean_corr.index, mean_corr.values, color=C.BLUE, lw=C.LW_HAIR + 0.4, ls="--", zorder=2
+        )
 
         # Reference lines
         for lev in [0.5, 0.7]:
             ax.axhline(lev, color=C.SPINE, ls=":", lw=0.6, alpha=0.4)
         ax.axhline(0, color=C.SPINE, ls="-", lw=0.7)
 
-        ax.legend(loc="upper left", framealpha=0.92, fontsize=8,
-                  edgecolor=C.GRID, ncol=2)
+        ax.legend(loc="upper left", framealpha=0.92, fontsize=8, edgecolor=C.GRID, ncol=2)
 
-        style_ax(ax, title="Rolling Asset Correlations",
-                 ylabel="Correlation",
-                 subtitle=f"Window: {window} {reporting_label} obs  |  Top-5 most volatile pairs")
+        style_ax(
+            ax,
+            title="Rolling Asset Correlations",
+            ylabel="Correlation",
+            subtitle=f"Window: {window} {reporting_label} obs  |  Top-5 most volatile pairs",
+        )
         smart_date_axis(ax, mean_corr)
 
         fig.tight_layout()
@@ -1758,7 +2038,7 @@ class PortfolioPlots:
     @staticmethod
     def plot_rolling_weights(
         portfolio_calc: PortfolioCalculations,
-        instrument_calc: Optional[InstrumentCalculations] = None,
+        instrument_calc: InstrumentCalculations | None = None,
         window: int = 30,
     ) -> plt.Figure:
         """Stacked area of smoothed rolling weights over time.
@@ -1787,18 +2067,28 @@ class PortfolioPlots:
         labels = [_clean_label(c) for c in smooth.columns]
         colors = _allocation_colors(labels, asset_alpha=0.92, cash_alpha=0.64)
 
-        ax.stackplot(smooth.index,
-                     *[smooth.iloc[:, i] for i in range(smooth.shape[1])],
-                     labels=labels, colors=colors, alpha=1.0, linewidth=0)
+        ax.stackplot(
+            smooth.index,
+            *[smooth.iloc[:, i] for i in range(smooth.shape[1])],
+            labels=labels,
+            colors=colors,
+            alpha=1.0,
+            linewidth=0,
+        )
 
-        style_ax(ax, title=f"Rolling Weights ({window}-day smoothed)",
-                 ylabel="Weight")
+        style_ax(ax, title=f"Rolling Weights ({window}-day smoothed)", ylabel="Weight")
         smart_date_axis(ax, smooth)
 
-        handles = [mpatches.Patch(facecolor=colors[i], label=labels[i])
-                   for i in range(len(labels))]
-        ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.01, 0.5),
-                  framealpha=0.95, fontsize=9.5, edgecolor=C.SPINE, borderpad=0.5)
+        handles = [mpatches.Patch(facecolor=colors[i], label=labels[i]) for i in range(len(labels))]
+        ax.legend(
+            handles=handles,
+            loc="center left",
+            bbox_to_anchor=(1.01, 0.5),
+            framealpha=0.95,
+            fontsize=9.5,
+            edgecolor=C.SPINE,
+            borderpad=0.5,
+        )
 
         fig.tight_layout()
         add_watermark(fig)

@@ -1,0 +1,8 @@
+# Default ownership and release-quality review boundaries.
+* @jpolec
+
+/.github/workflows/ @jpolec
+/quality/mypy-baseline.json @jpolec
+/release/ @jpolec
+/tools/verify_public_release.py @jpolec
+

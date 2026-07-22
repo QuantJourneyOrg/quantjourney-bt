@@ -9,7 +9,7 @@ Example Orders 04 - Limit Trend Pullback
 Mode: orders.
 Order type: LIMIT.
 Idea: in an uptrend, wait for a 1% pullback before entering.
-Universe: five large-cap stocks.
+Universe: three predeclared liquid ETFs: SPY, QQQ and IWM.
 
 If close is above SMA(50), the strategy places a limit buy below the close.
 Once long, it places a 4% limit take-profit and exits at market if trend fails.
@@ -42,7 +42,9 @@ class LimitTrendPullback(Backtester):
     """Trend-following entry that waits for a passive pullback fill."""
 
     def _has_pending(self, instrument: str) -> bool:
-        return any(o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders)
+        return any(
+            o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders
+        )
 
     def _compute_orders(self, date, bars, current_positions, nav) -> None:
         sma = self.instruments_data.get_feature("SMA_50_close")
@@ -61,27 +63,31 @@ class LimitTrendPullback(Backtester):
             if pos == 0 and not pending and bar.close > trend:
                 shares = int(nav * 0.12 / bar.close)
                 if shares > 0:
-                    self.fill_engine.submit(Order(
-                        inst,
-                        OrderSide.BUY,
-                        shares,
-                        OrderType.LIMIT,
-                        limit_price=round(bar.close * 0.99, 2),
-                        expires_after_bars=2,
-                    ))
+                    self.fill_engine.submit(
+                        Order(
+                            inst,
+                            OrderSide.BUY,
+                            shares,
+                            OrderType.LIMIT,
+                            limit_price=round(bar.close * 0.99, 2),
+                            expires_after_bars=2,
+                        )
+                    )
             elif pos > 0 and bar.close < trend:
                 self.fill_engine.cancel_all(instrument=inst)
                 self.fill_engine.submit(Order(inst, OrderSide.SELL, pos, OrderType.MARKET))
             elif pos > 0 and not pending:
                 entry = self.get_average_entry_price(inst) or bar.close
-                self.fill_engine.submit(Order(
-                    inst,
-                    OrderSide.SELL,
-                    pos,
-                    OrderType.LIMIT,
-                    limit_price=round(entry * 1.04, 2),
-                    expires_after_bars=5,
-                ))
+                self.fill_engine.submit(
+                    Order(
+                        inst,
+                        OrderSide.SELL,
+                        pos,
+                        OrderType.LIMIT,
+                        limit_price=round(entry * 1.04, 2),
+                        expires_after_bars=5,
+                    )
+                )
 
 
 async def main() -> None:
@@ -89,8 +95,10 @@ async def main() -> None:
         **_credentials(),
         strategy_name="ExampleOrders04_LimitTrendPullback",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
-        backtest_period={"start": "2020-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "QQQ", "IWM"],
+        backtest_period={"start": "2001-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="orders",
         max_position_size=0.20,

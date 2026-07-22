@@ -9,7 +9,7 @@ Example Orders 01 - Market SMA Crossover
 Mode: orders.
 Order type: MARKET.
 Idea: buy on SMA(20) crossing above SMA(50), sell on the reverse cross.
-Universe: five liquid technology stocks.
+Universe: three predeclared liquid ETFs: SPY, QQQ and IWM.
 
 This is the simplest order-mode template: the strategy submits explicit market
 orders, and the FillEngine handles fills, slippage and commissions.
@@ -46,7 +46,9 @@ class MarketSMACrossover(Backtester):
         self._prev_signal = {}
 
     def _has_pending(self, instrument: str) -> bool:
-        return any(o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders)
+        return any(
+            o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders
+        )
 
     def _compute_orders(self, date, bars, current_positions, nav) -> None:
         sma_fast = self.instruments_data.get_feature("SMA_20_close")
@@ -81,8 +83,10 @@ async def main() -> None:
         **_credentials(),
         strategy_name="ExampleOrders01_MarketSMACross",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
-        backtest_period={"start": "2020-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "QQQ", "IWM"],
+        backtest_period={"start": "2001-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="orders",
         max_position_size=0.25,

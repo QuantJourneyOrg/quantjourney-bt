@@ -32,12 +32,7 @@ Usage::
         cancel_check=lambda: False,
     )
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
@@ -46,7 +41,8 @@ from __future__ import annotations
 import inspect
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -69,12 +65,12 @@ def _check_optuna():
     """Guard import — raises helpful error if optuna missing."""
     try:
         import optuna  # noqa: F401
+
         return optuna
-    except ImportError:
+    except ImportError as exc:
         raise ImportError(
-            "Optuna is required for OptunaOptimizer. "
-            "Install with: pip install optuna"
-        )
+            "Optuna is required for OptunaOptimizer. Install with: pip install optuna"
+        ) from exc
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -95,7 +91,7 @@ def _suggest_param(trial, name: str, spec: dict) -> Any:
     ptype = spec.get("type", "float")
 
     if ptype == "int":
-        kwargs: Dict[str, Any] = {"name": name, "low": int(spec["low"]), "high": int(spec["high"])}
+        kwargs: dict[str, Any] = {"name": name, "low": int(spec["low"]), "high": int(spec["high"])}
         if spec.get("step"):
             kwargs["step"] = int(spec["step"])
         if spec.get("log"):
@@ -130,7 +126,7 @@ def _make_distribution(spec: dict):
             log=bool(spec.get("log", False)),
         )
     elif ptype == "float":
-        kw: Dict[str, Any] = {"low": float(spec["low"]), "high": float(spec["high"])}
+        kw: dict[str, Any] = {"low": float(spec["low"]), "high": float(spec["high"])}
         if spec.get("step"):
             kw["step"] = float(spec["step"])
         if spec.get("log"):
@@ -163,9 +159,7 @@ def _create_sampler(name: str, seed: int, n_startup: int = 10):
     elif name == "random":
         return optuna.samplers.RandomSampler(seed=seed)
     else:
-        raise ValueError(
-            f"Unknown sampler {name!r}. Valid: {_VALID_SAMPLERS}"
-        )
+        raise ValueError(f"Unknown sampler {name!r}. Valid: {_VALID_SAMPLERS}")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -179,18 +173,20 @@ def _create_pruner(name: str):
         return optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=3)
     elif name == "percentile":
         return optuna.pruners.PercentilePruner(
-            percentile=25.0, n_startup_trials=5, n_warmup_steps=3,
+            percentile=25.0,
+            n_startup_trials=5,
+            n_warmup_steps=3,
         )
     elif name == "hyperband":
         return optuna.pruners.HyperbandPruner(
-            min_resource=1, max_resource=10, reduction_factor=3,
+            min_resource=1,
+            max_resource=10,
+            reduction_factor=3,
         )
     elif name == "none":
         return optuna.pruners.NopPruner()
     else:
-        raise ValueError(
-            f"Unknown pruner {name!r}. Valid: {_VALID_PRUNERS}"
-        )
+        raise ValueError(f"Unknown pruner {name!r}. Valid: {_VALID_PRUNERS}")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -226,20 +222,20 @@ class OptunaOptimizer:
 
     def __init__(
         self,
-        param_space: Dict[str, Any] | None = None,
+        param_space: dict[str, Any] | None = None,
         n_trials: int = 100,
         n_jobs: int = 1,
         timeout: float | None = None,
         objective: str = "sharpe",
         direction: str = "maximize",
-        directions: List[str] | None = None,  # multi-objective
+        directions: list[str] | None = None,  # multi-objective
         sampler: str = "tpe",
         pruner: str = "none",
         seed: int = 42,
         n_startup_trials: int = 10,
         patience: int | None = None,  # convergence early-stop
-        warm_start_trials: List[Dict[str, Any]] | None = None,
-        constraints: List[Dict[str, Any]] | None = None,
+        warm_start_trials: list[dict[str, Any]] | None = None,
+        constraints: list[dict[str, Any]] | None = None,
         verbose: bool = False,
         **kwargs: Any,
     ) -> None:
@@ -263,9 +259,9 @@ class OptunaOptimizer:
 
     # ── Normalise legacy tuple format to dict ──
     @staticmethod
-    def _normalise_space(space: Dict[str, Any]) -> Dict[str, dict]:
+    def _normalise_space(space: dict[str, Any]) -> dict[str, dict]:
         """Convert mixed tuple/dict param specs to uniform dict format."""
-        out: Dict[str, dict] = {}
+        out: dict[str, dict] = {}
         for name, spec in space.items():
             if isinstance(spec, dict):
                 out[name] = spec
@@ -278,19 +274,18 @@ class OptunaOptimizer:
                     out[name] = {"type": ptype, "low": spec[1], "high": spec[2]}
             else:
                 raise ValueError(
-                    f"Invalid param spec for {name!r}: {spec!r}. "
-                    "Expected dict or tuple."
+                    f"Invalid param spec for {name!r}: {spec!r}. Expected dict or tuple."
                 )
         return out
 
     # ── Core API ──
     def optimize_fn(
         self,
-        evaluate_fn: Callable[[Dict[str, Any]], float | Tuple[float, ...]],
+        evaluate_fn: Callable[[dict[str, Any]], float | tuple[float, ...]],
         *,
-        progress_callback: Callable[[Dict[str, Any]], None] | None = None,
+        progress_callback: Callable[[dict[str, Any]], None] | None = None,
         cancel_check: Callable[[], bool] | None = None,
-        metrics_fn: Callable[[Dict[str, Any]], Dict[str, float]] | None = None,
+        metrics_fn: Callable[[dict[str, Any]], dict[str, float]] | None = None,
     ) -> OptimizationResult:
         """
         Run optimization using a synchronous evaluation function.
@@ -315,14 +310,12 @@ class OptunaOptimizer:
 
         t0 = time.time()
         is_multi = self._directions is not None and len(self._directions) > 1
-        trial_records: List[TrialRecord] = []
-        convergence: List[float] = []
+        trial_records: list[TrialRecord] = []
+        convergence: list[float] = []
 
         # Direction-aware improvement tracking: comparisons happen in
         # "signed" space so minimize studies do not spuriously early-stop.
-        primary_direction = (
-            self._directions[0] if is_multi else self._direction
-        )
+        primary_direction = self._directions[0] if is_multi else self._direction
         sign = -1.0 if primary_direction == "minimize" else 1.0
         best_signed = -np.inf
         best_so_far = np.nan  # actual best objective value (unsigned)
@@ -362,8 +355,7 @@ class OptunaOptimizer:
         # ── Warm-start: enqueue prior best trials ──
         if self._warm_start_trials:
             distributions = {
-                name: _make_distribution(spec)
-                for name, spec in self._param_space.items()
+                name: _make_distribution(spec) for name, spec in self._param_space.items()
             }
             for prior in self._warm_start_trials:
                 try:
@@ -377,7 +369,7 @@ class OptunaOptimizer:
                     logger.warning("Warm-start trial skipped: %s", e)
 
         # ── Objective ──
-        def objective(trial: optuna.Trial) -> float | Tuple[float, ...]:
+        def objective(trial: optuna.Trial) -> float | tuple[float, ...]:
             nonlocal best_signed, best_so_far, no_improve_count, _cancel_flag
 
             # Cancel check
@@ -398,7 +390,7 @@ class OptunaOptimizer:
                 raise optuna.TrialPruned()
 
             # Suggest params
-            params: Dict[str, Any] = {}
+            params: dict[str, Any] = {}
             for name, spec in self._param_space.items():
                 params[name] = _suggest_param(trial, name, spec)
 
@@ -415,14 +407,16 @@ class OptunaOptimizer:
                 raise
             except Exception as e:
                 logger.warning("Trial %d failed: %s", trial.number, e)
-                trial_records.append(TrialRecord(
-                    number=trial.number,
-                    params=params,
-                    value=float("-inf"),
-                    duration_seconds=time.time() - trial_t0,
-                    state="FAIL",
-                ))
-                raise optuna.TrialPruned()
+                trial_records.append(
+                    TrialRecord(
+                        number=trial.number,
+                        params=params,
+                        value=float("-inf"),
+                        duration_seconds=time.time() - trial_t0,
+                        state="FAIL",
+                    )
+                )
+                raise optuna.TrialPruned() from e
 
             trial_duration = time.time() - trial_t0
 
@@ -472,18 +466,20 @@ class OptunaOptimizer:
                 remaining = self._n_trials - trial.number - 1
                 eta = avg_time * remaining
 
-                progress_callback({
-                    "trial": trial.number,
-                    "total": self._n_trials,
-                    "value": primary,
-                    "best": best_so_far,
-                    "params": params,
-                    "metrics": trial_metrics,
-                    "elapsed": round(elapsed, 1),
-                    "eta": round(max(0, eta), 1),
-                    "no_improve": no_improve_count,
-                    "patience": patience,
-                })
+                progress_callback(
+                    {
+                        "trial": trial.number,
+                        "total": self._n_trials,
+                        "value": primary,
+                        "best": best_so_far,
+                        "params": params,
+                        "metrics": trial_metrics,
+                        "elapsed": round(elapsed, 1),
+                        "eta": round(max(0, eta), 1),
+                        "no_improve": no_improve_count,
+                        "patience": patience,
+                    }
+                )
 
             if is_multi and values_list:
                 return tuple(values_list)
@@ -513,11 +509,7 @@ class OptunaOptimizer:
         # real failures from our own records and make total failure LOUD.
         n_failed_records = sum(1 for t in trial_records if t.state == "FAIL")
         n_completed_records = sum(1 for t in trial_records if t.state == "COMPLETE")
-        all_failed = (
-            len(trial_records) > 0
-            and n_completed_records == 0
-            and n_failed_records > 0
-        )
+        all_failed = len(trial_records) > 0 and n_completed_records == 0 and n_failed_records > 0
         if all_failed:
             logger.error(
                 "OptunaOptimizer: ALL %d evaluated trials failed — "
@@ -532,8 +524,7 @@ class OptunaOptimizer:
             best_params = best_trials_pareto[0].params if best_trials_pareto else {}
             best_value = best_trials_pareto[0].values[0] if best_trials_pareto else 0.0
             pareto_front = [
-                {"params": t.params, "values": list(t.values)}
-                for t in best_trials_pareto
+                {"params": t.params, "values": list(t.values)} for t in best_trials_pareto
             ]
         else:
             best_params = study.best_params if completed else {}
@@ -541,7 +532,7 @@ class OptunaOptimizer:
             pareto_front = []
 
         # ── Parameter importance ──
-        param_importance: Dict[str, float] = {}
+        param_importance: dict[str, float] = {}
         if len(completed) >= 5:
             try:
                 param_importance = optuna.importance.get_param_importances(study)
@@ -602,9 +593,9 @@ class OptunaOptimizer:
         backtester_factory: Callable[..., Any],
         train_start: str,
         train_end: str,
-        base_config: Dict[str, Any],
+        base_config: dict[str, Any],
         *,
-        progress_callback: Callable[[Dict[str, Any]], None] | None = None,
+        progress_callback: Callable[[dict[str, Any]], None] | None = None,
         cancel_check: Callable[[], bool] | None = None,
     ) -> OptimizationResult:
         """
@@ -632,7 +623,7 @@ class OptunaOptimizer:
         """
         import asyncio
 
-        def evaluate_fn(params: Dict[str, Any]) -> float:
+        def evaluate_fn(params: dict[str, Any]) -> float:
             merged = {
                 **base_config,
                 **params,

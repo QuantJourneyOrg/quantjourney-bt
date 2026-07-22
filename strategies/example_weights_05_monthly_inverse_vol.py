@@ -8,8 +8,7 @@ Example Weights 05 - Monthly Inverse Volatility Basket
 
 Mode: weights.
 Idea: allocate more to ETFs with lower recent volatility.
-Universe: diversified ETFs.
-Rebalance: business month-end.
+Universe: canonical multi-asset ETFs: SPY, EFA, EEM, TLT, IEF, GLD, DBC and VNQ.
 
 The strategy stays long all assets after the warmup period, but sizes each ETF
 by inverse 63-day volatility. This is a simple risk-budgeting example.
@@ -62,15 +61,15 @@ async def main() -> None:
         strategy_name="ExampleWeights05_MonthlyInverseVol",
         strategy_type="Long Only",
         initial_capital=100_000,
-        instruments=["SPY", "QQQ", "EFA", "EEM", "TLT", "IEF", "GLD", "DBC"],
-        backtest_period={"start": "2012-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "EFA", "EEM", "TLT", "IEF", "GLD", "DBC", "VNQ"],
+        backtest_period={"start": "2007-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=0.35,
         rebalance_policy=RebalancePolicy(frequency="BME"),
         indicators_config=[],
-        benchmark_symbol="SPY",
-        benchmark_name="SPDR S&P 500 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

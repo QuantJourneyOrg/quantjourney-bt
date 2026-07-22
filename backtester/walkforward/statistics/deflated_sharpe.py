@@ -32,10 +32,6 @@ Interpretation (DSR is a probability in [0, 1]):
     0.80 – 0.95  →  marginal
     DSR < 0.80   →  likely false positive
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
 Updated: 07.2026.
 Licensed under the Apache License 2.0.
@@ -44,10 +40,9 @@ Licensed under the Apache License 2.0.
 from __future__ import annotations
 
 import math
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 import numpy as np
-
 
 # Euler–Mascheroni constant
 _GAMMA = 0.5772156649015329
@@ -55,11 +50,12 @@ _GAMMA = 0.5772156649015329
 
 def _expected_max_sr(
     sr_std: float,
-    n_trials: int,
+    n_trials: float,
 ) -> float:
     """
     E[max(SR)] under the null, using the Euler–Mascheroni approximation
-    of the expected maximum of *n_trials* i.i.d. standard normals,
+    of the expected maximum of *n_trials* effectively independent
+    standard normals,
     scaled by sr_std (= √V[SR] across trials).
 
     Bailey & López de Prado (2014):
@@ -67,7 +63,7 @@ def _expected_max_sr(
     """
     from scipy.stats import norm  # lazy import — only needed here
 
-    if n_trials <= 1:
+    if not math.isfinite(n_trials) or n_trials <= 1:
         return 0.0
     z1 = norm.ppf(1.0 - 1.0 / n_trials)
     z2 = norm.ppf(1.0 - 1.0 / (n_trials * math.e))
@@ -118,9 +114,10 @@ def probabilistic_sharpe(
 
 def deflated_sharpe(
     trial_sharpes: Sequence[float],
-    n_trials: Optional[int] = None,
+    n_trials: int | None = None,
     *,
-    observed_sr: Optional[float] = None,
+    effective_n_trials: float | None = None,
+    observed_sr: float | None = None,
     n_obs: int,
     skewness: float = 0.0,
     kurtosis: float = 3.0,
@@ -133,13 +130,15 @@ def deflated_sharpe(
     candidate (``observed_sr`` / ``n_obs`` / moments) must describe
     consistent quantities in the SAME per-period units:
 
-    - ``trial_sharpes``: objective values (Sharpes) of ALL trials the
-      optimizer evaluated.  Used only to estimate √V[SR] across trials
-      for the E[max] deflation threshold.
-    - ``n_trials``: population size N.  Defaults to
-      ``len(trial_sharpes)``.  Must describe the same population as
-      ``trial_sharpes`` — do NOT pass fold counts here; folds are not
-      trials.
+    - ``trial_sharpes``: finite completed-trial objective values used to
+      estimate √V[SR] across trials for the E[max] threshold.
+    - ``n_trials``: raw completed-trial count. Defaults to
+      ``len(trial_sharpes)``; folds are not trials.
+    - ``effective_n_trials``: optional effective number of independent
+      trials used in E[max]. Strongly correlated parameter variants do
+      not automatically count as independent trials. When dependence is
+      not estimated, leaving this unset uses the raw count as a
+      conservative approximation. Must be in [1, n_trials].
     - ``observed_sr``: per-period Sharpe of the selected candidate.
       Defaults to ``max(trial_sharpes)``.
     - ``n_obs``: T, the number of return observations behind
@@ -163,14 +162,26 @@ def deflated_sharpe(
             return 0.0  # nothing to evaluate
         observed_sr = float(arr.max())
 
-    n = int(n_trials) if n_trials is not None else int(arr.size)
+    raw_n = int(n_trials) if n_trials is not None else int(arr.size)
+    if raw_n < 0:
+        raise ValueError("n_trials must be >= 0")
+
+    if effective_n_trials is None:
+        effective_n = float(raw_n)
+    else:
+        effective_n = float(effective_n_trials)
+        if not math.isfinite(effective_n) or effective_n < 1.0:
+            raise ValueError("effective_n_trials must be finite and >= 1")
+        if raw_n >= 1 and effective_n > raw_n:
+            raise ValueError("effective_n_trials must be <= n_trials")
+
     sr_std = float(arr.std(ddof=0)) if arr.size > 1 else 0.0
 
-    if n <= 1 or sr_std == 0.0:
+    if effective_n <= 1.0 or sr_std == 0.0:
         # No multiple-testing to deflate — plain PSR vs the benchmark.
         sr0 = benchmark_sr
     else:
-        sr0 = benchmark_sr + _expected_max_sr(sr_std, n)
+        sr0 = benchmark_sr + _expected_max_sr(sr_std, effective_n)
 
     return probabilistic_sharpe(
         float(observed_sr),

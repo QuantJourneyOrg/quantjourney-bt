@@ -5,19 +5,14 @@ Institutional-grade result container that captures everything a quant
 desk needs: best params, full trial history, parameter importance,
 convergence metadata, and Pareto front for multi-objective studies.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import pandas as pd
 
@@ -27,10 +22,10 @@ class TrialRecord:
     """Single trial in the optimization study."""
 
     number: int
-    params: Dict[str, Any]
+    params: dict[str, Any]
     value: float
-    values: Optional[List[float]] = None  # multi-objective
-    metrics: Optional[Dict[str, float]] = None  # full metrics snapshot
+    values: list[float] | None = None  # multi-objective
+    metrics: dict[str, float] | None = None  # full metrics snapshot
     duration_seconds: float = 0.0
     pruned: bool = False
     state: str = "COMPLETE"  # COMPLETE | PRUNED | FAIL
@@ -53,18 +48,18 @@ class OptimizationResult:
     """
 
     # ── Core (backwards-compatible) ──
-    best_params: Dict[str, Any]
+    best_params: dict[str, Any]
     best_objective: float
     n_evaluated: int
     elapsed_seconds: float
-    all_results: Optional[pd.DataFrame] = None  # param combos × metrics
+    all_results: pd.DataFrame | None = None  # param combos × metrics
 
     # ── Extended ──
-    trials: List[TrialRecord] = field(default_factory=list)
-    param_importance: Dict[str, float] = field(default_factory=dict)
-    convergence_curve: List[float] = field(default_factory=list)
-    pareto_front: List[Dict[str, Any]] = field(default_factory=list)
-    study_metadata: Dict[str, Any] = field(default_factory=dict)
+    trials: list[TrialRecord] = field(default_factory=list)
+    param_importance: dict[str, float] = field(default_factory=dict)
+    convergence_curve: list[float] = field(default_factory=list)
+    pareto_front: list[dict[str, Any]] = field(default_factory=list)
+    study_metadata: dict[str, Any] = field(default_factory=dict)
 
     # ── Breakdown ──
     n_completed: int = 0
@@ -79,7 +74,7 @@ class OptimizationResult:
         direction = (self.study_metadata or {}).get("direction") or "maximize"
         return direction != "minimize"
 
-    def best_trial(self) -> Optional[TrialRecord]:
+    def best_trial(self) -> TrialRecord | None:
         """Return the trial with the best objective value (direction-aware)."""
         completed = [t for t in self.trials if t.state == "COMPLETE"]
         if not completed:
@@ -88,12 +83,12 @@ class OptimizationResult:
             return max(completed, key=lambda t: t.value)
         return min(completed, key=lambda t: t.value)
 
-    def top_k(self, k: int = 10) -> List[TrialRecord]:
+    def top_k(self, k: int = 10) -> list[TrialRecord]:
         """Return top-k trials by objective value, best first (direction-aware)."""
         completed = [t for t in self.trials if t.state == "COMPLETE"]
         return sorted(completed, key=lambda t: t.value, reverse=self._maximize())[:k]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialise to JSON-safe dictionary."""
         return {
             "best_params": self.best_params,
@@ -136,9 +131,10 @@ class OptimizationResult:
             Multi-line formatted text string.
         """
         from backtester.walkforward.optimization.summary import optimization_summary
+
         return optimization_summary(self, verbose=verbose)
 
-    def summary_dict(self) -> Dict[str, Any]:
+    def summary_dict(self) -> dict[str, Any]:
         """
         Build a comprehensive summary dictionary for programmatic access.
 
@@ -148,4 +144,5 @@ class OptimizationResult:
             top_trials, stability, diagnostics.
         """
         from backtester.walkforward.optimization.summary import optimization_summary_dict
+
         return optimization_summary_dict(self)

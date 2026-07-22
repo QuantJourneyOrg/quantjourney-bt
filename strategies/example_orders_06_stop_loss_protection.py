@@ -9,7 +9,7 @@ Example Orders 06 - Protective Stop Loss
 Mode: orders.
 Order types: MARKET entry, STOP exit.
 Idea: enter on SMA(20/50) trend and attach a 5% protective stop.
-Universe: five large technology stocks.
+Universe: three predeclared liquid ETFs: SPY, QQQ and IWM.
 
 This is the classic two-step order workflow: enter first, then attach a stop
 after the fill is visible in current positions.
@@ -73,13 +73,15 @@ class ProtectiveStopLoss(Backtester):
             elif pos > 0 and not self._has_stop.get(inst, False):
                 entry = self.get_average_entry_price(inst)
                 if entry is not None:
-                    self.fill_engine.submit(Order(
-                        inst,
-                        OrderSide.SELL,
-                        pos,
-                        OrderType.STOP,
-                        stop_price=round(entry * 0.95, 2),
-                    ))
+                    self.fill_engine.submit(
+                        Order(
+                            inst,
+                            OrderSide.SELL,
+                            pos,
+                            OrderType.STOP,
+                            stop_price=round(entry * 0.95, 2),
+                        )
+                    )
                     self._has_stop[inst] = True
             elif signal == 0 and prev == 1 and pos > 0:
                 self.fill_engine.cancel_all(instrument=inst)
@@ -94,8 +96,10 @@ async def main() -> None:
         **_credentials(),
         strategy_name="ExampleOrders06_ProtectiveStopLoss",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
-        backtest_period={"start": "2020-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "QQQ", "IWM"],
+        backtest_period={"start": "2001-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="orders",
         max_position_size=0.25,

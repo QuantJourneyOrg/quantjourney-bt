@@ -8,8 +8,7 @@ Example Weights 06 - Signal-Change Defensive Rotation
 
 Mode: weights.
 Idea: if SPY is above its SMA(200), hold risk ETFs; otherwise hold defensive ETFs.
-Universe: SPY, QQQ, IWM for risk-on; TLT and GLD for risk-off.
-Rebalance: only when target weights change materially.
+Universe: canonical multi-asset ETFs: SPY, EFA, EEM, TLT, IEF, GLD, DBC and VNQ.
 
 This demonstrates signal-driven rebalancing: the calendar is disabled, so the
 engine trades only when the regime changes.
@@ -39,8 +38,8 @@ def _credentials() -> dict:
 class SignalChangeDefensiveRotation(Backtester):
     """Risk-on/risk-off ETF rotation with signal-change rebalance trigger."""
 
-    risk_on_assets = ["SPY", "QQQ", "IWM"]
-    defensive_assets = ["TLT", "GLD"]
+    risk_on_assets = ["SPY", "EFA", "EEM", "DBC", "VNQ"]
+    defensive_assets = ["TLT", "IEF", "GLD"]
 
     def _compute_signals(self) -> pd.DataFrame:
         close = self.instruments_data.get_feature("adj_close")
@@ -68,8 +67,10 @@ async def main() -> None:
         strategy_name="ExampleWeights06_SignalChangeDefensive",
         strategy_type="Risk On / Risk Off",
         initial_capital=100_000,
-        instruments=["SPY", "QQQ", "IWM", "TLT", "GLD"],
-        backtest_period={"start": "2010-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "EFA", "EEM", "TLT", "IEF", "GLD", "DBC", "VNQ"],
+        backtest_period={"start": "2007-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=0.50,
@@ -81,8 +82,6 @@ async def main() -> None:
         indicators_config=[
             {"function": "SMA", "price_cols": ["close"], "params": {"periods": [200]}},
         ],
-        benchmark_symbol="SPY",
-        benchmark_name="SPDR S&P 500 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

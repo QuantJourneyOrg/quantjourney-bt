@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -17,15 +16,13 @@ class CalcConfig(BaseModel):
     use_pandera: bool = Field(False, description="Enable strict Pandera validation")
     use_numba: bool = Field(False, description="Enable numba-accelerated rolling reductions")
 
-    risk_free_rate_annual: Optional[float] = Field(
+    risk_free_rate_annual: float | None = Field(
         None, description="Constant annual RF rate to use where a series is not provided"
     )
-    calendar: Optional[str] = Field(
-        None, description="Trading calendar identifier (e.g., 'XNYS')"
-    )
+    calendar: str | None = Field(None, description="Trading calendar identifier (e.g., 'XNYS')")
 
     @classmethod
-    def from_env(cls) -> "CalcConfig":
+    def from_env(cls) -> CalcConfig:
         def _env_bool(name: str, default: bool = False) -> bool:
             v = os.getenv(name)
             if v is None:
@@ -38,7 +35,7 @@ class CalcConfig(BaseModel):
             except Exception:
                 return default
 
-        def _env_float_opt(name: str) -> Optional[float]:
+        def _env_float_opt(name: str) -> float | None:
             v = os.getenv(name)
             if v is None or v == "":
                 return None

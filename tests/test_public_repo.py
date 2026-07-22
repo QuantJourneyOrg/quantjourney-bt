@@ -4,12 +4,13 @@
 
 from __future__ import annotations
 
-import importlib.util
 import asyncio
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 STRATEGIES = ROOT / "strategies"
@@ -31,10 +32,11 @@ def _repo_files(pattern: str) -> list[Path]:
 
 def _strategy_files() -> list[Path]:
     if (ROOT / ".git").exists():
-        return [
-            path for path in _repo_files("strategies/example_*.py")
-            if path.exists()
-        ]
+        tracked = {path for path in _repo_files("strategies/example_*.py") if path.exists()}
+        # Include reviewed working-tree additions; the release-manifest guard
+        # independently rejects undeclared files and publishing requires a
+        # clean checkout, so this does not weaken the artifact boundary.
+        return sorted(tracked | set(STRATEGIES.glob("example_*.py")))
     return sorted(STRATEGIES.glob("example_*.py"))
 
 
@@ -59,8 +61,7 @@ def test_python_files_have_quantjourney_header() -> None:
 
 def test_package_ships_only_quantjourney_plot_theme() -> None:
     theme_files = sorted(
-        path.name
-        for path in (ROOT / "backtester" / "plots" / "theme" / "configs").glob("*.py")
+        path.name for path in (ROOT / "backtester" / "plots" / "theme" / "configs").glob("*.py")
     )
 
     assert theme_files == ["__init__.py", "quantjourney.py"]
@@ -71,9 +72,53 @@ def test_strategy_suite_has_expected_strategy_families() -> None:
     order_files = [path for path in files if path.name.startswith("example_orders_")]
     weight_files = [path for path in files if path.name.startswith("example_weights_")]
 
-    assert len(files) >= 45
-    assert len(order_files) >= 18
-    assert len(weight_files) >= 22
+    assert len(files) == 50
+    assert len(order_files) == 20
+    assert len(weight_files) == 25
+
+
+def test_approved_public_execution_components_are_present() -> None:
+    approved_paths = [
+        "backtester/execution/simulator.py",
+        "backtester/portfolio/accounting/ledger.py",
+        "backtester/portfolio/book.py",
+        "backtester/risk/pre_trade.py",
+    ]
+
+    for relative_path in approved_paths:
+        assert (ROOT / relative_path).is_file(), relative_path
+
+
+def test_public_release_source_matches_approved_manifest() -> None:
+    completed = subprocess.run(
+        [sys.executable, "tools/verify_public_release.py"],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert "Public release verification passed" in completed.stdout
+
+
+def test_public_docs_do_not_expose_private_repository_details() -> None:
+    checked = [ROOT / "README.md", ROOT / "CHANGELOG.md", ROOT / "docs/public_scope.md"]
+    forbidden = [
+        "_repo_qj_backtester_private",
+        "_repo_qj_backtester_web",
+        "ADR-113",
+        "ADR-114",
+        "Restored the private package",
+    ]
+
+    offenders = []
+    for path in checked:
+        text = path.read_text(encoding="utf-8")
+        for token in forbidden:
+            if token in text:
+                offenders.append(f"{path.relative_to(ROOT)}: {token}")
+
+    assert offenders == []
 
 
 def test_strategy_modules_import() -> None:
@@ -88,9 +133,9 @@ def test_strategy_modules_import() -> None:
 def test_backtester_imports() -> None:
     from backtester import Backtester
     from backtester.engines import StrategyPerformanceAnalysis
-    from backtester.sdk.client import APIClient, AsyncAPIClient
     from backtester.execution.order_types import Order, OrderSide, OrderType
     from backtester.portfolio.rebalance import RebalancePolicy
+    from backtester.sdk.client import APIClient, AsyncAPIClient
 
     assert Backtester is not None
     assert StrategyPerformanceAnalysis is not None
@@ -176,6 +221,53 @@ def test_sdk_prepare_payload_uses_normalized_granularity() -> None:
     assert captured["payload"]["provider"]["granularity"] == "5m"
 
 
+def test_sdk_prepare_validation_error_is_actionable() -> None:
+    from types import SimpleNamespace
+
+    from backtester.mixins.sdk_client import SDKClientMixin
+    from backtester.sdk.client import APIError, PrepareValidationError
+
+    class DummyClient:
+        async def _request(self, path: str, payload: dict) -> dict:
+            error = APIError("HTTP 422", request_id="req-prepare", error_code="ERR_VAL_003")
+            error.status_code = 422
+            error.response_body = {
+                "status": 422,
+                "detail": "Backtest preparation configuration is invalid.",
+                "error_code": "ERR_VAL_003",
+                "request_id": "req-prepare",
+                "errors": [
+                    {
+                        "field": "instruments",
+                        "code": "list_type",
+                        "message": "Instruments must be a list.",
+                        "hint": 'Send symbols as a list, for example ["AAPL"].',
+                    }
+                ],
+            }
+            raise error
+
+    class DummyBacktester(SDKClientMixin):
+        async def _get_sdk_client(self):
+            return DummyClient()
+
+    dummy = DummyBacktester()
+    dummy._source = "yfinance"
+    dummy._granularity = "1d"
+    dummy.backtest_period = SimpleNamespace(start="2026-01-01", end="2026-06-01")
+    dummy.instruments = ["AAPL"]
+    dummy._persist = True
+    dummy._dedupe = True
+    dummy._force_refresh = False
+
+    with pytest.raises(PrepareValidationError) as raised:
+        asyncio.run(dummy._fetch_market_data())
+
+    assert raised.value.field_errors[0]["field"] == "instruments"
+    assert "Instruments must be a list" in str(raised.value)
+    assert "req-prepare" in str(raised.value)
+
+
 def test_sample_data_payload_loads_without_credentials(monkeypatch) -> None:
     from types import SimpleNamespace
 
@@ -203,6 +295,7 @@ def test_sample_data_payload_loads_without_credentials(monkeypatch) -> None:
 
 def test_smart_date_axis_uses_time_labels_for_intraday_data() -> None:
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import pandas as pd
@@ -313,6 +406,32 @@ def test_strategy_launcher_check_mode() -> None:
     assert "Import check passed" in completed.stdout
 
 
+def test_strategy_launcher_lists_docstring_titles() -> None:
+    completed = subprocess.run(
+        ["./strategy.sh", "--list"],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert "Example Weights 01 - Daily SMA Trend" in completed.stdout
+    assert "# Copyright" not in completed.stdout
+
+
+def test_strategy_launcher_documents_batch_mode() -> None:
+    completed = subprocess.run(
+        ["./strategy.sh", "--help"],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert "--all --output ./reports" in completed.stdout
+    assert "--all --check" in completed.stdout
+
+
 def test_package_excludes_internal_report_modules() -> None:
     forbidden_paths = [
         "backtester/engines/pdf_creation.py",
@@ -372,13 +491,14 @@ def test_package_excludes_object_archive_hooks() -> None:
 
 def test_report_generates_dashboard_metrics_and_plots(tmp_path) -> None:
     import re
-    import pandas as pd
     from types import SimpleNamespace
+
+    import pandas as pd
 
     from backtester.engines import StrategyPerformanceAnalysis
 
     dates = pd.date_range("2024-01-01", periods=260, freq="B", tz="UTC")
-    nav = pd.Series([100_000 * (1.0004 ** i) for i in range(len(dates))], index=dates)
+    nav = pd.Series([100_000 * (1.0004**i) for i in range(len(dates))], index=dates)
     weights = pd.DataFrame(
         {
             "AAPL": [0.25 if i % 20 < 10 else 0.0 for i in range(len(dates))],
@@ -391,9 +511,9 @@ def test_report_generates_dashboard_metrics_and_plots(tmp_path) -> None:
     returns = nav.pct_change().fillna(0.0)
     prices = pd.DataFrame(
         {
-            "AAPL": [190 * (1.0005 ** i) for i in range(len(dates))],
-            "MSFT": [410 * (1.0003 ** i) for i in range(len(dates))],
-            "NVDA": [120 * (1.0008 ** i) for i in range(len(dates))],
+            "AAPL": [190 * (1.0005**i) for i in range(len(dates))],
+            "MSFT": [410 * (1.0003**i) for i in range(len(dates))],
+            "NVDA": [120 * (1.0008**i) for i in range(len(dates))],
             "CASH": [1.0 for _ in range(len(dates))],
         },
         index=dates,

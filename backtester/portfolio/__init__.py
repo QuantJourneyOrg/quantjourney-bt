@@ -4,12 +4,7 @@ backtester.portfolio package
 
 Exports core data containers and facades using lazy import.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
@@ -28,6 +23,11 @@ __all__ = [
     "WeightCostBreakdown",
     "WeightCostModel",
     "FixedBpsWeightCostModel",
+    "LedgerResult",
+    "PortfolioLedger",
+    "PortfolioSnapshot",
+    "StrategyBook",
+    "StrategyBookResult",
 ]
 
 
@@ -50,4 +50,8 @@ def __getattr__(name: str) -> Any:
         return importlib.import_module("backtester.portfolio.weight_cost").WeightCostModel
     if name == "FixedBpsWeightCostModel":
         return importlib.import_module("backtester.portfolio.weight_cost").FixedBpsWeightCostModel
+    if name in {"LedgerResult", "PortfolioLedger", "PortfolioSnapshot"}:
+        return getattr(importlib.import_module("backtester.portfolio.accounting"), name)
+    if name in {"StrategyBook", "StrategyBookResult"}:
+        return getattr(importlib.import_module("backtester.portfolio.book"), name)
     raise AttributeError(name)

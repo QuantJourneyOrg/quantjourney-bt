@@ -8,8 +8,7 @@ Example Weights 02 - Monthly ETF Trend With Drift Band
 
 Mode: weights.
 Idea: SMA(50/200) trend filter on a diversified ETF universe.
-Universe: equities, bonds, gold and commodities.
-Rebalance: business month-end, plus a 5% drift trigger between month-ends.
+Universe: canonical multi-asset ETFs: SPY, EFA, EEM, TLT, IEF, GLD, DBC and VNQ.
 
 This example shows how a slow strategy can reduce turnover while still forcing
 a rebalance when market drift moves actual weights too far from target.
@@ -58,8 +57,10 @@ async def main() -> None:
         strategy_name="ExampleWeights02_MonthlyDriftETF",
         strategy_type="Long / Cash",
         initial_capital=100_000,
-        instruments=["SPY", "QQQ", "IWM", "EFA", "EEM", "TLT", "GLD", "DBC"],
-        backtest_period={"start": "2015-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "EFA", "EEM", "TLT", "IEF", "GLD", "DBC", "VNQ"],
+        backtest_period={"start": "2007-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=0.30,
@@ -67,8 +68,6 @@ async def main() -> None:
         indicators_config=[
             {"function": "SMA", "price_cols": ["close"], "params": {"periods": [50, 200]}},
         ],
-        benchmark_symbol="SPY",
-        benchmark_name="SPDR S&P 500 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

@@ -125,9 +125,13 @@ def build_sample_bt_payload(
         parameter_frames.append(parameters)
 
     metrics_df = pd.concat(metric_frames, axis=1)
-    metrics_df.columns = pd.MultiIndex.from_tuples(metrics_df.columns, names=["instrument", "field"])
+    metrics_df.columns = pd.MultiIndex.from_tuples(
+        metrics_df.columns, names=["instrument", "field"]
+    )
     parameters_df = pd.concat(parameter_frames, axis=1)
-    parameters_df.columns = pd.MultiIndex.from_tuples(parameters_df.columns, names=["instrument", "field"])
+    parameters_df.columns = pd.MultiIndex.from_tuples(
+        parameters_df.columns, names=["instrument", "field"]
+    )
 
     return {
         "session_id": "sample-session",

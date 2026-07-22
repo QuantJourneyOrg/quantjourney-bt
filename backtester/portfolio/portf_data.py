@@ -7,27 +7,22 @@ target weights, realized weights, returns, costs, drawdowns, and derived
 analytics. It is designed for deterministic backtest replay, portfolio
 accounting, and institutional-grade report generation.
 
-Institutional-grade QuantJourney Backtester component.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
+import warnings
+from dataclasses import dataclass, field
+
 import numpy as np
 import pandas as pd
-from dataclasses import dataclass, field
-from typing import Union, Dict, Optional, Tuple, List
-from enum import Enum
-import warnings
 
 from backtester.portfolio.instr_data import InstrumentData
-from backtester.utils.decorators import error_logger
-from backtester.utils.logger import logger
 from backtester.portfolio.schemas import (
     validate_nav_series,
     validate_weights_frame,
 )
+from backtester.utils.decorators import error_logger
 
 
 # PortfolioData class ------------------------------------------------------------------
@@ -56,7 +51,8 @@ class PortfolioData:
             (converted in ``__post_init__``), regardless of the timezone
             of the series passed in. Use ``.index.tz_localize(None)`` on a
             copy before joining with tz-naive data.
-        input_weights (Optional[Union[np.ndarray, pd.DataFrame, Dict[str, float]]): Initial weights, e.g. {'AAPL': 0.5, 'MSFT': 0.5}
+        input_weights: Initial weights, for example
+            ``{'AAPL': 0.5, 'MSFT': 0.5}``.
         rebalance_flags (Optional[pd.Series]): Rebalance flags, e.g True if rebalancing is needed
         asset_name_map (Optional[Dict[str, str]]): Asset name mapping e.g. {'AAPL': 'Apple Inc.'}
         trading_calendar (Optional[pd.Series]): Trading calendar
@@ -75,27 +71,36 @@ class PortfolioData:
     instruments: InstrumentData
     net_asset_value: pd.Series
 
-    input_weights: Optional[Union[np.ndarray, pd.DataFrame, Dict[str, float]]] = (None)
-    rebalance_flags: Optional[pd.Series] = (None)
-    asset_name_map: Optional[Dict[str, str]] = (None)
-    trading_calendar: Optional[pd.Series] = None
+    input_weights: np.ndarray | pd.DataFrame | dict[str, float] | None = None
+    rebalance_flags: pd.Series | None = None
+    rebalance_decision_flags: pd.Series | None = None
+    rebalance_submission_flags: pd.Series | None = None
+    rebalance_fill_flags: pd.Series | None = None
+    asset_name_map: dict[str, str] | None = None
+    trading_calendar: pd.Series | None = None
+    periods_per_year: int = 252
 
-    weights: Optional[pd.DataFrame] = None
-    positions: Optional[pd.DataFrame] = None   
-    position_values: Optional[pd.DataFrame] = None
-    cash_buffer: Union[float, pd.Series] = 0.05             # Default to 5% cash buffer
+    weights: pd.DataFrame | None = None
+    positions: pd.DataFrame | None = None
+    position_values: pd.DataFrame | None = None
+    exposure_values: pd.DataFrame | None = None
+    exposure_weights: pd.DataFrame | None = None
+    cash_buffer: float | pd.Series = 0.05  # Default to 5% cash buffer
     # Optional actual cash time series (distinct from configuration buffer)
-    cash: Optional[pd.Series] = None
+    cash: pd.Series | None = None
+    margin_by_instrument: pd.DataFrame | None = None
+    margin_used: pd.Series | None = None
+    buying_power: pd.Series | None = None
 
     # It is useful to store the following metrics for quick access in the backtesting engine:
-    returns: Optional[pd.Series] = None
-    returns_for_metrics: Optional[pd.Series] = None
-    cumulative_returns: Optional[pd.Series] = (None)
-    volatility: Optional[pd.Series] = None
-    total_pnl: Optional[pd.Series] = None
-    total_transaction_costs: Optional[pd.Series] = (None)
-    sharpe_ratio: Optional[pd.Series] = None
-    drawdown: Optional[pd.Series] = None
+    returns: pd.Series | None = None
+    returns_for_metrics: pd.Series | None = None
+    cumulative_returns: pd.Series | None = None
+    volatility: pd.Series | None = None
+    total_pnl: pd.Series | None = None
+    total_transaction_costs: pd.Series | None = None
+    sharpe_ratio: pd.Series | None = None
+    drawdown: pd.Series | None = None
     _version: int = field(default=0, repr=False)
     _skip_initial_metrics: bool = field(default=False, repr=False)
 
@@ -117,13 +122,13 @@ class PortfolioData:
         # Required attributes validation
         if self.instruments is None:
             raise ValueError("PortfolioData is missing the required attribute: instruments")
-        
+
         if not isinstance(self.instruments, InstrumentData):
             raise ValueError("instruments must be an InstrumentData object")
 
         if self.net_asset_value is None:
             raise ValueError("PortfolioData is missing the required attribute: net_asset_value")
-        
+
         if not isinstance(self.net_asset_value, pd.Series):
             raise ValueError("net_asset_value must be a pandas Series")
         # Schema validation for core frames
@@ -140,30 +145,51 @@ class PortfolioData:
         def ensure_datetime_and_convert(index):
             if not isinstance(index, pd.DatetimeIndex):
                 index = pd.to_datetime(index)
-            return (
-                index.tz_convert(timezone) if index.tz else index.tz_localize(timezone)
-            )
+            return index.tz_convert(timezone) if index.tz else index.tz_localize(timezone)
 
         # Convert the timezone for each attribute safely
         if self.net_asset_value is not None:
-            self.net_asset_value.index = ensure_datetime_and_convert(
-                self.net_asset_value.index
-            )
+            self.net_asset_value.index = ensure_datetime_and_convert(self.net_asset_value.index)
         if self.weights is not None:
             self.weights.index = ensure_datetime_and_convert(self.weights.index)
         if self.positions is not None:
             self.positions.index = ensure_datetime_and_convert(self.positions.index)
         if self.position_values is not None:
             self.position_values.index = ensure_datetime_and_convert(self.position_values.index)
+        if self.exposure_values is not None:
+            self.exposure_values.index = ensure_datetime_and_convert(self.exposure_values.index)
+        if self.exposure_weights is not None:
+            self.exposure_weights.index = ensure_datetime_and_convert(self.exposure_weights.index)
         if self.cash is not None:
             self.cash.index = ensure_datetime_and_convert(self.cash.index)
+        if self.margin_by_instrument is not None:
+            self.margin_by_instrument.index = ensure_datetime_and_convert(
+                self.margin_by_instrument.index
+            )
+        if self.margin_used is not None:
+            self.margin_used.index = ensure_datetime_and_convert(self.margin_used.index)
+        if self.buying_power is not None:
+            self.buying_power.index = ensure_datetime_and_convert(self.buying_power.index)
         if self.rebalance_flags is not None:
             self.rebalance_flags.index = ensure_datetime_and_convert(self.rebalance_flags.index)
+        if self.rebalance_decision_flags is not None:
+            self.rebalance_decision_flags.index = ensure_datetime_and_convert(
+                self.rebalance_decision_flags.index
+            )
+        if self.rebalance_submission_flags is not None:
+            self.rebalance_submission_flags.index = ensure_datetime_and_convert(
+                self.rebalance_submission_flags.index
+            )
+        if self.rebalance_fill_flags is not None:
+            self.rebalance_fill_flags.index = ensure_datetime_and_convert(
+                self.rebalance_fill_flags.index
+            )
         if self.trading_calendar is not None:
             self.trading_calendar.index = ensure_datetime_and_convert(self.trading_calendar.index)
 
     def _validate_index_integrity(self):
         """Ensure time indices are tz-aware, monotonic, and unique."""
+
         def normalize(obj, name: str):
             if obj is None:
                 return None
@@ -188,18 +214,38 @@ class PortfolioData:
             self.positions = normalize(self.positions, "positions")
         if self.position_values is not None:
             self.position_values = normalize(self.position_values, "position_values")
+        if self.exposure_values is not None:
+            self.exposure_values = normalize(self.exposure_values, "exposure_values")
+        if self.exposure_weights is not None:
+            self.exposure_weights = normalize(self.exposure_weights, "exposure_weights")
         if self.cash is not None:
             self.cash = normalize(self.cash, "cash")
+        if self.margin_by_instrument is not None:
+            self.margin_by_instrument = normalize(self.margin_by_instrument, "margin_by_instrument")
+        if self.margin_used is not None:
+            self.margin_used = normalize(self.margin_used, "margin_used")
+        if self.buying_power is not None:
+            self.buying_power = normalize(self.buying_power, "buying_power")
         if self.rebalance_flags is not None:
             self.rebalance_flags = normalize(self.rebalance_flags, "rebalance_flags")
+        if self.rebalance_decision_flags is not None:
+            self.rebalance_decision_flags = normalize(
+                self.rebalance_decision_flags, "rebalance_decision_flags"
+            )
+        if self.rebalance_submission_flags is not None:
+            self.rebalance_submission_flags = normalize(
+                self.rebalance_submission_flags, "rebalance_submission_flags"
+            )
+        if self.rebalance_fill_flags is not None:
+            self.rebalance_fill_flags = normalize(self.rebalance_fill_flags, "rebalance_fill_flags")
         if self.trading_calendar is not None:
             self.trading_calendar = normalize(self.trading_calendar, "trading_calendar")
 
     @staticmethod
     def _coerce_timestamp_to_index_tz(
-        value: Union[str, pd.Timestamp, None],
+        value: str | pd.Timestamp | None,
         index: pd.Index,
-    ) -> Optional[pd.Timestamp]:
+    ) -> pd.Timestamp | None:
         """Coerce a user-supplied timestamp to the timezone of a DatetimeIndex."""
         if value is None:
             return None
@@ -227,7 +273,10 @@ class PortfolioData:
         self.returns_for_metrics = raw_returns.dropna()
         self.returns = raw_returns.fillna(0.0)
         self.cumulative_returns = (1 + self.returns).cumprod() - 1
-        self.volatility = self.returns_for_metrics.rolling(window=20).std() * np.sqrt(252)  # Annualized
+        periods_per_year = max(int(self.periods_per_year), 1)
+        self.volatility = self.returns_for_metrics.rolling(window=20).std() * np.sqrt(
+            periods_per_year
+        )
 
         # Improved drawdown calculation using cumulative returns
         wealth_index = 1 + self.cumulative_returns
@@ -236,22 +285,22 @@ class PortfolioData:
 
         # Initialize optional metrics
         self.total_pnl = self.net_asset_value - self.net_asset_value.iloc[0]
-        
+
         # Calculate Sharpe ratio if returns and volatility are available
         metric_returns = self.returns_for_metrics
         if not metric_returns.isna().all() and not self.volatility.isna().all():
             risk_free_rate = 0.02  # 2% annual — consistent with PortfolioCalculations
-            excess_returns = metric_returns - risk_free_rate / 252
+            excess_returns = metric_returns - risk_free_rate / periods_per_year
             std_dev = excess_returns.std()
             if std_dev > 0:  # Prevent division by zero
-                self.sharpe_ratio = excess_returns.mean() / std_dev * np.sqrt(252)
+                self.sharpe_ratio = excess_returns.mean() / std_dev * np.sqrt(periods_per_year)
             else:
                 self.sharpe_ratio = None
-                
+
     # Properties -----------------------------------------------------------------
 
     @property
-    def time_period(self) -> Tuple[str, str]:
+    def time_period(self) -> tuple[str, str]:
         """
         Return the start and end dates of the data as strings.
         """
@@ -261,7 +310,7 @@ class PortfolioData:
         )
 
     @property
-    def instrument_names(self) -> List[str]:
+    def instrument_names(self) -> list[str]:
         """
         Return the list of instrument names in the portfolio.
         """
@@ -306,8 +355,8 @@ class PortfolioData:
     def assert_accounting_identity(
         self,
         *,
-        position_values: Optional[pd.DataFrame] = None,
-        cash: Optional[pd.Series] = None,
+        position_values: pd.DataFrame | None = None,
+        cash: pd.Series | None = None,
         rtol: float = 1e-10,
         atol: float = 1e-8,
     ) -> None:
@@ -339,14 +388,14 @@ class PortfolioData:
             raise ValueError("weights are required to compute average_weights")
         return self.weights.mean()
 
-    # Methods for Weights, Positions, Value  ---------------------------------------------------------
+    # Methods for weights, positions, and value
 
     def generate_positions(self, strategies: pd.DataFrame):
         """
         Generate positions based on provided strategies and constraints.
 
         Args:
-                strategies (pd.DataFrame): DataFrame of trading strategies to be used for generating positions.
+                strategies: Trading strategies used to generate positions.
         """
         if strategies is None or strategies.empty:
             raise ValueError("Strategies are required to generate positions.")
@@ -403,10 +452,38 @@ class PortfolioData:
         self._validate_index_integrity()
         validate_weights_frame(self.weights, self.instrument_names)
         self._version += 1
-        
+
     def update_cash(self, cash_series: pd.Series) -> None:
         """Update the realized cash time series (not the buffer setting)."""
         self.cash = cash_series.copy()
+        self._convert_timezone("UTC")
+        self._validate_index_integrity()
+        self._version += 1
+
+    def update_accounting_risk(
+        self,
+        *,
+        margin_by_instrument: pd.DataFrame,
+        margin_used: pd.Series,
+        buying_power: pd.Series,
+    ) -> None:
+        """Store margin and buying-power histories on the portfolio timeline."""
+        self.margin_by_instrument = margin_by_instrument.copy()
+        self.margin_used = margin_used.copy()
+        self.buying_power = buying_power.copy()
+        self._convert_timezone("UTC")
+        self._validate_index_integrity()
+        self._version += 1
+
+    def update_exposures(
+        self,
+        *,
+        exposure_values: pd.DataFrame,
+        exposure_weights: pd.DataFrame,
+    ) -> None:
+        """Store signed economic exposures separately from accounting values."""
+        self.exposure_values = exposure_values.copy()
+        self.exposure_weights = exposure_weights.copy()
         self._convert_timezone("UTC")
         self._validate_index_integrity()
         self._version += 1
@@ -429,13 +506,22 @@ class PortfolioData:
             net_asset_value=self.net_asset_value,
             input_weights=self.input_weights,
             rebalance_flags=self.rebalance_flags,
+            rebalance_decision_flags=self.rebalance_decision_flags,
+            rebalance_submission_flags=self.rebalance_submission_flags,
+            rebalance_fill_flags=self.rebalance_fill_flags,
             asset_name_map=self.asset_name_map,
             trading_calendar=self.trading_calendar,
+            periods_per_year=self.periods_per_year,
             weights=weights,
             positions=self.positions,
             position_values=self.position_values,
+            exposure_values=self.exposure_values,
+            exposure_weights=self.exposure_weights,
             cash_buffer=self.cash_buffer,
             cash=self.cash,
+            margin_by_instrument=self.margin_by_instrument,
+            margin_used=self.margin_used,
+            buying_power=self.buying_power,
             returns=self.returns,
             returns_for_metrics=self.returns_for_metrics,
             cumulative_returns=self.cumulative_returns,
@@ -453,13 +539,22 @@ class PortfolioData:
             net_asset_value=self.net_asset_value,
             input_weights=self.input_weights,
             rebalance_flags=self.rebalance_flags,
+            rebalance_decision_flags=self.rebalance_decision_flags,
+            rebalance_submission_flags=self.rebalance_submission_flags,
+            rebalance_fill_flags=self.rebalance_fill_flags,
             asset_name_map=self.asset_name_map,
             trading_calendar=self.trading_calendar,
+            periods_per_year=self.periods_per_year,
             weights=self.weights,
             positions=positions,
             position_values=self.position_values,
+            exposure_values=self.exposure_values,
+            exposure_weights=self.exposure_weights,
             cash_buffer=self.cash_buffer,
             cash=self.cash,
+            margin_by_instrument=self.margin_by_instrument,
+            margin_used=self.margin_used,
+            buying_power=self.buying_power,
             returns=self.returns,
             returns_for_metrics=self.returns_for_metrics,
             cumulative_returns=self.cumulative_returns,
@@ -477,13 +572,22 @@ class PortfolioData:
             net_asset_value=nav,
             input_weights=self.input_weights,
             rebalance_flags=self.rebalance_flags,
+            rebalance_decision_flags=self.rebalance_decision_flags,
+            rebalance_submission_flags=self.rebalance_submission_flags,
+            rebalance_fill_flags=self.rebalance_fill_flags,
             asset_name_map=self.asset_name_map,
             trading_calendar=self.trading_calendar,
+            periods_per_year=self.periods_per_year,
             weights=self.weights,
             positions=self.positions,
             position_values=self.position_values,
+            exposure_values=self.exposure_values,
+            exposure_weights=self.exposure_weights,
             cash_buffer=self.cash_buffer,
             cash=self.cash,
+            margin_by_instrument=self.margin_by_instrument,
+            margin_used=self.margin_used,
+            buying_power=self.buying_power,
             _version=self._version + 1,
         )
         return pd_obj
@@ -510,7 +614,7 @@ class PortfolioData:
             raise ValueError("weights are required to get instrument value")
         return self.net_asset_value * self.weights[instrument]
 
-    def get_portfolio_snapshot(self, date: Union[str, pd.Timestamp]) -> pd.Series:
+    def get_portfolio_snapshot(self, date: str | pd.Timestamp) -> pd.Series:
         """
         Return a snapshot of the portfolio weights on a specific date.
         """
@@ -518,7 +622,7 @@ class PortfolioData:
             raise ValueError("weights are required to get a portfolio snapshot")
         return self.weights.loc[date]
 
-    def is_trading_day(self, date: Union[str, pd.Timestamp]) -> bool:
+    def is_trading_day(self, date: str | pd.Timestamp) -> bool:
         """
         Check if a given date is a trading day.
         """
@@ -556,29 +660,47 @@ class PortfolioData:
                 self.net_asset_value.index,
             )
             sliced_nav = self.net_asset_value.loc[start:stop]
-            sliced_weights = (
-                self.weights.loc[start:stop]
-                if self.weights is not None
-                else None
-            )
+            sliced_weights = self.weights.loc[start:stop] if self.weights is not None else None
             sliced_positions = (
-                self.positions.loc[start:stop]
-                if self.positions is not None
-                else None
+                self.positions.loc[start:stop] if self.positions is not None else None
             )
             sliced_position_values = (
-                self.position_values.loc[start:stop]
-                if self.position_values is not None
+                self.position_values.loc[start:stop] if self.position_values is not None else None
+            )
+            sliced_exposure_values = (
+                self.exposure_values.loc[start:stop] if self.exposure_values is not None else None
+            )
+            sliced_exposure_weights = (
+                self.exposure_weights.loc[start:stop] if self.exposure_weights is not None else None
+            )
+            sliced_cash = self.cash.loc[start:stop] if self.cash is not None else None
+            sliced_margin_by_instrument = (
+                self.margin_by_instrument.loc[start:stop]
+                if self.margin_by_instrument is not None
                 else None
             )
-            sliced_cash = (
-                self.cash.loc[start:stop]
-                if self.cash is not None
-                else None
+            sliced_margin_used = (
+                self.margin_used.loc[start:stop] if self.margin_used is not None else None
+            )
+            sliced_buying_power = (
+                self.buying_power.loc[start:stop] if self.buying_power is not None else None
             )
             sliced_rebalance_flags = (
-                self.rebalance_flags.loc[start:stop]
-                if self.rebalance_flags is not None
+                self.rebalance_flags.loc[start:stop] if self.rebalance_flags is not None else None
+            )
+            sliced_rebalance_decision_flags = (
+                self.rebalance_decision_flags.loc[start:stop]
+                if self.rebalance_decision_flags is not None
+                else None
+            )
+            sliced_rebalance_submission_flags = (
+                self.rebalance_submission_flags.loc[start:stop]
+                if self.rebalance_submission_flags is not None
+                else None
+            )
+            sliced_rebalance_fill_flags = (
+                self.rebalance_fill_flags.loc[start:stop]
+                if self.rebalance_fill_flags is not None
                 else None
             )
             # InstrumentData expects a tuple (start, end), not a slice
@@ -590,14 +712,42 @@ class PortfolioData:
                 self.positions.loc[date_range] if self.positions is not None else None
             )
             sliced_position_values = (
-                self.position_values.loc[date_range]
-                if self.position_values is not None
-                else None
+                self.position_values.loc[date_range] if self.position_values is not None else None
+            )
+            sliced_exposure_values = (
+                self.exposure_values.loc[date_range] if self.exposure_values is not None else None
+            )
+            sliced_exposure_weights = (
+                self.exposure_weights.loc[date_range] if self.exposure_weights is not None else None
             )
             sliced_cash = self.cash.loc[date_range] if self.cash is not None else None
+            sliced_margin_by_instrument = (
+                self.margin_by_instrument.loc[date_range]
+                if self.margin_by_instrument is not None
+                else None
+            )
+            sliced_margin_used = (
+                self.margin_used.loc[date_range] if self.margin_used is not None else None
+            )
+            sliced_buying_power = (
+                self.buying_power.loc[date_range] if self.buying_power is not None else None
+            )
             sliced_rebalance_flags = (
-                self.rebalance_flags.loc[date_range]
-                if self.rebalance_flags is not None
+                self.rebalance_flags.loc[date_range] if self.rebalance_flags is not None else None
+            )
+            sliced_rebalance_decision_flags = (
+                self.rebalance_decision_flags.loc[date_range]
+                if self.rebalance_decision_flags is not None
+                else None
+            )
+            sliced_rebalance_submission_flags = (
+                self.rebalance_submission_flags.loc[date_range]
+                if self.rebalance_submission_flags is not None
+                else None
+            )
+            sliced_rebalance_fill_flags = (
+                self.rebalance_fill_flags.loc[date_range]
+                if self.rebalance_fill_flags is not None
                 else None
             )
             sliced_instruments = self.instruments.slice_data(date_range)
@@ -610,9 +760,39 @@ class PortfolioData:
         if sliced_positions is not None:
             index_checks.append(sliced_nav_index.equals(self._index_as_utc(sliced_positions.index)))
         if sliced_position_values is not None:
-            index_checks.append(sliced_nav_index.equals(self._index_as_utc(sliced_position_values.index)))
+            index_checks.append(
+                sliced_nav_index.equals(self._index_as_utc(sliced_position_values.index))
+            )
+        if sliced_exposure_values is not None:
+            index_checks.append(
+                sliced_nav_index.equals(self._index_as_utc(sliced_exposure_values.index))
+            )
+        if sliced_exposure_weights is not None:
+            index_checks.append(
+                sliced_nav_index.equals(self._index_as_utc(sliced_exposure_weights.index))
+            )
         if sliced_cash is not None:
             index_checks.append(sliced_nav_index.equals(self._index_as_utc(sliced_cash.index)))
+        if sliced_margin_by_instrument is not None:
+            index_checks.append(
+                sliced_nav_index.equals(self._index_as_utc(sliced_margin_by_instrument.index))
+            )
+        if sliced_margin_used is not None:
+            index_checks.append(
+                sliced_nav_index.equals(self._index_as_utc(sliced_margin_used.index))
+            )
+        if sliced_buying_power is not None:
+            index_checks.append(
+                sliced_nav_index.equals(self._index_as_utc(sliced_buying_power.index))
+            )
+        for sliced_flags in (
+            sliced_rebalance_flags,
+            sliced_rebalance_decision_flags,
+            sliced_rebalance_submission_flags,
+            sliced_rebalance_fill_flags,
+        ):
+            if sliced_flags is not None:
+                index_checks.append(sliced_nav_index.equals(self._index_as_utc(sliced_flags.index)))
         if not all(index_checks):
             raise ValueError("Inconsistent date ranges after slicing")
 
@@ -622,12 +802,21 @@ class PortfolioData:
             weights=sliced_weights,
             positions=sliced_positions,
             position_values=sliced_position_values,
+            exposure_values=sliced_exposure_values,
+            exposure_weights=sliced_exposure_weights,
             input_weights=self.input_weights,
             rebalance_flags=sliced_rebalance_flags,
+            rebalance_decision_flags=sliced_rebalance_decision_flags,
+            rebalance_submission_flags=sliced_rebalance_submission_flags,
+            rebalance_fill_flags=sliced_rebalance_fill_flags,
             asset_name_map=self.asset_name_map,
             trading_calendar=self.trading_calendar,
+            periods_per_year=self.periods_per_year,
             cash_buffer=self.cash_buffer,
             cash=sliced_cash,
+            margin_by_instrument=sliced_margin_by_instrument,
+            margin_used=sliced_margin_used,
+            buying_power=sliced_buying_power,
         )
 
 
@@ -644,26 +833,44 @@ class PortfolioDataBuilder:
         *,
         instruments: "InstrumentData",
         nav: pd.Series,
-        weights: Optional[pd.DataFrame] = None,
-        positions: Optional[pd.DataFrame] = None,
-        position_values: Optional[pd.DataFrame] = None,
-        input_weights: Optional[Union[np.ndarray, pd.DataFrame, Dict[str, float]]] = None,
-        rebalance_flags: Optional[pd.Series] = None,
-        asset_name_map: Optional[Dict[str, str]] = None,
-        trading_calendar: Optional[pd.Series] = None,
-        cash_buffer: Union[float, pd.Series] = 0.05,
-        cash: Optional[pd.Series] = None,
+        weights: pd.DataFrame | None = None,
+        positions: pd.DataFrame | None = None,
+        position_values: pd.DataFrame | None = None,
+        exposure_values: pd.DataFrame | None = None,
+        exposure_weights: pd.DataFrame | None = None,
+        input_weights: np.ndarray | pd.DataFrame | dict[str, float] | None = None,
+        rebalance_flags: pd.Series | None = None,
+        rebalance_decision_flags: pd.Series | None = None,
+        rebalance_submission_flags: pd.Series | None = None,
+        rebalance_fill_flags: pd.Series | None = None,
+        asset_name_map: dict[str, str] | None = None,
+        trading_calendar: pd.Series | None = None,
+        cash_buffer: float | pd.Series = 0.05,
+        cash: pd.Series | None = None,
+        margin_by_instrument: pd.DataFrame | None = None,
+        margin_used: pd.Series | None = None,
+        buying_power: pd.Series | None = None,
+        periods_per_year: int = 252,
     ) -> "PortfolioData":
         return PortfolioData(
             instruments=instruments,
             net_asset_value=nav,
             input_weights=input_weights,
             rebalance_flags=rebalance_flags,
+            rebalance_decision_flags=rebalance_decision_flags,
+            rebalance_submission_flags=rebalance_submission_flags,
+            rebalance_fill_flags=rebalance_fill_flags,
             asset_name_map=asset_name_map,
             trading_calendar=trading_calendar,
             weights=weights,
             positions=positions,
             position_values=position_values,
+            exposure_values=exposure_values,
+            exposure_weights=exposure_weights,
             cash_buffer=cash_buffer,
             cash=cash,
+            margin_by_instrument=margin_by_instrument,
+            margin_used=margin_used,
+            buying_power=buying_power,
+            periods_per_year=periods_per_year,
         )

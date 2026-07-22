@@ -1,45 +1,38 @@
 """
-Probability of Backtest Overfitting (PBO).
+Walk-forward rank-stability diagnostics and legacy PBO helpers.
 
 Bailey, Borwein, López de Prado & Zhu (2017),
 "The Probability of Backtest Overfitting".
 
-True CSCV-style PBO requires TRIAL-LEVEL out-of-sample data: every
+Canonical CSCV PBO requires TRIAL-LEVEL out-of-sample data: every
 candidate configuration must be evaluated on both halves of each
 combinatorial split, so that the IS-selected trial's OOS *rank* among
-all candidates can be measured.  A walk-forward pipeline that only
-records one IS Sharpe and one OOS Sharpe per fold does NOT contain the
-information needed to compute PBO — any number derived from fold-level
-Sharpes alone is a transfer diagnostic, not PBO.
+all candidates can be measured across symmetric combinations of IS/OOS
+blocks.  The rolling walk-forward top-K pipeline in this package does
+not perform CSCV and must not be reported as canonical PBO.
 
 This module therefore provides:
 
-- ``selected_trial_logit`` / ``pbo_from_selected_ranks`` — the honest,
-  computable statistic: per fold, the optimizer's top-K trials are
-  re-backtested on the OOS window (opt-in via
-  ``WalkForwardConfig.pbo_trials``); the IS-selected trial's relative
-  OOS rank ω̄ ∈ (0, 1) yields a logit λ = ln(ω̄ / (1 − ω̄)), and
-  PBO = fraction of folds with λ ≤ 0 (selection lands in the bottom
-  half OOS).
+- ``selected_trial_rank_logit`` and
+  ``walk_forward_top_k_rank_failure_rate`` — a useful rolling
+  rank-stability diagnostic.  Per fold, the optimizer's top-K IS trials
+  are re-backtested on that fold's OOS window; the IS-selected trial's
+  relative OOS rank yields a logit, and the aggregate reports the
+  fraction of folds with logit <= 0.
 
 - ``probability_of_backtest_overfitting`` — DEPRECATED.  The previous
   implementation computed a fold-level IS→OOS ratio with no trials, no
   selection, and no rank, and could label a textbook overfit
   (IS 3.0 → OOS 0.05) as "no overfit".  It now returns ``nan`` and
-  warns; use the ``pbo_trials`` pipeline instead.
+  warns; use the ``rank_stability_trials`` pipeline instead.
 
-- ``pbo_logit_distribution`` — retained as a *diagnostic* IS→OOS
-  transfer-ratio distribution across combinatorial fold splits (used
-  for plotting).  It is NOT the CSCV PBO.
+- ``is_oos_transfer_distribution`` — an unrelated diagnostic IS→OOS
+  transfer-ratio distribution across fold splits (used for plotting).
 
-Interpretation (for the real, rank-based PBO):
-    PBO < 0.15 → low overfit risk
-    0.15 – 0.40 → moderate
-    PBO > 0.40 → likely overfit
-
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
+The former ``selected_trial_logit``, ``pbo_from_selected_ranks`` and
+``pbo_logit_distribution`` names remain as deprecated compatibility
+wrappers for one release.  They do not turn these rolling diagnostics
+into CSCV PBO.
 
 Copyright (c) 2026 QuantJourney.
 Updated: 07.2026.
@@ -51,8 +44,8 @@ from __future__ import annotations
 import logging
 import math
 import warnings as _warnings
+from collections.abc import Sequence
 from itertools import combinations
-from typing import Optional, Sequence
 
 import numpy as np
 
@@ -64,12 +57,13 @@ def _n_choose_k(n: int, k: int) -> int:
     return math.comb(n, k)
 
 
-# ── Rank-based PBO (the computable, honest statistic) ─────────────────
+# ── Rolling top-K OOS rank-stability diagnostic ──────────────────────
 
-def selected_trial_logit(
+
+def selected_trial_rank_logit(
     selected_value: float,
     candidate_values: Sequence[float],
-) -> Optional[float]:
+) -> float | None:
     """
     Logit of the IS-selected trial's relative OOS rank among candidates.
 
@@ -85,38 +79,66 @@ def selected_trial_logit(
         statistic is not computable (K < 2 or non-finite selection).
     """
     vals = np.asarray(list(candidate_values), dtype=np.float64)
+    vals = vals[np.isfinite(vals)]
     if vals.size < 2 or not np.isfinite(selected_value):
         return None
 
     # Average-tie rank: 1 = worst … K = best
-    rank = float((vals < selected_value).sum()) + (
-        float((vals == selected_value).sum()) + 1.0
-    ) / 2.0
+    rank = (
+        float((vals < selected_value).sum()) + (float((vals == selected_value).sum()) + 1.0) / 2.0
+    )
     omega = rank / (vals.size + 1.0)
     if not (0.0 < omega < 1.0):
         return None
     return float(math.log(omega / (1.0 - omega)))
 
 
-def pbo_from_selected_ranks(logits: Sequence[float]) -> float:
+def walk_forward_top_k_rank_failure_rate(logits: Sequence[float]) -> float:
     """
-    PBO from per-fold selection-rank logits.
+    Failure rate from rolling-fold selection-rank logits.
 
     Args:
-        logits: One λ per fold, from ``selected_trial_logit``.
+        logits: One lambda per fold, from ``selected_trial_rank_logit``.
 
     Returns:
-        PBO ∈ [0, 1] — fraction of folds where λ ≤ 0 (the IS-selected
-        trial ranked in the bottom half OOS).  ``nan`` when no logits
-        are available.
+        Value in [0, 1]: fraction of rolling folds where the IS-selected
+        trial ranked in the bottom half of the evaluated top-K set OOS.
+        ``nan`` when no logits are available.  This is not CSCV PBO.
     """
-    finite = [float(l) for l in logits if l is not None and np.isfinite(l)]
+    finite = [float(logit) for logit in logits if logit is not None and np.isfinite(logit)]
     if not finite:
         return float("nan")
-    return sum(1.0 for l in finite if l <= 0.0) / len(finite)
+    return sum(1.0 for logit in finite if logit <= 0.0) / len(finite)
+
+
+def selected_trial_logit(
+    selected_value: float,
+    candidate_values: Sequence[float],
+) -> float | None:
+    """Deprecated alias for :func:`selected_trial_rank_logit`."""
+    _warnings.warn(
+        "selected_trial_logit is deprecated; use selected_trial_rank_logit. "
+        "The rolling top-K diagnostic is not canonical CSCV PBO.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return selected_trial_rank_logit(selected_value, candidate_values)
+
+
+def pbo_from_selected_ranks(logits: Sequence[float]) -> float:
+    """Deprecated alias for ``walk_forward_top_k_rank_failure_rate``."""
+    _warnings.warn(
+        "pbo_from_selected_ranks is deprecated; use "
+        "walk_forward_top_k_rank_failure_rate. The result is not canonical "
+        "CSCV PBO.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return walk_forward_top_k_rank_failure_rate(logits)
 
 
 # ── Deprecated fold-level pseudo-PBO ──────────────────────────────────
+
 
 def probability_of_backtest_overfitting(
     is_sharpes: Sequence[float],
@@ -136,10 +158,9 @@ def probability_of_backtest_overfitting(
     OOS 0.05 still scored 0.0 ("no overfit").  Rather than report a
     falsely reassuring number, this function now returns ``nan``.
 
-    Use ``WalkForwardConfig.pbo_trials = K`` (K ≥ 2) with an optimizer
+    Use ``WalkForwardConfig.rank_stability_trials = K`` (K >= 2) with an optimizer
     so the walk-forward runner evaluates the top-K trials OOS per fold;
-    the engine then computes the rank-based PBO via
-    ``pbo_from_selected_ranks``.
+    the engine then computes a rolling top-K rank-failure diagnostic.
     """
     if len(is_sharpes) != len(oos_sharpes):
         raise ValueError("is_sharpes and oos_sharpes must have equal length")
@@ -147,8 +168,8 @@ def probability_of_backtest_overfitting(
     _warnings.warn(
         "probability_of_backtest_overfitting(is_sharpes, oos_sharpes) is "
         "deprecated: fold-level Sharpes cannot yield the CSCV PBO. It now "
-        "returns nan. Enable WalkForwardConfig.pbo_trials for the "
-        "rank-based PBO.",
+        "returns nan. Enable WalkForwardConfig.rank_stability_trials for "
+        "the rolling top-K rank-failure diagnostic.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -161,7 +182,8 @@ def probability_of_backtest_overfitting(
 
 # ── Diagnostic transfer-ratio distribution (plotting only) ────────────
 
-def pbo_logit_distribution(
+
+def is_oos_transfer_distribution(
     is_sharpes: Sequence[float],
     oos_sharpes: Sequence[float],
     *,
@@ -214,3 +236,26 @@ def pbo_logit_distribution(
             logits[idx] = 1.0 if oos_mean >= 0 else 0.0
 
     return logits
+
+
+def pbo_logit_distribution(
+    is_sharpes: Sequence[float],
+    oos_sharpes: Sequence[float],
+    *,
+    max_combinations: int = 10_000,
+    seed: int = 42,
+) -> np.ndarray:
+    """Deprecated alias for :func:`is_oos_transfer_distribution`."""
+    _warnings.warn(
+        "pbo_logit_distribution is deprecated; use "
+        "is_oos_transfer_distribution. This fold-level diagnostic is not "
+        "a CSCV PBO logit distribution.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return is_oos_transfer_distribution(
+        is_sharpes,
+        oos_sharpes,
+        max_combinations=max_combinations,
+        seed=seed,
+    )

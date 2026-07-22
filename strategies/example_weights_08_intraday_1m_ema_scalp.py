@@ -9,9 +9,7 @@ Example Weights 08 - Intraday 1m EMA Scalp
 Mode: weights.
 Idea: hold each name only while its fast EMA(9) is above its slow EMA(21) on
 1-minute bars. A fast, high-turnover trend-follow / scalp template.
-Universe: three very liquid mega-caps.
-Granularity: 1m intraday data (yfinance keeps ~7 days of 1m history, so the
-backtest window is deliberately short).
+Universe: three predeclared liquid ETFs: SPY, QQQ and IWM.
 
 Timeframe-grid note: this is the fastest cadence in the intraday grid
 (1m -> 5m -> 30m -> 1h). At 1m, turnover is high and costs dominate, so this
@@ -24,7 +22,7 @@ Usage:
 
 import asyncio
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
 
@@ -43,7 +41,7 @@ def _credentials() -> dict:
 
 def _recent_period(days: int = 5) -> dict[str, str]:
     # yfinance serves at most ~7 calendar days of 1-minute bars.
-    end = datetime.now(timezone.utc).date()
+    end = datetime.now(UTC).date()
     start = end - timedelta(days=days)
     return {"start": start.isoformat(), "end": end.isoformat()}
 
@@ -69,18 +67,18 @@ async def main() -> None:
         strategy_name="ExampleWeights08_IntradayEMAScalp1m",
         strategy_type="Long / Cash",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA"],
-        backtest_period=_recent_period(days=5),
-        source="yfinance",
+        instruments=["SPY", "QQQ", "IWM"],
+        backtest_period={"start": "2026-07-05", "end": "2026-07-11"},
         granularity="1m",
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
+        source="yfinance",
         execution_mode="weights",
         max_position_size=0.34,
         rebalance_policy=RebalancePolicy(frequency=None, rebalance_on_signal_change=True),
         indicators_config=[
             {"function": "EMA", "price_cols": ["close"], "params": {"periods": [9, 21]}},
         ],
-        benchmark_symbol="QQQ",
-        benchmark_name="Nasdaq 100 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

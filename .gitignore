@@ -1,6 +1,6 @@
 .DS_Store
+/AGENTS.md
 .venv/
-uv.lock
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -55,3 +55,12 @@ build/
 *.csr
 *.p12
 *.pfx
+
+# Cross-engine benchmark outputs and local artifacts
+compare/native_results/
+compare/native_reports/
+compare/protocol_artifacts/
+compare/.envs/
+compare/quantconnect/lean_data/
+compare/quantconnect/native_*/
+compare/native/lean_results/

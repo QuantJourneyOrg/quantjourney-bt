@@ -57,13 +57,10 @@ Use a short, descriptive name, e.g. `feat/example-bollinger-squeeze` or
 
 ### 5. Set up a development environment
 
-Use a virtual environment (do not install into system/Homebrew Python):
+Use the reviewed lockfile (do not install into system/Homebrew Python):
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -U pip
-python -m pip install -e ".[dev,data]"
+uv sync --frozen --extra dev --extra data --extra wf --extra typecheck
 ```
 
 ### 6. Make your change
@@ -74,13 +71,17 @@ For a new strategy, follow the conventions in
 ### 7. Run the checks locally
 
 ```bash
-pytest -q
-ruff check .
+uv run --no-sync pytest -q
+uv run --no-sync ruff check .
+uv run --no-sync ruff format --check .
+uv run --no-sync python tools/check_mypy_baseline.py
 # for a new strategy, confirm it imports cleanly:
 ./strategy.sh <your_strategy_name> --check
 ```
 
 Everything should pass before you open a pull request.
+Do not update `quality/mypy-baseline.json` merely to make CI green; a
+maintainer must review the complete diagnostic change.
 
 ### 8. Commit
 
@@ -137,6 +138,7 @@ keep the universe small enough to read the resulting report.
 
 - [ ] `pytest -q` passes.
 - [ ] `ruff check .` is clean.
+- [ ] `ruff format --check .` and the reviewed mypy baseline gate pass.
 - [ ] New strategies pass `./strategy.sh <name> --check`.
 - [ ] Docstrings follow the existing style.
 - [ ] No credentials, API keys, tokens, or private paths are included.

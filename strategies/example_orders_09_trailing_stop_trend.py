@@ -9,7 +9,7 @@ Example Orders 09 - Trailing Stop Trend
 Mode: orders.
 Order types: MARKET entry, STOP_TRAIL exit.
 Idea: enter on SMA trend and let a 4% trailing stop manage the exit.
-Universe: five large technology stocks.
+Universe: three predeclared liquid ETFs: SPY, QQQ and IWM.
 
 The stop ratchets upward as price makes new highs. It does not need manual
 updates from the strategy; the FillEngine manages the trailing anchor.
@@ -71,13 +71,15 @@ class TrailingStopTrend(Backtester):
                 if shares > 0:
                     self.fill_engine.submit(Order(inst, OrderSide.BUY, shares, OrderType.MARKET))
             elif pos > 0 and not self._has_trail.get(inst, False):
-                self.fill_engine.submit(Order(
-                    inst,
-                    OrderSide.SELL,
-                    pos,
-                    OrderType.STOP_TRAIL,
-                    trail_percent=0.04,
-                ))
+                self.fill_engine.submit(
+                    Order(
+                        inst,
+                        OrderSide.SELL,
+                        pos,
+                        OrderType.STOP_TRAIL,
+                        trail_percent=0.04,
+                    )
+                )
                 self._has_trail[inst] = True
             elif signal == 0 and prev == 1 and pos > 0:
                 self.fill_engine.cancel_all(instrument=inst)
@@ -92,8 +94,10 @@ async def main() -> None:
         **_credentials(),
         strategy_name="ExampleOrders09_TrailingStopTrend",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
-        backtest_period={"start": "2020-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "QQQ", "IWM"],
+        backtest_period={"start": "2001-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="orders",
         max_position_size=0.25,

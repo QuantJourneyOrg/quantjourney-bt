@@ -9,7 +9,7 @@ Example Weights 22 - MACD Trend
 Mode: weights.
 Idea: hold each name while its MACD line is above its signal line — a momentum
 trend filter that reacts faster than a simple long-window SMA crossover.
-Universe: five liquid mega-cap stocks.
+Universe: canonical US sector ETFs: XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV and XLY.
 
 Signal: MACD = EMA(12) - EMA(26); signal line = EMA(9) of MACD.
 - MACD > signal line  -> long
@@ -65,15 +65,15 @@ async def main() -> None:
         strategy_name="ExampleWeights22_MACDTrend",
         strategy_type="Long / Cash",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
-        backtest_period={"start": "2015-01-01", "end": "2025-01-01"},
+        instruments=["XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY"],
+        backtest_period={"start": "2000-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=0.25,
         rebalance_policy=RebalancePolicy(frequency="D"),
         indicators_config=[],
-        benchmark_symbol="^GSPC",
-        benchmark_name="S&P 500 Index",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

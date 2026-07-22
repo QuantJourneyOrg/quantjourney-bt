@@ -6,27 +6,61 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
-  test:
+  quality:
+    name: Source, lint, and types
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
-      - name: Install package with dev dependencies
+      - name: Install pinned uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.28"
+          enable-cache: true
+
+      - name: Sync locked quality environment
+        run: >-
+          uv sync --frozen
+          --extra dev --extra data --extra wf --extra typecheck
+
+      - name: Verify approved public source manifest
+        run: uv run --no-sync python tools/verify_public_release.py
+
+      - name: Blocking full-tree lint
         run: |
-          python -m pip install -U pip
-          python -m pip install -e ".[dev,data]"
+          uv run --no-sync ruff check .
+          uv run --no-sync ruff format --check .
 
-      # Advisory for now: the tree has a pre-existing lint backlog. This surfaces
-      # ruff suggestions on each PR without failing the build. Once the backlog is
-      # cleared (`ruff check --fix .`), remove `continue-on-error` to make it a gate.
-      - name: Lint (ruff, advisory)
-        continue-on-error: true
-        run: ruff check .
+      - name: Blocking full-package type-check baseline
+        run: uv run --no-sync python tools/check_mypy_baseline.py
 
-      - name: Tests (pytest)
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package with test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,data,wf]"
+
+      - name: Tests
         run: pytest -q

@@ -43,9 +43,9 @@ survives due diligence.
 
 ## Validation
 
-- **Deeper overfit detection.** Combinatorial purged cross-validation,
-  probability of backtest overfitting, and deflated Sharpe on top of the
-  existing walk-forward, purge/embargo, and optimization diagnostics.
+- **Deeper overfit detection.** Combinatorial purged cross-validation and
+  canonical CSCV probability of backtest overfitting on top of the existing
+  walk-forward, pre-OOS purge, DSR and rolling rank-stability diagnostics.
 
 ## Reach
 

@@ -8,8 +8,8 @@ Example Orders 02 - Market RSI Mean Reversion
 
 Mode: orders.
 Order type: MARKET.
-Idea: buy oversold stocks when RSI(14) is below 35, sell when RSI is above 60.
-Universe: five liquid mega-cap stocks.
+Idea: buy oversold liquid ETFs when RSI(14) is below 35, sell when RSI is above 60.
+Universe: three predeclared liquid ETFs: SPY, QQQ and IWM.
 
 This example uses market orders for both entry and exit, so it is easy to read
 and useful as a minimal order-mode mean-reversion template.
@@ -42,7 +42,9 @@ class MarketRSIReversion(Backtester):
     """RSI entry/exit strategy implemented with market orders."""
 
     def _has_pending(self, instrument: str) -> bool:
-        return any(o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders)
+        return any(
+            o.instrument == instrument and o.is_active for o in self.fill_engine.pending_orders
+        )
 
     def _compute_orders(self, date, bars, current_positions, nav) -> None:
         rsi = self.instruments_data.get_feature("RSI_14_close")
@@ -70,8 +72,10 @@ async def main() -> None:
         **_credentials(),
         strategy_name="ExampleOrders02_MarketRSIReversion",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "META", "AMZN"],
-        backtest_period={"start": "2020-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "QQQ", "IWM"],
+        backtest_period={"start": "2001-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="orders",
         max_position_size=0.20,

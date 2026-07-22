@@ -11,7 +11,7 @@ Idea: hold a diversified multi-asset basket, but size positions so each asset
 contributes equal risk (equal risk contribution, ERC) rather than equal dollars.
 Low-volatility assets (bonds) get more capital; high-volatility assets (equities,
 commodities) get less.
-Universe: equities, bonds, gold, commodities.
+Universe: canonical multi-asset ETFs: SPY, EFA, EEM, TLT, IEF, GLD, DBC and VNQ.
 
 Base: stay invested in all assets after warm-up (equal target weights).
 Risk overlay: `RiskParityModel(lookback=63)` replaces the equal weights with ERC
@@ -48,7 +48,7 @@ class RiskParityMultiAsset(Backtester):
     def _compute_signals(self) -> pd.DataFrame:
         close = self.instruments_data.get_feature("adj_close")
         signals = pd.DataFrame(0.0, index=close.index, columns=close.columns)
-        signals.iloc[self.WARMUP:] = 1.0
+        signals.iloc[self.WARMUP :] = 1.0
         return signals
 
     def _compute_weights(self) -> pd.DataFrame:
@@ -63,16 +63,16 @@ async def main() -> None:
         strategy_name="ExampleWeights19_RiskParityMultiAsset",
         strategy_type="Long Only",
         initial_capital=100_000,
-        instruments=["SPY", "QQQ", "TLT", "IEF", "GLD", "DBC"],
-        backtest_period={"start": "2012-01-01", "end": "2025-01-01"},
+        instruments=["SPY", "EFA", "EEM", "TLT", "IEF", "GLD", "DBC", "VNQ"],
+        backtest_period={"start": "2007-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=1.0,
         rebalance_policy=RebalancePolicy(frequency="BME"),
         risk_model=RiskParityModel(lookback=63),
         indicators_config=[],
-        benchmark_symbol="SPY",
-        benchmark_name="S&P 500 ETF",
         show_text_reports=True,
         save_text_reports=True,
         save_portfolio_plots=True,

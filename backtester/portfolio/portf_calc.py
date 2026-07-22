@@ -6,12 +6,7 @@ This module provides a thin facade over PortfolioData, delegating analytics
 to pure functions in quantjourney.portfolio.calc. It keeps orchestration
 and config handling near data containers and leaves math to the calc layer.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
@@ -19,16 +14,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from backtester.portfolio.portf_data import PortfolioData
-from backtester.portfolio.config import CalcConfig, get_default_config
 from backtester.portfolio.calc import returns as calc_returns
 from backtester.portfolio.calc import risk as calc_risk
+from backtester.portfolio.config import CalcConfig, get_default_config
 from backtester.portfolio.instr_calc import InstrumentCalculations
+from backtester.portfolio.portf_data import PortfolioData
 
 
 class MetricStatus(Enum):
@@ -43,7 +38,7 @@ class ValidationResult:
     status: MetricStatus
     message: str
     data: Any
-    details: Optional[Dict[str, Any]] = None
+    details: dict[str, Any] | None = None
 
 
 class ReturnMethod(Enum):
@@ -68,7 +63,12 @@ class PortfolioCalculations:
 
     def __init__(self, portfolio_data: PortfolioData, *, config: CalcConfig | None = None) -> None:
         self._portfolio_data = portfolio_data
-        self._config: CalcConfig = config or get_default_config()
+        if config is None:
+            config = get_default_config()
+            periods_per_year = getattr(portfolio_data, "periods_per_year", None)
+            if periods_per_year is not None:
+                config = config.model_copy(update={"days_per_year": max(int(periods_per_year), 1)})
+        self._config = config
         self.trading_days = int(self._config.days_per_year)
         self.risk_free_rate = float(self._config.risk_free_rate_annual or 0.0)
 
@@ -86,7 +86,7 @@ class PortfolioCalculations:
         return r.replace([np.inf, -np.inf], np.nan).dropna()
 
     @property
-    def weights(self) -> Optional[pd.DataFrame | pd.Series]:
+    def weights(self) -> pd.DataFrame | pd.Series | None:
         return self._portfolio_data.weights
 
     # Back-compat helpers for plotting layer ---------------------------
@@ -126,11 +126,21 @@ class PortfolioCalculations:
     # Validation -------------------------------------------------------
     def _validate_portfolio_data(self) -> ValidationResult:
         if self._portfolio_data is None:
-            return ValidationResult(MetricStatus.FAILED, "Missing portfolio data", {"error": "Portfolio data not provided"})
+            return ValidationResult(
+                MetricStatus.FAILED,
+                "Missing portfolio data",
+                {"error": "Portfolio data not provided"},
+            )
         if self.returns is None or len(self.returns) == 0:
-            return ValidationResult(MetricStatus.FAILED, "Empty return series", {"error": "No return data"})
+            return ValidationResult(
+                MetricStatus.FAILED, "Empty return series", {"error": "No return data"}
+            )
         if len(self.returns) < self.trading_days:
-            return ValidationResult(MetricStatus.WARNING, "Limited data history", {"warning": "Less than 1 year of data"})
+            return ValidationResult(
+                MetricStatus.WARNING,
+                "Limited data history",
+                {"warning": "Less than 1 year of data"},
+            )
         if self.weights is not None:
             w = self.weights
             if isinstance(w, pd.DataFrame):
@@ -138,8 +148,12 @@ class PortfolioCalculations:
             else:
                 s = w.sum()
             if not np.isclose(s, 1.0, rtol=1e-3):
-                return ValidationResult(MetricStatus.WARNING, "Weights don't sum to 1", {"warning": f"Sum: {s}"})
-        return ValidationResult(MetricStatus.SUCCESS, "Validation passed", {"message": "All checks completed"})
+                return ValidationResult(
+                    MetricStatus.WARNING, "Weights don't sum to 1", {"warning": f"Sum: {s}"}
+                )
+        return ValidationResult(
+            MetricStatus.SUCCESS, "Validation passed", {"message": "All checks completed"}
+        )
 
     # Returns ----------------------------------------------------------
     def compute_returns(self, method: str = "simple") -> pd.Series:
@@ -151,27 +165,39 @@ class PortfolioCalculations:
         else:
             raise ValueError(f"Invalid return method: {method}")
 
-    def compute_cumulative_returns(self, starting_value: float = 1.0) -> Dict[str, Any]:
+    def compute_cumulative_returns(self, starting_value: float = 1.0) -> dict[str, Any]:
         if len(self.returns) == 0:
-            return {"status": MetricStatus.ERROR.value, "message": "Insufficient data", "data": None}
+            return {
+                "status": MetricStatus.ERROR.value,
+                "message": "Insufficient data",
+                "data": None,
+            }
         cum = starting_value * (1 + self.returns).cumprod()
         return {
             "status": MetricStatus.SUCCESS.value,
             "cumulative_returns": cum,
             "total_return": cum.iloc[-1] - starting_value,
-            "annualized_return": calc_returns.compute_annualized_returns(self.returns.to_frame(), days_per_year=self.trading_days).iloc[0],
+            "annualized_return": calc_returns.compute_annualized_returns(
+                self.returns.to_frame(), days_per_year=self.trading_days
+            ).iloc[0],
         }
 
-    def compute_periodic_returns(self, period: str = "ME", method: str = "compound") -> Dict[str, Any]:
+    def compute_periodic_returns(
+        self, period: str = "ME", method: str = "compound"
+    ) -> dict[str, Any]:
         if len(self.returns) == 0:
-            return {"status": MetricStatus.ERROR.value, "message": "Insufficient data", "data": None}
+            return {
+                "status": MetricStatus.ERROR.value,
+                "message": "Insufficient data",
+                "data": None,
+            }
         r = self.returns.dropna().sort_index()
         if method == "compound":
             periodic = (1 + r).resample(period).prod() - 1
         else:
             periodic = r.resample(period).sum()
 
-        def _period_return(start=None, periods: Optional[int] = None) -> float:
+        def _period_return(start=None, periods: int | None = None) -> float:
             if start is not None:
                 window = r.loc[start:]
             elif periods is not None:
@@ -226,7 +252,9 @@ class PortfolioCalculations:
     def compute_max_drawdown(self) -> float:
         return calc_risk.compute_max_drawdown(self.returns.to_frame()).iloc[0]
 
-    def compute_sharpe_ratio(self, risk_free_rate: Optional[float] = None, annualize: bool = True) -> float:
+    def compute_sharpe_ratio(
+        self, risk_free_rate: float | None = None, annualize: bool = True
+    ) -> float:
         if risk_free_rate is None:
             risk_free_rate = self.risk_free_rate
         sr = calc_risk.sharpe_ratio(
@@ -239,7 +267,7 @@ class PortfolioCalculations:
 
     def compute_sortino_ratio(
         self,
-        risk_free_rate: Optional[float] = None,
+        risk_free_rate: float | None = None,
         target_return: float = 0.0,
         annualize: bool = True,
     ) -> float:
@@ -249,7 +277,7 @@ class PortfolioCalculations:
         downside = adjusted[adjusted < 0]
         if len(adjusted) == 0 or len(downside) == 0:
             return np.nan
-        downside_std = np.sqrt((downside ** 2).sum() / len(adjusted))
+        downside_std = np.sqrt((downside**2).sum() / len(adjusted))
         if downside_std == 0:
             return np.nan
         ratio = adjusted.mean() / downside_std
@@ -276,7 +304,9 @@ class PortfolioCalculations:
         return self.compute_gross_weight_change() / 2.0
 
     # Rolling ----------------------------------------------------------
-    def compute_rolling_sortino(self, window: int = 252, risk_free_rate: float = 0.0, target_return: float = 0.0) -> pd.Series:
+    def compute_rolling_sortino(
+        self, window: int = 252, risk_free_rate: float = 0.0, target_return: float = 0.0
+    ) -> pd.Series:
         """Rolling Sortino ratio using downside deviation within the window.
 
         Filters to only negative returns for the denominator (avoids zero-padding
@@ -286,14 +316,16 @@ class PortfolioCalculations:
         if len(r) == 0:
             return pd.Series(dtype=float)
         td = self.trading_days
+
         def sortino_win(x: pd.Series) -> float:
             neg = x[x < target_return]
             if len(neg) < 2 or neg.std() == 0:
                 return np.nan
             return (x.mean() / neg.std()) * np.sqrt(td)
+
         return r.rolling(window=window).apply(sortino_win, raw=False)
 
-    def compute_annualized_return(self, returns: Optional[pd.Series] = None) -> float:
+    def compute_annualized_return(self, returns: pd.Series | None = None) -> float:
         if returns is None:
             returns = self.returns
         total_return = (1 + returns).prod() - 1
@@ -304,7 +336,7 @@ class PortfolioCalculations:
 
     # ── Monthly stats ─────────────────────────────────────────────────
     # ── Period stats ──────────────────────────────────────────────────
-    def compute_period_stats(self) -> Dict[str, float]:
+    def compute_period_stats(self) -> dict[str, float]:
         daily_wins = (self.returns > 0).mean() * 100
         monthly = self.returns.resample("ME").apply(lambda x: (1 + x).prod() - 1)
         quarterly = self.returns.resample("QE").apply(lambda x: (1 + x).prod() - 1)
@@ -320,14 +352,16 @@ class PortfolioCalculations:
     # ── Advanced annualised volatility ────────────────────────────────
     def compute_advanced_annualized_volatility(
         self,
-        short_window: Optional[int] = None,
-        long_window: Optional[int] = None,
+        short_window: int | None = None,
+        long_window: int | None = None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         r = self.metric_returns
         annual = np.sqrt(self.trading_days)
         std_vol = r.std() * annual
-        short_window = int(short_window or (30 if self.trading_days >= 252 else max(2, self.trading_days)))
+        short_window = int(
+            short_window or (30 if self.trading_days >= 252 else max(2, self.trading_days))
+        )
         long_window = int(long_window or max(2, self.trading_days))
         short_window = max(2, short_window)
         long_window = max(2, long_window)
@@ -335,9 +369,15 @@ class PortfolioCalculations:
         rolling_long = r.rolling(long_window).std() * annual
         return {
             "standard": std_vol * 100,
-            "current_30d": rolling_short.iloc[-1] * 100 if len(rolling_short.dropna()) > 0 else np.nan,
-            "historical_252d": rolling_long.iloc[-1] * 100 if len(rolling_long.dropna()) > 0 else np.nan,
-            "peak_95th": rolling_long.quantile(0.95) * 100 if len(rolling_long.dropna()) > 0 else np.nan,
+            "current_30d": rolling_short.iloc[-1] * 100
+            if len(rolling_short.dropna()) > 0
+            else np.nan,
+            "historical_252d": rolling_long.iloc[-1] * 100
+            if len(rolling_long.dropna()) > 0
+            else np.nan,
+            "peak_95th": rolling_long.quantile(0.95) * 100
+            if len(rolling_long.dropna()) > 0
+            else np.nan,
             "short_window": short_window,
             "long_window": long_window,
             "summary_stats": {
@@ -347,7 +387,7 @@ class PortfolioCalculations:
             },
         }
 
-    def compute_advanced_calmar_ratio(self, **kwargs) -> Dict[str, Any]:
+    def compute_advanced_calmar_ratio(self, **kwargs) -> dict[str, Any]:
         ann_ret = self.compute_annualized_return()
         max_dd = abs(self.compute_max_drawdown())
         calmar = ann_ret / max_dd if max_dd != 0 else np.inf
@@ -361,8 +401,8 @@ class PortfolioCalculations:
 
     def compute_advanced_turnover(
         self,
-        trades_df: Optional[pd.DataFrame] = None,
-    ) -> Dict[str, float]:
+        trades_df: pd.DataFrame | None = None,
+    ) -> dict[str, float]:
         """Turnover analytics from target-weight changes."""
         if self.weights is None:
             return {"status": "error", "message": "No weights data"}

@@ -11,7 +11,7 @@ Idea: same SMA(50/200) trend strategy as WF 01, but validated with an EXPANDING
 walk-forward — the training window grows over time (anchored start, moving end)
 while the test window slides forward. This mimics a strategy that keeps all
 history as it accumulates.
-Universe: five large US technology stocks.
+Universe: canonical US sector ETFs: XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV and XLY.
 
 What this teaches: rolling vs expanding schemes answer different questions.
 Rolling asks "does a fixed-length recent history generalize?"; expanding asks
@@ -81,8 +81,10 @@ def _build_strategy(
         strategy_name=strategy_name,
         strategy_type="Long / Cash",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
-        backtest_period=backtest_period or {"start": "2012-01-01", "end": "2025-01-01"},
+        instruments=["XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY"],
+        backtest_period=backtest_period or {"start": "2000-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=0.25,
@@ -90,8 +92,6 @@ def _build_strategy(
         indicators_config=[
             {"function": "SMA", "price_cols": ["close"], "params": {"periods": [50, 200]}},
         ],
-        benchmark_symbol="^GSPC",
-        benchmark_name="S&P 500 Index",
         show_text_reports=False,
         save_text_reports=save_packet,
         save_portfolio_plots=save_packet,
@@ -105,14 +105,15 @@ async def main() -> None:
 
     config = WalkForwardConfig(
         scheme="expanding",
-        train_months=24,       # minimum initial training window
+        train_months=24,  # minimum initial training window
         test_months=6,
         step_months=6,
         purge_days=5,
-        embargo_pct=0.01,
+        extra_pre_oos_purge_pct=0.01,
     )
     engine_kwargs = {}
     if mode == "per_fold_refit":
+
         def factory(*, fold, train_start, train_end, oos_start, oos_end, **_) -> SMATrendForWF:
             return _build_strategy(
                 strategy_name=f"ExampleWF02_ExpandingWalkForward_Fold{fold.fold_id:02d}",
@@ -129,15 +130,17 @@ async def main() -> None:
 
     print(result.summary())
 
-    verdicts = interpret_metrics({
-        "overfit_ratio": result.overfit_ratio,
-        "efficiency": result.efficiency,
-        "sharpe_decay": result.sharpe_decay,
-        # Context keys (no verdicts of their own): gate the lights so a
-        # losing strategy or a tiny fold count never renders green.
-        "composite_sharpe": result.oos_sharpe,
-        "n_folds": result.n_folds,
-    })
+    verdicts = interpret_metrics(
+        {
+            "overfit_ratio": result.overfit_ratio,
+            "efficiency": result.efficiency,
+            "sharpe_decay": result.sharpe_decay,
+            # Context keys (no verdicts of their own): gate the lights so a
+            # losing strategy or a tiny fold count never renders green.
+            "composite_sharpe": result.oos_sharpe,
+            "n_folds": result.n_folds,
+        }
+    )
     if result.mode == "slice_diagnostics":
         print(
             "\nNOTE: slice_diagnostics mode — the metrics above are IN-SAMPLE"

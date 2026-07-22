@@ -27,20 +27,16 @@ The strategy's ``_compute_weights()`` returns *raw* weights (e.g.
 proportional to alpha). The risk model adjusts them *before*
 RebalanceEngine decides which days to trade.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 from backtester.risk.base import RiskModel, RiskModelChain
-from backtester.risk.vol_target import VolTargetModel
 from backtester.risk.inverse_vol import InverseVolModel
-from backtester.risk.risk_parity import RiskParityModel
 from backtester.risk.position_limit import PositionLimitModel
+from backtester.risk.pre_trade import PreTradeDecision, PreTradeResult, PreTradeRisk
+from backtester.risk.risk_parity import RiskParityModel
+from backtester.risk.vol_target import VolTargetModel
 
 __all__ = [
     "RiskModel",
@@ -49,4 +45,7 @@ __all__ = [
     "InverseVolModel",
     "RiskParityModel",
     "PositionLimitModel",
+    "PreTradeDecision",
+    "PreTradeResult",
+    "PreTradeRisk",
 ]

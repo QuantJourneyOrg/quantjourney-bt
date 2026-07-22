@@ -15,19 +15,13 @@ with vol adjustment::
 
 Then renormalised to preserve the original total exposure.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -56,7 +50,7 @@ class InverseVolModel(RiskModel):
     """
 
     lookback: int = 63
-    ann_factor: float = np.sqrt(252)
+    ann_factor: float | None = None
     min_vol: float = 0.01
     blend_alpha: bool = True
 
@@ -65,45 +59,51 @@ class InverseVolModel(RiskModel):
         weights: pd.DataFrame,
         returns: pd.DataFrame,
         *,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> pd.DataFrame:
         n = len(weights)
         if n == 0:
             return weights
 
         out = weights.copy()
+        periods_per_year = int((metadata or {}).get("periods_per_year", 252))
+        ann_factor = (
+            float(self.ann_factor)
+            if self.ann_factor is not None
+            else float(np.sqrt(max(periods_per_year, 1)))
+        )
 
-        for i in range(self.lookback, n):
-            row_w = weights.iloc[i]
-            active = row_w.abs() > 1e-10
+        # The public contract leaves the complete warm-up unchanged.  Shifted
+        # rolling volatility matches the legacy strictly-prior window while
+        # computing the full matrix in one native pandas pass.
+        # ``DataFrame.std`` skips missing values in the legacy sliced window,
+        # so two valid observations are sufficient even after warm-up.
+        rolling = returns.rolling(window=self.lookback, min_periods=2).std().shift(1)
+        rolling = rolling.iloc[:n].copy()
+        rolling.index = weights.index[: len(rolling)]
+        vols = pd.DataFrame(np.nan, index=weights.index, columns=rolling.columns, dtype=float)
+        if len(rolling):
+            vols.iloc[: len(rolling)] = rolling.to_numpy(dtype=float)
+        vols = (vols * ann_factor).clip(lower=self.min_vol)
+        inv_vol = 1.0 / vols
+        active = weights.abs() > 1e-10
 
-            if active.sum() == 0:
-                out.iloc[i] = 0.0
-                continue
+        if self.blend_alpha:
+            blended = (weights * inv_vol).where(active, 0.0)
+        else:
+            signed_weights = pd.DataFrame(
+                np.sign(weights.to_numpy(dtype=float)),
+                index=weights.index,
+                columns=weights.columns,
+            )
+            blended = (signed_weights * inv_vol).where(active, 0.0)
 
-            # Per-asset realised vol
-            window = returns.iloc[max(0, i - self.lookback):i]
-            vols = window.std() * self.ann_factor
-            vols = vols.clip(lower=self.min_vol)
-
-            inv_vol = 1.0 / vols
-
-            if self.blend_alpha:
-                # Conviction × risk: w_i * (1/σ_i), then renormalise
-                blended = row_w * inv_vol
-                blended = blended.where(active, 0.0)
-            else:
-                # Pure inverse-vol among active instruments
-                blended = inv_vol.where(active, 0.0)
-
-            total = blended.abs().sum()
-            if total < 1e-10:
-                out.iloc[i] = 0.0
-                continue
-
-            # Preserve original total exposure
-            original_exposure = row_w.abs().sum()
-            out.iloc[i] = blended / total * original_exposure
+        total = blended.abs().sum(axis=1)
+        original_exposure = weights.abs().sum(axis=1)
+        scaled = blended.div(total, axis=0).mul(original_exposure, axis=0)
+        scaled.loc[total < 1e-10, :] = 0.0
+        scaled = scaled.reindex(columns=weights.columns)
+        out.iloc[self.lookback :] = scaled.iloc[self.lookback :].to_numpy(dtype=float)
 
         return out
 

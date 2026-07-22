@@ -10,7 +10,7 @@ Mode: weights + optimization + walk-forward.
 Idea: use Optuna's Tree-structured Parzen Estimator (TPE) to search SMA fast/slow
 windows over continuous integer ranges, then validate the winning parameters
 with a rolling walk-forward.
-Universe: five large US technology stocks.
+Universe: canonical US sector ETFs: XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV and XLY.
 
 What this teaches: for anything past a tiny grid, Bayesian optimization (Optuna
 TPE) finds good parameters in far fewer evaluations than exhaustive grid search
@@ -71,8 +71,10 @@ def _build(fast: int, slow: int) -> SMACrossoverTunable:
         **_credentials(),
         strategy_name=f"SMA_{fast}_{slow}",
         initial_capital=100_000,
-        instruments=["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"],
-        backtest_period={"start": "2015-01-01", "end": "2025-01-01"},
+        instruments=["XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY"],
+        backtest_period={"start": "2000-01-03", "end": "2026-01-01"},
+        benchmark_symbol="SPY",
+        benchmark_name="SPDR S&P 500 ETF Trust",
         source="yfinance",
         execution_mode="weights",
         max_position_size=0.25,
@@ -80,7 +82,6 @@ def _build(fast: int, slow: int) -> SMACrossoverTunable:
         indicators_config=[
             {"function": "SMA", "price_cols": ["close"], "params": {"periods": [fast, slow]}},
         ],
-        benchmark_symbol="^GSPC",
         show_text_reports=False,
         save_portfolio_plots=False,
     )
@@ -134,18 +135,24 @@ def main() -> None:
     # Validate the winner out-of-sample with rolling walk-forward.
     best = _run(best_fast, best_slow)
     config = WalkForwardConfig(
-        scheme="rolling", train_months=24, test_months=6,
-        step_months=6, purge_days=5, embargo_pct=0.01,
+        scheme="rolling",
+        train_months=24,
+        test_months=6,
+        step_months=6,
+        purge_days=5,
+        extra_pre_oos_purge_pct=0.01,
     )
     wf = WalkForwardEngine(config=config, initial_capital=100_000).run(best.portfolio_data)
     print("\nWalk-forward validation of the Optuna-best params:")
     print(wf.summary())
 
-    verdicts = interpret_metrics({
-        "overfit_ratio": wf.overfit_ratio,
-        "efficiency": wf.efficiency,
-        "sharpe_decay": wf.sharpe_decay,
-    })
+    verdicts = interpret_metrics(
+        {
+            "overfit_ratio": wf.overfit_ratio,
+            "efficiency": wf.efficiency,
+            "sharpe_decay": wf.sharpe_decay,
+        }
+    )
     for v in verdicts:
         print(f"  {v}")
 

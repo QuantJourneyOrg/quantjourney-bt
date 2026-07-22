@@ -2,19 +2,13 @@
 OOS aggregation — concatenate per-fold OOS returns into a single equity curve
 and compute composite metrics.
 
-Institutional-grade QuantJourney Backtester component.
-Designed for deterministic strategy simulation, portfolio accounting,
-analytics, reporting, and reproducible research workflows.
-
 Copyright (c) 2026 QuantJourney.
-Updated: 05.2026.
 Licensed under the Apache License 2.0.
 """
 
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -23,8 +17,8 @@ from backtester.utils.logger import logger
 
 
 def aggregate_oos_returns(
-    fold_oos_returns: List[pd.Series],
-) -> Tuple[pd.Series, pd.Series]:
+    fold_oos_returns: list[pd.Series],
+) -> tuple[pd.Series, pd.Series]:
     """
     Concatenate per-fold OOS returns into a single time series.
 
@@ -59,7 +53,7 @@ def compute_composite_metrics(
     oos_returns: pd.Series,
     risk_free_rate: float = 0.0,
     trading_days: int = 252,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Compute aggregate OOS metrics from concatenated returns.
 
@@ -103,7 +97,7 @@ def bootstrap_sharpe_ci(
     seed: int = 42,
     risk_free_rate: float = 0.0,
     trading_days: int = 252,
-) -> Optional[Tuple[float, float]]:
+) -> tuple[float, float] | None:
     """
     Stationary block bootstrap 5%/95% CI for the annualized Sharpe ratio.
 
