@@ -140,16 +140,14 @@ top of the same engine results. More examples at
 pip install quantjourney-bt
 ```
 
-The wheel installs the `backtester` library. The runnable strategy catalog and
-the `strategy.sh` (macOS/Linux) and `strategy.bat` (Windows) launchers are
-repository assets; clone this repository when you
-want to run or modify the examples below.
+With `uv`:
 
-The install also exposes `qj-bt data`, an unauthenticated terminal helper for
-browsing public backtester metadata such as sources, granularities, datasets,
-example universes, and the symbols referenced by those examples.
+```bash
+uv pip install quantjourney-bt
+```
 
-Optional extras: `pip install "quantjourney-bt[wf]"` adds Optuna for the
+Optional extras: `pip install "quantjourney-bt[wf]"` or
+`uv pip install "quantjourney-bt[data,wf]"` adds Optuna for the
 walk-forward optimization examples (WF05); `[data]` adds the yfinance
 benchmark fallback.
 
