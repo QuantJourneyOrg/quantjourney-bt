@@ -18,11 +18,11 @@ assumptions, costs, slippage, rebalancing rules, crisis behavior, walk-forward
 validation, optimization diagnostics, metrics, plots, and run metadata from
 one repeatable run.
 
-If you'd like to learn more, explore these QuantJourney resources:
+### Free Quant Research & Learning Resources
 
-- [![Quant Interviews](https://img.shields.io/badge/Quant_Interviews-2563EB?style=flat-square)](https://quant-interviews.quantjourney.cloud/) — 194 quant interview questions in a free book: [download the PDF](https://quant-interviews.quantjourney.cloud/).
-- [![QuantJourney Blog](https://img.shields.io/badge/QuantJourney_Blog-FF6719?style=flat-square)](https://quantjourney.substack.com/) — 300+ articles on quantitative finance, systematic strategies, and backtesting.
-- [![Quant Videos](https://img.shields.io/badge/Quant_Videos-FF0000?style=flat-square)](https://www.youtube.com/@QuantJourneywithCode) — Trading strategies and code walkthroughs on YouTube.
+- **[Quant Interviews](https://quant-interviews.quantjourney.cloud/?utm_source=github&utm_medium=readme&utm_campaign=quantjourney_bt)** — 194 quantitative finance interview questions covering mathematics, statistics, trading systems, and coding. **Download both books as free PDFs.**
+- **[QuantJourney Blog](https://quantjourney.substack.com/?utm_source=github&utm_medium=readme&utm_campaign=quantjourney_bt)** — 300+ articles on quantitative finance, systematic strategies, and backtesting. **Subscribe for new research and code.**
+- **[Quant Videos](https://www.youtube.com/@QuantJourneywithCode?utm_source=github&utm_medium=readme&utm_campaign=quantjourney_bt)** — Trading strategies, Python implementations, and code walkthroughs on YouTube.
 
 ## Installation
 
