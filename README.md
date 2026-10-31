@@ -18,6 +18,10 @@ assumptions, costs, slippage, rebalancing rules, crisis behavior, walk-forward
 validation, optimization diagnostics, metrics, plots, and run metadata from
 one repeatable run.
 
+- [![Quant Interviews](https://img.shields.io/badge/Quant_Interviews-2563EB?style=flat-square)](https://quant-interviews.quantjourney.cloud/) — 194 quant interview questions in a free book: [download the PDF](https://quant-interviews.quantjourney.cloud/).
+- [![QuantJourney Blog](https://img.shields.io/badge/QuantJourney_Blog-FF6719?style=flat-square)](https://quantjourney.substack.com/) — 300+ articles on quantitative finance, systematic strategies, and backtesting.
+- [![Quant Videos](https://img.shields.io/badge/Quant_Videos-FF0000?style=flat-square)](https://www.youtube.com/@QuantJourneywithCode) — Trading strategies and code walkthroughs on YouTube.
+
 ## Installation
 
 ```bash
