@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 
@@ -10,8 +11,15 @@ import pandas as pd
 import pytest
 import yfinance as yf
 
-from _local import download_yfinance as downloader
 from backtester.local_data import load_local_data
+
+ROOT = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location(
+    "local_yahoo_downloader", ROOT / "_local" / "download_yfinance.py"
+)
+assert SPEC is not None and SPEC.loader is not None
+downloader = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(downloader)
 
 
 @pytest.fixture
