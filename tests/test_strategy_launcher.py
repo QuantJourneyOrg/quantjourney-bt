@@ -19,6 +19,26 @@ launcher = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(launcher)
 
 
+@pytest.fixture(autouse=True)
+def restore_launcher_environment(monkeypatch) -> None:
+    for key in (
+        "QJ_DATA_FILE",
+        "QJ_DATA_CSV",
+        "QJ_CSV_CONFIG",
+        "QJ_SAMPLE_DATA",
+        "QJ_QUIET",
+        "QJ_LOG_LEVEL",
+        "QJ_NO_REPORTS",
+        "QJ_OUTPUT_DIR",
+        "QJ_PLOT_THEME",
+        "QJ_PLOT_DPI",
+    ):
+        value = os.environ.get(key)
+        monkeypatch.setenv(key, value if value is not None else "")
+        if value is None:
+            monkeypatch.delenv(key)
+
+
 def test_env_loader_is_non_executing_and_does_not_override(tmp_path: Path, monkeypatch) -> None:
     marker = tmp_path / "must-not-exist"
     env_file = tmp_path / ".env"
