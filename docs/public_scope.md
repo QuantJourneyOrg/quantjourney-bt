@@ -19,6 +19,7 @@ documents what ships here versus what is provided by the hosted platform.
   with a reproducible sample-data mode that requires no account.
 - Static report generation: metrics, PNG chart pack, and a static HTML
   dashboard.
+- Validated local daily USD equity CSV input, with an explicit universe option for the daily SMA example.
 - SDK client for the QuantJourney cloud API (optional; the bundled sample-data
   path runs fully offline).
 

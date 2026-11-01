@@ -135,6 +135,27 @@ def _scoped_cache_key(
     return hashlib.sha256(cache_payload).hexdigest()
 
 
+class MissingCredentialsError(ValueError):
+    """A Cloud input was selected without authentication settings."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Error: No credentials set. Add QJ_API_KEY to .env or the environment.\n"
+            "For a credential-free demo, add --sample-data."
+        )
+
+    @staticmethod
+    def reraise_if_required(error: Exception) -> None:
+        """Keep CLI credential failures fatal without changing library failure handling."""
+        import os
+
+        if (
+            isinstance(error, MissingCredentialsError)
+            and os.getenv("QJ_REQUIRE_CREDENTIALS") == "1"
+        ):
+            raise error
+
+
 class APIError(Exception):
     """Exception raised for API errors."""
 

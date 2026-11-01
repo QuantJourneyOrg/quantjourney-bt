@@ -1190,6 +1190,7 @@ class PortfolioPlots:
         handles = [mpatches.Patch(facecolor=colors[i], label=labels[i]) for i in range(len(labels))]
         ax.legend(
             handles=handles,
+            ncol=max(1, (len(handles) + 19) // 20),
             loc="center left",
             bbox_to_anchor=(1.01, 0.5),
             framealpha=0.95,
@@ -1326,6 +1327,7 @@ class PortfolioPlots:
         handles = [mpatches.Patch(facecolor=colors[i], label=labels[i]) for i in range(len(labels))]
         ax.legend(
             handles=handles,
+            ncol=max(1, (len(handles) + 19) // 20),
             loc="center left",
             bbox_to_anchor=(1.01, 0.5),
             framealpha=0.95,
@@ -2082,6 +2084,7 @@ class PortfolioPlots:
         handles = [mpatches.Patch(facecolor=colors[i], label=labels[i]) for i in range(len(labels))]
         ax.legend(
             handles=handles,
+            ncol=max(1, (len(handles) + 19) // 20),
             loc="center left",
             bbox_to_anchor=(1.01, 0.5),
             framealpha=0.95,

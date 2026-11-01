@@ -22,6 +22,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from backtester.sdk.client import MissingCredentialsError
 from backtester.walkforward.optimization.result import (
     OptimizationResult,
     TrialRecord,
@@ -139,6 +140,7 @@ class GridSearchOptimizer:
                 score = float(evaluate_fn(params))
                 state = "COMPLETE"
             except Exception as e:
+                MissingCredentialsError.reraise_if_required(e)
                 logger.warning("Grid trial %d failed for %s: %s", i, params, e)
                 score = -np.inf
                 state = "FAIL"
@@ -199,6 +201,7 @@ class GridSearchOptimizer:
                 )
                 state = "COMPLETE"
             except Exception as e:
+                MissingCredentialsError.reraise_if_required(e)
                 logger.warning("Grid trial %d failed for %s: %s", i, params, e)
                 score = -np.inf
                 state = "FAIL"

@@ -42,7 +42,7 @@ jobs:
       - name: Sync locked release environment
         run: >-
           uv sync --frozen
-          --extra dev --extra data --extra wf --extra typecheck
+          --extra dev --extra data --extra wf --extra typecheck --extra parquet
 
       - name: Verify clean source, version, tag, and release approval
         run: >-

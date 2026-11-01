@@ -29,7 +29,7 @@ jobs:
       - name: Sync locked quality environment
         run: >-
           uv sync --frozen
-          --extra dev --extra data --extra wf --extra typecheck
+          --extra dev --extra data --extra wf --extra typecheck --extra parquet
 
       - name: Verify approved public source manifest
         run: uv run --no-sync python tools/verify_public_release.py
@@ -60,7 +60,7 @@ jobs:
       - name: Install package with test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev,data,wf]"
+          python -m pip install -e ".[dev,data,wf,parquet]"
 
       - name: Tests
         run: pytest -q

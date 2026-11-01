@@ -9,6 +9,7 @@ both backtester/cli/qj_data.py
 both backtester/cli/qj_data_api.py
 both backtester/cli/qj_data_views.py
 both backtester/cli/strategy_runner.py
+both backtester/local_data.py
 both backtester/core.py
 both backtester/engines/__init__.py
 both backtester/engines/benchmark.py
@@ -175,3 +176,4 @@ sdist strategies/README.md
 sdist strategy.bat
 sdist strategy.py
 sdist strategy.sh
+sdist _docs/local-csv.md

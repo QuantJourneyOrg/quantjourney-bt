@@ -5,6 +5,8 @@
 
 set -euo pipefail
 
+# Local file options are parsed by strategy.py and forwarded unchanged.
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOCAL_PYTHON="$SCRIPT_DIR/.venv/bin/python"
 PARENT_PYTHON="$SCRIPT_DIR/../.venv/bin/python"

@@ -216,3 +216,126 @@ def test_cached_portfolio_returns_preserve_tracking_error_math() -> None:
         expected = np.std(legacy - benchmark[end - 21 : end], ddof=1)
         actual = np.std(cached[end - 21 : end] - benchmark[end - 21 : end], ddof=1)
         assert actual == expected
+
+
+def test_indicator_batch_avoids_fragmentation_and_preserves_values() -> None:
+    import asyncio
+    import warnings
+    from types import SimpleNamespace
+
+    from backtester import Backtester
+
+    dates = pd.date_range("2020-01-01", periods=8, tz="UTC")
+    symbols = [f"S{i:03}" for i in range(60)]
+    prices = pd.DataFrame(
+        {
+            (symbol, "adj_close"): np.arange(8, dtype=float) + i + 10
+            for i, symbol in enumerate(symbols)
+        },
+        index=dates,
+    )
+    parameters = pd.DataFrame(
+        {
+            ("S000", "existing"): pd.Series(1, index=dates, dtype="int64"),
+            ("S000", "SMA_2_close"): pd.Series(-1.0, index=dates),
+        },
+    )
+    parameters.columns.names = ["instrument", "parameter"]
+    indicators = SimpleNamespace(SMA=lambda data, period: data.rolling(period).mean())
+    state = SimpleNamespace(
+        ti=indicators,
+        indicators_config=[
+            {"function": "SMA", "price_cols": ["close"], "params": {"periods": [2, 3]}}
+        ],
+        instruments_data=SimpleNamespace(prices=prices, parameters=parameters.copy()),
+    )
+    with warnings.catch_warnings(record=True) as emitted:
+        warnings.simplefilter("always", pd.errors.PerformanceWarning)
+        asyncio.run(Backtester._compute_indicators(state))
+    actual = state.instruments_data.parameters
+    expected_columns = list(parameters.columns)
+    for symbol in symbols:
+        for period in [2, 3]:
+            key = (symbol, f"SMA_{period}_close")
+            if key not in expected_columns:
+                expected_columns.append(key)
+            pd.testing.assert_series_equal(
+                actual[key],
+                prices[(symbol, "adj_close")].rolling(period).mean(),
+                check_names=False,
+            )
+    assert list(actual.columns) == expected_columns
+    pd.testing.assert_series_equal(actual[("S000", "existing")], parameters[("S000", "existing")])
+    assert actual.columns.names == parameters.columns.names
+    assert not [item for item in emitted if issubclass(item.category, pd.errors.PerformanceWarning)]
+
+
+def test_indicator_batch_keeps_dataframe_outputs_alignment_and_error_continuation() -> None:
+    import asyncio
+    from types import SimpleNamespace
+
+    from backtester import Backtester
+
+    dates = pd.date_range("2020-01-01", periods=5, tz="UTC")
+    prices = pd.DataFrame({("AAPL", "adj_close"): np.arange(5, dtype=float) + 10}, index=dates)
+    parameters = pd.DataFrame({("AAPL", "keep"): True}, index=dates[1:])
+    parameters.columns.names = ["instrument", "parameter"]
+
+    def fail(data):
+        raise ValueError("Expected test-only indicator failure")
+
+    state = SimpleNamespace(
+        ti=SimpleNamespace(
+            FAIL=fail,
+            PAIR=lambda data, period: pd.DataFrame(
+                {"fast": data.rolling(period).mean(), "slow": data * 2}
+            ),
+            FLAG=lambda data: data > 11,
+            LEVELS=lambda data: pd.DataFrame({"level": data + 1}),
+        ),
+        indicators_config=[
+            {"function": "FAIL"},
+            {"function": "PAIR", "params": {"periods": [2]}},
+            {"function": "FLAG"},
+            {"function": "LEVELS"},
+        ],
+        instruments_data=SimpleNamespace(prices=prices, parameters=parameters.copy()),
+    )
+    asyncio.run(Backtester._compute_indicators(state))
+    actual = state.instruments_data.parameters
+    close = prices[("AAPL", "adj_close")]
+    for name, expected in {
+        "fast_close": close.rolling(2).mean(),
+        "slow_close": close * 2,
+        "FLAG_close": close > 11,
+        "level_close": close + 1,
+    }.items():
+        pd.testing.assert_series_equal(
+            actual[("AAPL", name)], expected.reindex(parameters.index), check_names=False
+        )
+    pd.testing.assert_series_equal(actual[("AAPL", "keep")], parameters[("AAPL", "keep")])
+    assert actual.index.equals(parameters.index)
+
+
+def test_indicator_batch_handles_empty_parameter_frames() -> None:
+    import asyncio
+    from types import SimpleNamespace
+
+    from backtester import Backtester
+
+    dates = pd.date_range("2020-01-01", periods=5, tz="UTC")
+    prices = pd.DataFrame({("AAPL", "adj_close"): np.arange(5, dtype=float) + 10}, index=dates)
+    for parameters in (pd.DataFrame(), pd.DataFrame(index=dates)):
+        state = SimpleNamespace(
+            ti=SimpleNamespace(SMA=lambda data, period: data.rolling(period).mean()),
+            indicators_config=[{"function": "SMA", "params": {"periods": [2]}}],
+            instruments_data=SimpleNamespace(prices=prices, parameters=parameters),
+        )
+        asyncio.run(Backtester._compute_indicators(state))
+        actual = state.instruments_data.parameters
+        assert isinstance(actual.columns, pd.MultiIndex)
+        pd.testing.assert_series_equal(
+            actual[("AAPL", "SMA_2_close")],
+            prices[("AAPL", "adj_close")].rolling(2).mean(),
+            check_names=False,
+        )

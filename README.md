@@ -24,13 +24,114 @@ one repeatable run.
 - **[QuantJourney Blog](https://quantjourney.substack.com/?utm_source=github&utm_medium=readme&utm_campaign=quantjourney_bt)** — 300+ articles on quantitative finance, systematic strategies, and backtesting. **Subscribe for new research and code.**
 - **[Quant Videos](https://www.youtube.com/@QuantJourneywithCode?utm_source=github&utm_medium=readme&utm_campaign=quantjourney_bt)** — Trading strategies, Python implementations, and code walkthroughs on YouTube.
 
+<a id="install"></a>
+
 ## Installation
+
+Use an activated virtual environment with Python 3.11 or newer.
 
 ```bash
 pip install quantjourney-bt
 ```
 
 Current PyPI release: **0.12.5**. The public package supports Python 3.11 and newer.
+
+<details>
+<summary>Alternative installation and local development</summary>
+
+With `uv`:
+
+```bash
+uv pip install quantjourney-bt
+```
+
+Optional extras: `pip install "quantjourney-bt[wf]"` or
+`uv pip install "quantjourney-bt[data,wf]"` adds Optuna for the
+walk-forward optimization examples (WF05); `[data]` adds the yfinance
+benchmark fallback.
+
+For local development:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -e ".[dev,data]"
+pytest
+```
+
+Do not install dependencies into the Homebrew/system Python. Use a virtual
+environment; otherwise macOS/Homebrew may raise an
+`externally-managed-environment` error and the launcher may miss packages such
+as `quantjourney_ti`.
+
+</details>
+
+## Reproducible Demo Without API Key
+
+After installation, clone the repository to get the example strategies and launchers:
+
+```bash
+git clone https://github.com/QuantJourneyOrg/quantjourney-bt.git
+cd quantjourney-bt
+
+./strategy.sh example_weights_01_sma_daily \
+  --sample-data --output /tmp/qj-sample
+```
+
+No account or API key is required. The run uses deterministic bundled sample data.
+It checks installation and report generation; it does not measure historical strategy performance.
+
+Open `/tmp/qj-sample/ExampleWeights01_DailySMATrend/dashboard.html` in a browser.
+The same directory contains `summary.json`, `metrics.csv`, and `equity_curve.csv`.
+See [Reports](#reports) for the output file list.
+
+On Windows, use `strategy.bat` and a Windows output path. See [Windows setup](WINDOWS.md).
+
+For historical market data, see [Local data input](#local-data-input-source-checkout) below.
+Cloud preparation requires QuantJourney credentials; see [Quick Start](#quick-start).
+
+## Local Data Input (Source Checkout)
+
+Use the [_local guide](_local/README.md) to download Yahoo data and run CSV, Parquet, or DataFrame input.
+Install this source checkout to use local input. PyPI 0.12.5 does not include this feature.
+
+```bash
+python -m pip install -e ".[data,parquet,reports]"
+python _local/download_yfinance.py --output-dir _local/data
+```
+
+From the repository root, run the daily SMA example with an existing CSV:
+
+```bash
+./strategy.sh example_weights_01_sma_daily \
+  --data-file _local/data/data_universe_50_yf_10years.csv \
+  --csv-config \
+  --output reports/local_csv
+```
+
+`--csv-config` explicitly uses the file's symbols and date span. The strategy's trading rules stay unchanged.
+Only this example currently opts in to the universe override.
+Normal strategies keep their configured instruments and dates.
+For Parquet, select a `.parquet` file with `--data-file`.
+Python strategies can set `source="local"` and `local_data=path_or_dataframe` in their constructor.
+The command uses our local Yahoo snapshot. This file is not included in a public clone or package.
+Replace its path with your own CSV path when needed.
+See the [CSV format and input rules](_docs/local-csv.md).
+No account, API key, Data SDK, or network connection is needed for CSV execution.
+Open `reports/local_csv/ExampleWeights01_DailySMATrend/dashboard.html` when the run finishes.
+
+## Published Backtest Report
+
+This chart comes from the published Daily SMA Trend backtest on historical market data.
+It is separate from the sample-data demo above.
+
+[![Daily SMA Trend cumulative returns versus SPY](docs/strategy-results/example-weights-01-sma-daily.png)](https://backtester.quantjourney.cloud/strategies/example-weights-01-sma-daily)
+
+[Open the full report](https://backtester.quantjourney.cloud/strategies/example-weights-01-sma-daily)
+for the configuration, metrics, logs, and charts.
+[View the strategy code](strategies/example_weights_01_sma_daily.py).
+Past performance does not predict future results.
 
 ## Why It Exists
 
@@ -100,8 +201,8 @@ interactive dashboards, execution traces, and PDF tear sheets.
 ## What Stays Local
 
 Your strategy code, signals, portfolio accounting, order simulation, metrics,
-plots, generated reports, and run artifacts stay local. QuantJourney Cloud is
-used for market-data preparation and authentication.
+plots, generated reports, and run artifacts stay local. CSV input stays offline.
+QuantJourney Cloud supplies the optional authenticated market-data preparation path.
 
 ## What It Is Not
 
@@ -139,51 +240,6 @@ execution traces, PDF factsheets, and interactive dashboards — are generated b
 the hosted [QuantJourney platform](https://backtester.quantjourney.cloud) on
 top of the same engine results. More examples at
 [backtester.quantjourney.cloud](https://backtester.quantjourney.cloud).
-
-## Install
-
-```bash
-pip install quantjourney-bt
-```
-
-With `uv`:
-
-```bash
-uv pip install quantjourney-bt
-```
-
-Optional extras: `pip install "quantjourney-bt[wf]"` or
-`uv pip install "quantjourney-bt[data,wf]"` adds Optuna for the
-walk-forward optimization examples (WF05); `[data]` adds the yfinance
-benchmark fallback.
-
-For local development:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -U pip
-python -m pip install -e ".[dev,data]"
-pytest
-```
-
-Do not install dependencies into the Homebrew/system Python. Use a virtual
-environment; otherwise macOS/Homebrew may raise an
-`externally-managed-environment` error and the launcher may miss packages such
-as `quantjourney_ti`.
-
-## Reproducible Demo Without API Key
-
-Run the first strategy against deterministic bundled sample data:
-
-```bash
-./strategy.sh example_weights_01_sma_daily --sample-data --output /tmp/qj-sample
-```
-
-The sample dataset is intentionally small and reproducible. It is useful for
-install checks, report generation, and reading the engine flow without creating
-an account. For real market data, set QuantJourney API credentials and run the
-same strategy without `--sample-data`.
 
 ## qj-bt Data Catalog
 
@@ -237,6 +293,7 @@ it gives the package a quick install/import/report safety check before release.
 
 ## Documentation
 
+- [Local CSV guide](_docs/local-csv.md) - setup, examples, CSV format, and local report files.
 - [Windows setup](WINDOWS.md) - native Windows installation and `strategy.bat` usage without WSL.
 - [Roadmap](docs/ROADMAP.md) - direction of travel by theme, without delivery
   dates or ordering commitments.

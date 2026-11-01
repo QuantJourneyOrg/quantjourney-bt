@@ -47,6 +47,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from backtester.sdk.client import MissingCredentialsError
 from backtester.walkforward.optimization.result import (
     OptimizationResult,
     TrialRecord,
@@ -406,6 +407,7 @@ class OptunaOptimizer:
             except optuna.TrialPruned:
                 raise
             except Exception as e:
+                MissingCredentialsError.reraise_if_required(e)
                 logger.warning("Trial %d failed: %s", trial.number, e)
                 trial_records.append(
                     TrialRecord(

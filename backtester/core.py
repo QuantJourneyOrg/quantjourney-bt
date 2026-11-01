@@ -136,11 +136,13 @@ def _normalize_granularity(granularity: Any) -> str:
 # ─────────────────────────────────────────────────────────────────────
 
 
-def _payload_to_multiindex_df(payload: dict[str, Any]) -> pd.DataFrame:
+def _payload_to_multiindex_df(payload: dict[str, Any] | pd.DataFrame) -> pd.DataFrame:
     """
     Convert a FramePayload JSON (columns, index, data) back into
     a MultiIndex-columned DataFrame:  (instrument, field).
     """
+    if isinstance(payload, pd.DataFrame):
+        return payload.copy(deep=True)
     columns_meta = payload.get("columns", [])
     index_iso = payload.get("index", [])
     rows = payload.get("data", [])
@@ -164,8 +166,10 @@ def _payload_to_multiindex_df(payload: dict[str, Any]) -> pd.DataFrame:
     return df
 
 
-def _payload_to_series(payload: dict[str, Any], name: str = "nav") -> pd.Series:
+def _payload_to_series(payload: dict[str, Any] | pd.Series, name: str = "nav") -> pd.Series:
     """Convert a {index, data} payload into a pd.Series."""
+    if isinstance(payload, pd.Series):
+        return payload.copy(deep=True).rename(name)
     index_iso = payload.get("index", [])
     values = payload.get("data", [])
     idx = pd.DatetimeIndex(pd.to_datetime(index_iso), name="date")
@@ -254,6 +258,8 @@ class Backtester(SDKClientMixin, ReportingMixin):
         asyncio.run(main())
     """
 
+    supports_csv_config: bool = False
+
     def __init__(
         self,
         *,
@@ -264,6 +270,9 @@ class Backtester(SDKClientMixin, ReportingMixin):
         api_key: str | None = None,
         # ── Provider ──
         source: str = "yfinance",
+        local_data: str | os.PathLike[str] | pd.DataFrame | None = None,
+        data_csv: str | os.PathLike[str] | None = None,
+        csv_config: bool | None = None,
         granularity: str = "1d",
         # ── Strategy Config ──
         strategy_name: str = "cloud_strategy",
@@ -393,7 +402,40 @@ class Backtester(SDKClientMixin, ReportingMixin):
         self._sdk_client = None
 
         # ── Provider ──
-        self._source = source
+        if local_data is not None and data_csv is not None:
+            raise ValueError("Specify only one of local_data and data_csv")
+        self._data_csv = os.fspath(data_csv) if data_csv is not None else None
+        self._local_data_input: str | os.PathLike[str] | pd.DataFrame | None
+        if local_data is not None:
+            self._local_data_input = (
+                local_data.copy(deep=True) if isinstance(local_data, pd.DataFrame) else local_data
+            )
+        elif data_csv is not None:
+            self._local_data_input = self._data_csv
+        else:
+            file_setting = os.getenv("QJ_DATA_FILE")
+            csv_setting = os.getenv("QJ_DATA_CSV")
+            if file_setting and csv_setting:
+                raise ValueError("Specify only one of QJ_DATA_FILE and QJ_DATA_CSV")
+            self._data_csv = csv_setting
+            self._local_data_input = file_setting or csv_setting
+        self._csv_config = _env_flag("QJ_CSV_CONFIG", False) if csv_config is None else csv_config
+        if self._csv_config and self._local_data_input is None:
+            raise ValueError("csv_config requires local_data or data_csv")
+        if self._local_data_input is not None and (
+            source == "sample" or _env_flag("QJ_SAMPLE_DATA", False)
+        ):
+            raise ValueError("Local data and sample mode cannot be combined")
+        if self._csv_config and not self.supports_csv_config:
+            raise ValueError("This strategy does not opt in to CSV universe/period replacement")
+        if source == "local" and self._local_data_input is None:
+            raise ValueError("source='local' requires local_data or data_csv")
+        self._source = (
+            "local_csv"
+            if self._data_csv is not None
+            else ("local" if self._local_data_input is not None else source)
+        )
+        self._local_data_metadata: dict[str, Any] | None = None
         self._granularity = _normalize_granularity(granularity)
         self._persist = persist
         self._dedupe = dedupe
@@ -807,7 +849,17 @@ class Backtester(SDKClientMixin, ReportingMixin):
 
             self.ti = TechnicalIndicators()
 
-        instruments = self.instruments_data.prices.columns.get_level_values(0).unique()
+        data = self.instruments_data
+        if data is None:
+            raise RuntimeError("Instrument data is required before indicator computation")
+        parameters = data.parameters
+        if parameters.index.empty:
+            parameters = parameters.reindex(data.prices.index)
+        if not len(parameters.columns):
+            parameters = parameters.copy()
+            parameters.columns = pd.MultiIndex.from_tuples([], names=data.prices.columns.names)
+        indicator_columns: dict[tuple[str, str], pd.Series[Any]] = {}
+        instruments = data.prices.columns.get_level_values(0).unique()
 
         for instrument in instruments:
             for ind_dict in self.indicators_config:
@@ -833,7 +885,7 @@ class Backtester(SDKClientMixin, ReportingMixin):
                     for col in price_cols:
                         col_name = "adj_close" if col == "close" else col
                         try:
-                            series = self.instruments_data.prices[instrument][col_name]
+                            series = data.prices[instrument][col_name]
                         except KeyError:
                             logger.error(f"Missing {col_name} for {instrument}")
                             continue
@@ -844,28 +896,41 @@ class Backtester(SDKClientMixin, ReportingMixin):
                                 result = indicator_func(data=series, period=period)
                                 out_col = f"{func_name}_{period}_{col}"
                                 if isinstance(result, pd.Series):
-                                    self.instruments_data.parameters[(instrument, out_col)] = result
+                                    indicator_columns[(instrument, out_col)] = result.reindex(
+                                        parameters.index
+                                    )
                                 elif isinstance(result, pd.DataFrame):
                                     for rc in result.columns:
-                                        self.instruments_data.parameters[
-                                            (instrument, f"{rc}_{col}")
-                                        ] = result[rc]
+                                        output = result[rc]
+                                        if not isinstance(output, pd.Series):
+                                            raise ValueError(
+                                                "Indicator result columns must be unique"
+                                            )
+                                        indicator_columns[(instrument, f"{rc}_{col}")] = (
+                                            output.reindex(parameters.index)
+                                        )
                         else:
                             # Non-period indicators — pass remaining params as kwargs
                             extra = {k: v for k, v in params.items() if k != "periods"}
                             result = indicator_func(data=series, **extra)
                             if isinstance(result, pd.Series):
                                 out_col = f"{func_name}_{col}"
-                                self.instruments_data.parameters[(instrument, out_col)] = result
+                                indicator_columns[(instrument, out_col)] = result.reindex(
+                                    parameters.index
+                                )
                             elif isinstance(result, pd.DataFrame):
                                 for rc in result.columns:
-                                    self.instruments_data.parameters[
-                                        (instrument, f"{rc}_{col}")
-                                    ] = result[rc]
+                                    output = result[rc]
+                                    if not isinstance(output, pd.Series):
+                                        raise ValueError("Indicator result columns must be unique")
+                                    indicator_columns[(instrument, f"{rc}_{col}")] = output.reindex(
+                                        parameters.index
+                                    )
 
-                    stored_features = [
-                        key[1] for key in self.instruments_data.parameters if key[0] == instrument
+                    stored_columns = list(parameters.columns) + [
+                        key for key in indicator_columns if key not in parameters.columns
                     ]
+                    stored_features = [key[1] for key in stored_columns if key[0] == instrument]
                     logger.info(f"Stored features for {instrument}: {stored_features}")
 
                 except Exception as e:
@@ -873,6 +938,20 @@ class Backtester(SDKClientMixin, ReportingMixin):
                         f"Error calculating {ind_dict.get('function', '?')} for {instrument}: {e}"
                     )
                     continue
+
+        if indicator_columns:
+            computed = pd.DataFrame(indicator_columns, index=parameters.index)
+            computed.columns = pd.MultiIndex.from_tuples(
+                list(indicator_columns), names=parameters.columns.names
+            )
+            column_order = parameters.columns.append(
+                computed.columns[~computed.columns.isin(parameters.columns)]
+            )
+            retained = parameters.loc[:, ~parameters.columns.isin(computed.columns)]
+            # Assemble once; preserve replacements, column order and aligned warm-up NaNs.
+            data.parameters = (
+                pd.concat([retained, computed], axis=1).reindex(columns=column_order).copy()
+            )
 
     # ─────────────────────────────────────────────────────────────────
     # Abstract Strategy Methods
@@ -2294,10 +2373,16 @@ class Backtester(SDKClientMixin, ReportingMixin):
         except Exception as e:
             self._timings["data_fetch_seconds"] = time.perf_counter() - stage_started
             self._timings["total_seconds"] = time.perf_counter() - total_started
-            from backtester.sdk.client import BacktesterAccessError, PrepareValidationError
+            from backtester.sdk.client import (
+                BacktesterAccessError,
+                MissingCredentialsError,
+                PrepareValidationError,
+            )
 
             friendly_prepare_error = (
-                isinstance(e, (BacktesterAccessError, PrepareValidationError))
+                isinstance(
+                    e, (BacktesterAccessError, MissingCredentialsError, PrepareValidationError)
+                )
                 and _env_flag("QJ_FRIENDLY_ERRORS", False)
                 and os.getenv("QJ_LOG_LEVEL", "").strip().upper() != "DEBUG"
             )
@@ -2305,7 +2390,8 @@ class Backtester(SDKClientMixin, ReportingMixin):
                 logger.error(
                     f"[Backtester] Could not fetch market data — skipping strategy.\n  Error: {e}"
                 )
-            if self._strict_data_fetch:
+            MissingCredentialsError.reraise_if_required(e)
+            if self._strict_data_fetch or self._local_data_input is not None:
                 raise
             return
         self._timings["data_fetch_seconds"] = time.perf_counter() - stage_started

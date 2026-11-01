@@ -133,18 +133,32 @@ async def _fetch_benchmark_via_sdk(
 # ── Main entry point ───────────────────────────────────────────────────
 
 
+def local_benchmark_returns(
+    prices: pd.DataFrame, returns_index: pd.DatetimeIndex, symbol: str
+) -> pd.Series | None:
+    """Use only the configured local series; absence is an explicit empty result."""
+    if (symbol, "adj_close") not in prices.columns:
+        logger.info(f"Local benchmark {symbol} is unavailable; comparison omitted")
+        return None
+    price = prices[(symbol, "adj_close")]
+    return _align_benchmark_returns(_price_to_returns(price), returns_index)
+
+
 async def get_benchmark_returns(
     returns_index: pd.DatetimeIndex,
     symbol: str = "^GSPC",
-    start_date=None,
-    end_date=None,
+    start_date: Any = None,
+    end_date: Any = None,
     sdk_client: Any = None,
+    local_prices: pd.DataFrame | None = None,
 ) -> pd.Series | None:
     """
     Fetch and process benchmark returns, aligning with the primary returns index.
 
     Priority: SDK warehouse → yfinance.
     """
+    if local_prices is not None:
+        return local_benchmark_returns(local_prices, returns_index, symbol)
     try:
         # 1) SDK warehouse API
         benchmark_data = await _fetch_benchmark_via_sdk(sdk_client, symbol, start_date, end_date)

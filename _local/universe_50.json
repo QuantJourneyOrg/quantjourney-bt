@@ -1,0 +1,319 @@
+{
+  "schema_version": 1,
+  "start": "2016-10-31",
+  "end_exclusive": "2026-10-31",
+  "selection": "First 50 distinct companies by case-insensitive company name in the published constituent snapshot, with every AAPL reference session present in the requested interval.",
+  "constituent_source": "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv",
+  "constituent_snapshot_sha256": "941ec91edb922f802b7b9c14a4a006ac65606f74a2882ea57cabd5e0ff825ebc",
+  "constituent_license": "ODC-PDDL-1.0",
+  "constituent_license_source": "https://github.com/datasets/s-and-p-500-companies/blob/main/datapackage.json",
+  "point_in_time": false,
+  "companies": [
+    {
+      "symbol": "MMM",
+      "company": "3M",
+      "sector": "Industrials",
+      "cik": "66740"
+    },
+    {
+      "symbol": "AOS",
+      "company": "A. O. Smith",
+      "sector": "Industrials",
+      "cik": "91142"
+    },
+    {
+      "symbol": "ABT",
+      "company": "Abbott Laboratories",
+      "sector": "Health Care",
+      "cik": "1800"
+    },
+    {
+      "symbol": "ABBV",
+      "company": "AbbVie",
+      "sector": "Health Care",
+      "cik": "1551152"
+    },
+    {
+      "symbol": "ACN",
+      "company": "Accenture",
+      "sector": "Information Technology",
+      "cik": "1467373"
+    },
+    {
+      "symbol": "ADBE",
+      "company": "Adobe Inc.",
+      "sector": "Information Technology",
+      "cik": "796343"
+    },
+    {
+      "symbol": "AMD",
+      "company": "Advanced Micro Devices",
+      "sector": "Information Technology",
+      "cik": "2488"
+    },
+    {
+      "symbol": "AES",
+      "company": "AES Corporation",
+      "sector": "Utilities",
+      "cik": "874761"
+    },
+    {
+      "symbol": "AFL",
+      "company": "Aflac",
+      "sector": "Financials",
+      "cik": "4977"
+    },
+    {
+      "symbol": "A",
+      "company": "Agilent Technologies",
+      "sector": "Health Care",
+      "cik": "1090872"
+    },
+    {
+      "symbol": "APD",
+      "company": "Air Products",
+      "sector": "Materials",
+      "cik": "2969"
+    },
+    {
+      "symbol": "AKAM",
+      "company": "Akamai Technologies",
+      "sector": "Information Technology",
+      "cik": "1086222"
+    },
+    {
+      "symbol": "ALB",
+      "company": "Albemarle Corporation",
+      "sector": "Materials",
+      "cik": "915913"
+    },
+    {
+      "symbol": "ARE",
+      "company": "Alexandria Real Estate Equities",
+      "sector": "Real Estate",
+      "cik": "1035443"
+    },
+    {
+      "symbol": "ALGN",
+      "company": "Align Technology",
+      "sector": "Health Care",
+      "cik": "1097149"
+    },
+    {
+      "symbol": "ALLE",
+      "company": "Allegion",
+      "sector": "Industrials",
+      "cik": "1579241"
+    },
+    {
+      "symbol": "LNT",
+      "company": "Alliant Energy",
+      "sector": "Utilities",
+      "cik": "352541"
+    },
+    {
+      "symbol": "ALL",
+      "company": "Allstate",
+      "sector": "Financials",
+      "cik": "899051"
+    },
+    {
+      "symbol": "GOOGL",
+      "company": "Alphabet Inc. (Class A)",
+      "sector": "Communication Services",
+      "cik": "1652044"
+    },
+    {
+      "symbol": "MO",
+      "company": "Altria",
+      "sector": "Consumer Staples",
+      "cik": "764180"
+    },
+    {
+      "symbol": "AMZN",
+      "company": "Amazon",
+      "sector": "Consumer Discretionary",
+      "cik": "1018724"
+    },
+    {
+      "symbol": "AMCR",
+      "company": "Amcor",
+      "sector": "Materials",
+      "cik": "1748790"
+    },
+    {
+      "symbol": "AEE",
+      "company": "Ameren",
+      "sector": "Utilities",
+      "cik": "1002910"
+    },
+    {
+      "symbol": "AEP",
+      "company": "American Electric Power",
+      "sector": "Utilities",
+      "cik": "4904"
+    },
+    {
+      "symbol": "AXP",
+      "company": "American Express",
+      "sector": "Financials",
+      "cik": "4962"
+    },
+    {
+      "symbol": "AIG",
+      "company": "American International Group",
+      "sector": "Financials",
+      "cik": "5272"
+    },
+    {
+      "symbol": "AMT",
+      "company": "American Tower",
+      "sector": "Real Estate",
+      "cik": "1053507"
+    },
+    {
+      "symbol": "AWK",
+      "company": "American Water Works",
+      "sector": "Utilities",
+      "cik": "1410636"
+    },
+    {
+      "symbol": "AMP",
+      "company": "Ameriprise Financial",
+      "sector": "Financials",
+      "cik": "820027"
+    },
+    {
+      "symbol": "AME",
+      "company": "Ametek",
+      "sector": "Industrials",
+      "cik": "1037868"
+    },
+    {
+      "symbol": "AMGN",
+      "company": "Amgen",
+      "sector": "Health Care",
+      "cik": "318154"
+    },
+    {
+      "symbol": "APH",
+      "company": "Amphenol",
+      "sector": "Information Technology",
+      "cik": "820313"
+    },
+    {
+      "symbol": "ADI",
+      "company": "Analog Devices",
+      "sector": "Information Technology",
+      "cik": "6281"
+    },
+    {
+      "symbol": "AON",
+      "company": "Aon plc",
+      "sector": "Financials",
+      "cik": "315293"
+    },
+    {
+      "symbol": "APA",
+      "company": "APA Corporation",
+      "sector": "Energy",
+      "cik": "1841666"
+    },
+    {
+      "symbol": "APO",
+      "company": "Apollo Global Management",
+      "sector": "Financials",
+      "cik": "1858681"
+    },
+    {
+      "symbol": "AAPL",
+      "company": "Apple Inc.",
+      "sector": "Information Technology",
+      "cik": "320193"
+    },
+    {
+      "symbol": "AMAT",
+      "company": "Applied Materials",
+      "sector": "Information Technology",
+      "cik": "6951"
+    },
+    {
+      "symbol": "APTV",
+      "company": "Aptiv",
+      "sector": "Consumer Discretionary",
+      "cik": "1521332"
+    },
+    {
+      "symbol": "ACGL",
+      "company": "Arch Capital Group",
+      "sector": "Financials",
+      "cik": "947484"
+    },
+    {
+      "symbol": "ADM",
+      "company": "Archer Daniels Midland",
+      "sector": "Consumer Staples",
+      "cik": "7084"
+    },
+    {
+      "symbol": "ARES",
+      "company": "Ares Management",
+      "sector": "Financials",
+      "cik": "1176948"
+    },
+    {
+      "symbol": "ANET",
+      "company": "Arista Networks",
+      "sector": "Information Technology",
+      "cik": "1596532"
+    },
+    {
+      "symbol": "AJG",
+      "company": "Arthur J. Gallagher & Co.",
+      "sector": "Financials",
+      "cik": "354190"
+    },
+    {
+      "symbol": "AIZ",
+      "company": "Assurant",
+      "sector": "Financials",
+      "cik": "1267238"
+    },
+    {
+      "symbol": "T",
+      "company": "AT&T",
+      "sector": "Communication Services",
+      "cik": "732717"
+    },
+    {
+      "symbol": "ATO",
+      "company": "Atmos Energy",
+      "sector": "Utilities",
+      "cik": "731802"
+    },
+    {
+      "symbol": "ADSK",
+      "company": "Autodesk",
+      "sector": "Information Technology",
+      "cik": "769397"
+    },
+    {
+      "symbol": "ADP",
+      "company": "Automatic Data Processing",
+      "sector": "Industrials",
+      "cik": "8670"
+    },
+    {
+      "symbol": "AZO",
+      "company": "AutoZone",
+      "sector": "Consumer Discretionary",
+      "cik": "866787"
+    }
+  ],
+  "limitations": [
+    "Current-company selection, not historical index membership.",
+    "Adjusted-price research approximation; no separate cash-dividend accounting.",
+    "Provider history can be revised. Complete exchange-calendar coverage is not independently certified.",
+    "Public redistribution rights are not verified. This is a local research download."
+  ]
+}

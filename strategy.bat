@@ -1,6 +1,8 @@
 @echo off
 setlocal
 
+REM Local file options are parsed by strategy.py and forwarded unchanged.
+
 set "ROOT=%~dp0"
 set "PYTHON=%ROOT%.venv\Scripts\python.exe"
 

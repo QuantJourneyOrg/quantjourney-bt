@@ -30,6 +30,7 @@ TOP_LEVEL_SDIST = {
     "strategy.sh",
 }
 SDIST_ROOT_SUFFIXES = {
+    "_docs": {".md"},
     "backtester": {".py", ".typed"},
     "benchmarks": {".md"},
     "docs": {".md", ".mdx"},

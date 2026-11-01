@@ -13,9 +13,18 @@ Copyright (c) 2026 QuantJourney.
 Licensed under the Apache License 2.0.
 """
 
+from __future__ import annotations
+
 import logging
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import pandas as pd
+
+    from backtester.core import BacktestPeriod
+    from backtester.execution.contract_spec import ContractSpec
+    from backtester.sdk.client import AsyncAPIClient
 
 try:
     from backtester.utils.logger import logger
@@ -25,6 +34,20 @@ except Exception:
 
 class SDKClientMixin:
     """API authentication, market-data fetching, and server-side calculations."""
+
+    _local_data_metadata: dict[str, Any] | None
+    _data_csv: str | None
+    _local_data_input: str | os.PathLike[str] | pd.DataFrame | None
+    _sdk_client: AsyncAPIClient | None
+    _csv_config: bool
+    _granularity: str
+    base_currency: str
+    backtest_period: BacktestPeriod
+    instruments: list[str]
+
+    if TYPE_CHECKING:
+
+        def _contract_spec(self, instrument: str) -> ContractSpec: ...
 
     @staticmethod
     def _replace_existing_session_enabled() -> bool:
@@ -107,12 +130,12 @@ class SDKClientMixin:
     # SDK Client — uses quantjourney.sdk.client.AsyncAPIClient
     # ─────────────────────────────────────────────────────────────────
 
-    async def _get_sdk_client(self):
+    async def _get_sdk_client(self) -> AsyncAPIClient:
         """Lazy-initialize and return the SDK async client."""
         if self._sdk_client is not None:
             return self._sdk_client
 
-        from backtester.sdk.client import AsyncAPIClient
+        from backtester.sdk.client import AsyncAPIClient, MissingCredentialsError
 
         if self._api_key:
             # API key auth — handled by SDK (Bearer header)
@@ -188,7 +211,7 @@ class SDKClientMixin:
             expires = data.get("expires_in", "?")
             logger.info(f"[Backtester] Logged in as {self._email} (expires in {expires}s)")
         else:
-            raise ValueError("Backtester requires either (email + password) or api_key")
+            raise MissingCredentialsError()
 
         return self._sdk_client
 
@@ -201,6 +224,39 @@ class SDKClientMixin:
         Fetch market data from /bt/prepare API via the SDK client.
         Auto token refresh on 401 is handled by the SDK.
         """
+        local_input = getattr(self, "_local_data_input", None)
+        if local_input is not None:
+            from backtester.local_data import load_csv_data, load_local_data
+
+            if self._granularity != "1d":
+                raise ValueError("Local data supports daily equity data only")
+            if self.base_currency != "USD":
+                raise ValueError("Local data currently supports USD equities only")
+            selection = {
+                "instruments": None if self._csv_config else self.instruments,
+                "start": None if self._csv_config else self.backtest_period.start,
+                "end": None if self._csv_config else self.backtest_period.end,
+            }
+            if self._data_csv is not None:
+                data = load_csv_data(self._data_csv, **selection)
+            else:
+                data = load_local_data(local_input, **selection)
+            for symbol in data["instrument_names"]:
+                if self._contract_spec(symbol).asset_class.value != "equity":
+                    raise ValueError("Local data requires equity instrument specifications")
+            if self._csv_config:
+                self.instruments = data["instrument_names"]
+                self.backtest_period = type(self.backtest_period)(
+                    start=data["summary"]["start"], end=data["summary"]["end"]
+                )
+            self._api_response = data
+            self._source = data["summary"]["source"]
+            self._local_data_metadata = {**data["local_data"], "csv_config": self._csv_config}
+            self.session_id = None
+            self.dataset_id = None
+            self._validate_data_completeness_response()
+            return
+
         if self._source == "sample" or os.getenv("QJ_SAMPLE_DATA", "").strip().lower() in {
             "1",
             "true",

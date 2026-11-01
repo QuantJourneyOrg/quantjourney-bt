@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quantjourney-bt"
-version = "0.12.5"
+version = "0.13.0"
 description = "Python-native backtesting engine for reproducible portfolio and order-based strategy research"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -62,6 +62,7 @@ typecheck = [
     "types-python-dateutil==2.9.0.20260518",
 ]
 data = ["yfinance>=0.2"]
+parquet = ["pyarrow>=14.0.1"]
 reports = ["scipy>=1.11", "seaborn>=0.13"]
 wf = ["optuna>=3.0"]
 

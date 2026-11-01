@@ -123,7 +123,7 @@ def check_strategy(path: Path) -> int:
 
 
 def credentials_are_ready(*, sample_data: bool, check_only: bool) -> bool:
-    if sample_data or check_only:
+    if sample_data or check_only or os.environ.get("QJ_DATA_CSV") or os.environ.get("QJ_DATA_FILE"):
         return True
     if os.environ.get("QJ_API_KEY"):
         return True
@@ -135,6 +135,14 @@ def credentials_are_ready(*, sample_data: bool, check_only: bool) -> bool:
 
 
 def apply_run_options(args: argparse.Namespace) -> None:
+    if args.data_file:
+        os.environ["QJ_DATA_FILE"] = str(Path(args.data_file).expanduser().resolve())
+        os.environ.pop("QJ_DATA_CSV", None)
+    if args.data_csv:
+        os.environ["QJ_DATA_CSV"] = str(Path(args.data_csv).expanduser().resolve())
+        os.environ.pop("QJ_DATA_FILE", None)
+    if args.csv_config:
+        os.environ["QJ_CSV_CONFIG"] = "1"
     if args.sample_data:
         os.environ["QJ_SAMPLE_DATA"] = "1"
     if args.quiet:
@@ -170,8 +178,7 @@ def run_strategy(
     output: TextIO | None = None,
 ) -> int:
     apply_run_options(args)
-    if not credentials_are_ready(sample_data=args.sample_data, check_only=args.check):
-        return 1
+    # Strategy code can select local data; authenticate only at Cloud acquisition.
     if args.check:
         if output is None:
             return check_strategy(path)
@@ -184,8 +191,18 @@ def run_strategy(
     print(f"Python: {sys.executable}", file=destination)
     print(f"Backtester: v{backtester_version()}", file=destination)
     print(f"Theme: {os.environ.get('QJ_PLOT_THEME', 'strategy default')}", file=destination)
-    if args.sample_data:
+    local_path = os.environ.get("QJ_DATA_FILE") or os.environ.get("QJ_DATA_CSV")
+    if local_path:
+        print(f"Data: local file ({Path(local_path).name})", file=destination)
+        if os.environ.get("QJ_CSV_CONFIG", "").lower() in {"1", "true", "yes", "on"}:
+            print(
+                "CSV configuration: replace universe and period; preserve trading rules",
+                file=destination,
+            )
+    elif args.sample_data:
         print("Data: deterministic sample data", file=destination)
+    else:
+        print("Data: strategy configuration", file=destination)
     print(f"Plot DPI: {os.environ.get('QJ_PLOT_DPI', '300')}", file=destination)
     print(f"Log Level: {os.environ.get('QJ_LOG_LEVEL', 'INFO')}", file=destination)
     print(f"Output: {os.environ.get('QJ_OUTPUT_DIR', './reports')}", file=destination)
@@ -206,6 +223,7 @@ def run_strategy(
 
 
 def run_all(args: argparse.Namespace) -> int:
+    apply_run_options(args)
     if not credentials_are_ready(sample_data=args.sample_data, check_only=args.check):
         return 1
 
@@ -261,7 +279,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--all", action="store_true", help="run every example_*.py strategy")
     parser.add_argument("-l", "--list", action="store_true", help="list available strategies")
     parser.add_argument("--check", action="store_true", help="import without running a backtest")
-    parser.add_argument("--sample-data", action="store_true", help="use bundled sample data")
+    data_options = parser.add_mutually_exclusive_group()
+    data_options.add_argument("--sample-data", action="store_true", help="use bundled sample data")
+    data_options.add_argument(
+        "--data-file", metavar="PATH", help="load a local CSV or Parquet file"
+    )
+    data_options.add_argument("--data-csv", metavar="PATH", help="load local daily equity CSV")
+    parser.add_argument(
+        "--csv-config",
+        action="store_true",
+        help="use local input instruments/dates; requires a strategy that opts in",
+    )
     parser.add_argument("-q", "--quiet", action="store_true", help="show only the final summary")
     parser.add_argument("--no-reports", action="store_true", help="skip report generation")
     parser.add_argument("-o", "--output", help="output root for reports")
@@ -276,6 +304,30 @@ def main(argv: list[str] | None = None) -> int:
     configure_process_environment()
     parser = build_parser()
     args = parser.parse_args(argv)
+    local_path = (
+        args.data_file
+        or args.data_csv
+        or os.environ.get("QJ_DATA_FILE")
+        or os.environ.get("QJ_DATA_CSV")
+    )
+    sample_env = os.environ.get("QJ_SAMPLE_DATA", "").strip().lower() in {"1", "true", "yes", "on"}
+    csv_config = args.csv_config or os.environ.get("QJ_CSV_CONFIG", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if local_path and (args.sample_data or sample_env):
+        parser.error("Local input cannot be combined with sample mode")
+    if csv_config and args.all:
+        parser.error("--csv-config requires one explicitly opted-in strategy, not --all")
+    for argument in ("data_file", "data_csv"):
+        path_value = getattr(args, argument)
+        if path_value:
+            setattr(args, argument, str(Path(path_value).expanduser().resolve()))
+    for variable in ("QJ_DATA_FILE", "QJ_DATA_CSV"):
+        if os.environ.get(variable):
+            os.environ[variable] = str(Path(os.environ[variable]).expanduser().resolve())
 
     selected_modes = int(bool(args.strategy)) + int(args.all) + int(args.list)
     if selected_modes != 1:

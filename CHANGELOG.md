@@ -1,5 +1,17 @@
 # QuantJourney Backtester Changelog
 
+## 0.13.0 - Unreleased
+
+### Added
+- Read daily USD equity observations from CSV, Parquet or a pandas DataFrame without Cloud credentials.
+- Add local input launcher options and an explicit, strategy-controlled universe and period override.
+- Add `_local/` download and DataFrame helpers. Generated Yahoo price snapshots remain outside Git.
+
+### Changed
+- Keep local reports offline, including benchmark lookup and input metadata.
+- Assemble indicators in one batch and split large allocation legends across columns.
+- Keep Cloud credential failures fatal in the launcher when a strategy selects its own input.
+
 ## 0.12.5 - 2026-09-17
 
 ### Added

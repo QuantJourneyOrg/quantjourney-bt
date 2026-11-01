@@ -64,3 +64,13 @@ compare/.envs/
 compare/quantconnect/lean_data/
 compare/quantconnect/native_*/
 compare/native/lean_results/
+
+# Local downloaded market data; not approved for public redistribution.
+/_csv/
+
+# Local input examples; generated Yahoo snapshots stay outside Git.
+/_local/*
+!/_local/README.md
+!/_local/download_yfinance.py
+!/_local/data_universe_50_yf_10years.py
+!/_local/universe_50.json

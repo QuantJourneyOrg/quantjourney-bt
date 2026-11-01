@@ -49,6 +49,8 @@ def _sample_mode() -> bool:
 class DailySMATrend(Backtester):
     """Long/cash SMA(50/200) trend strategy with daily rebalancing."""
 
+    supports_csv_config = True
+
     def _compute_signals(self) -> pd.DataFrame:
         sma_fast = self.instruments_data.get_feature("SMA_50_close")
         sma_slow = self.instruments_data.get_feature("SMA_200_close")
@@ -62,10 +64,16 @@ class DailySMATrend(Backtester):
         return active.div(counts, axis=0).fillna(0.0).clip(upper=0.25)
 
 
-async def main() -> None:
+async def main(
+    *,
+    local_data: str | os.PathLike[str] | pd.DataFrame | None = None,
+    csv_config: bool | None = None,
+) -> None:
     sample_mode = _sample_mode()
     strategy = DailySMATrend(
         **_credentials(),
+        local_data=local_data,
+        csv_config=csv_config,
         strategy_name="ExampleWeights01_DailySMATrend",
         strategy_type="Long / Cash",
         initial_capital=100_000,
@@ -81,7 +89,7 @@ async def main() -> None:
         ),
         benchmark_symbol="^GSPC" if sample_mode else "SPY",
         benchmark_name="S&P 500 Index" if sample_mode else "SPDR S&P 500 ETF Trust",
-        source="sample" if sample_mode else "yfinance",
+        source="sample" if sample_mode else ("local" if local_data is not None else "yfinance"),
         execution_mode="weights",
         max_position_size=0.25,
         rebalance_policy=RebalancePolicy(frequency="D"),

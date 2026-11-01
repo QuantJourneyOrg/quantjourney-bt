@@ -28,6 +28,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from backtester.engines.benchmark import local_benchmark_returns
 from backtester.metrics import format_metric, generate_report_sections
 from backtester.metrics.configs.portfolio_perf import PORTFOLIO_PERF_METRICS
 from backtester.plots.plot_compat import C, ensure_style, reset_style
@@ -60,6 +61,7 @@ class StrategyPerformanceConfig:
     benchmark: dict[str, str] = field(
         default_factory=lambda: {"symbol": "SPY", "name": "S&P 500 Index"}
     )
+    local_data: bool = field(default=False)
     reporting_frequency: str = field(default="daily")
 
     def __post_init__(self) -> None:
@@ -380,11 +382,21 @@ class StrategyPerformanceAnalysis:
         pc = self.portfolio_calc
         ic = self.instrument_calc
         assert pc is not None
+        benchmark_returns = None
+        if self.config.local_data and self.instruments_data is not None:
+            benchmark_returns = local_benchmark_returns(
+                self.instruments_data.prices,
+                pd.DatetimeIndex(self.returns.index),
+                self.config.benchmark.get("symbol", "SPY"),
+            )
         plots: list[tuple[str, Callable[[], Any]]] = [
             (
                 "cumulative_returns",
                 lambda: PortfolioPlots.plot_cumulative_returns(
-                    portfolio_calc=pc, instrument_calc=ic
+                    portfolio_calc=pc,
+                    instrument_calc=None if self.config.local_data else ic,
+                    benchmark_returns=benchmark_returns,
+                    benchmark_name=self.config.benchmark.get("name", "Benchmark"),
                 ),
             ),
             (

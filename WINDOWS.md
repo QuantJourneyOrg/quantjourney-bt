@@ -130,3 +130,31 @@ both `product:backtester` and `feature:backtester`. Sign in at
 https://users.quantjourney.cloud, activate Backtester for the account, create a
 new restricted key, and replace `QJ_API_KEY` in `.env`. The launcher stops
 before execution, so no trades or report are created.
+
+
+## Local data input (source checkout)
+
+Use this source checkout for local input. PyPI 0.12.5 does not include this feature.
+Follow [_local/README.md](_local/README.md) to install the extras and download a snapshot.
+
+Use Command Prompt:
+
+```bat
+strategy.bat example_weights_01_sma_daily --data-file _local\data\data_universe_50_yf_10years.csv --csv-config --output reports\local_csv
+```
+
+PowerShell uses `.\strategy.bat` instead of `strategy.bat`.
+The legacy `--data-csv` option remains available.
+For Parquet, install the optional reader and select a `.parquet` file:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[reports,parquet]"
+.\strategy.bat example_weights_01_sma_daily --data-file _local\data\data_universe_50_yf_10years.parquet --csv-config --output reports\local_csv
+```
+
+The snapshot is local research data. A public clone does not include it.
+For Python DataFrame input and strategy configuration, see the [local input guide](_docs/local-csv.md).
+
+This command needs a local CSV. It uses no credentials or network connection.
+The explicit override uses the file's symbols and period. Trading rules stay unchanged.
+See [Local CSV input](_docs/local-csv.md) for the format and supported strategy.

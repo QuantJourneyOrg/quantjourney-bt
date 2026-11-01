@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 
 from backtester.reporting_frequency import infer_periods_per_year
+from backtester.sdk.client import MissingCredentialsError
 from backtester.utils.logger import logger
 from backtester.walkforward.folds.base import Fold
 from backtester.walkforward.result import FoldResult
@@ -87,6 +88,7 @@ class FoldRunner:
                 logger.error(f"[WalkForward] Fold {self._fold.fold_id} refit FAILED: {exc}")
                 return self._failed_result(f"refit failed: {exc}")
             except Exception as exc:
+                MissingCredentialsError.reraise_if_required(exc)
                 logger.error(f"[WalkForward] Fold {self._fold.fold_id} refit FAILED: {exc}")
                 return self._failed_result(f"refit failed: {exc}")
 
@@ -100,6 +102,7 @@ class FoldRunner:
             try:
                 portfolio_data, opt_meta = await self._run_fold_refit_async()
             except Exception as exc:
+                MissingCredentialsError.reraise_if_required(exc)
                 logger.error(f"[WalkForward] Fold {self._fold.fold_id} refit FAILED: {exc}")
                 return self._failed_result(f"refit failed: {exc}")
 
@@ -598,7 +601,8 @@ class FoldRunner:
                     raise ValueError("candidate backtester exposes no portfolio_data")
                 self._validate_fold_portfolio_bounds(pdata)
                 oos_scores.append(self._oos_score_for_params(pdata))
-            except Exception:
+            except Exception as credential_error:
+                MissingCredentialsError.reraise_if_required(credential_error)
                 oos_scores.append(float("-inf"))
         return oos_scores, self._rank_stability_logit_from_scores(oos_scores)
 
@@ -620,7 +624,8 @@ class FoldRunner:
                     raise ValueError("candidate backtester exposes no portfolio_data")
                 self._validate_fold_portfolio_bounds(pdata)
                 oos_scores.append(self._oos_score_for_params(pdata))
-            except Exception:
+            except Exception as credential_error:
+                MissingCredentialsError.reraise_if_required(credential_error)
                 oos_scores.append(float("-inf"))
         return oos_scores, self._rank_stability_logit_from_scores(oos_scores)
 

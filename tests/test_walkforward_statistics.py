@@ -201,3 +201,62 @@ def test_per_fold_refit_fails_closed_when_factory_returns_full_history() -> None
         runner._validate_fold_portfolio_bounds(
             SimpleNamespace(net_asset_value=pd.Series([100_000.0], index=[pd.NaT]))
         )
+
+
+@pytest.mark.parametrize("asynchronous", [False, True])
+@pytest.mark.parametrize("stage", ["fold", "rank"])
+def test_fold_keeps_missing_credentials_fatal(monkeypatch, asynchronous, stage) -> None:
+    monkeypatch.setenv("QJ_REQUIRE_CREDENTIALS", "1")
+    import asyncio
+    from types import SimpleNamespace
+
+    from backtester.sdk.client import MissingCredentialsError
+
+    fold = Fold(
+        fold_id=3,
+        scheme="rolling",
+        train_start=pd.Timestamp("2020-01-02"),
+        train_end=pd.Timestamp("2020-06-30"),
+        effective_is_end=pd.Timestamp("2020-06-25"),
+        oos_start=pd.Timestamp("2020-07-01"),
+        oos_end=pd.Timestamp("2020-09-30"),
+        purge_start=pd.Timestamp("2020-06-26"),
+        purge_end=pd.Timestamp("2020-06-30"),
+    )
+    runner = FoldRunner(fold, SimpleNamespace(), backtester_factory=lambda **kwargs: None)
+
+    def missing_credentials(*args, **kwargs):
+        raise MissingCredentialsError()
+
+    async def missing_credentials_async():
+        raise MissingCredentialsError()
+
+    monkeypatch.setattr(runner, "_run_fold_refit", missing_credentials)
+    monkeypatch.setattr(runner, "_run_fold_refit_async", missing_credentials_async)
+    if stage != "fold":
+        trial = SimpleNamespace(params={"period": 2}, number=0)
+        monkeypatch.setattr(runner, "_build_fold_backtester", missing_credentials)
+        if stage == "rank":
+            monkeypatch.setattr(runner, "_rank_stability_top_trials", lambda result: [trial])
+        else:
+            monkeypatch.setattr(
+                runner, "_parameter_study_candidates", lambda result: ([trial], None)
+            )
+            monkeypatch.setattr(runner, "_oos_evaluation_record", lambda *args: None)
+            monkeypatch.setattr(runner, "_build_parameter_study", lambda *args: object())
+
+    with pytest.raises(MissingCredentialsError):
+        if stage == "fold":
+            if asynchronous:
+                asyncio.run(runner.run_async())
+            else:
+                runner.run()
+        elif stage == "rank":
+            if asynchronous:
+                asyncio.run(runner._evaluate_rank_stability_candidates_async(None))
+            else:
+                runner._evaluate_rank_stability_candidates(None)
+        elif asynchronous:
+            asyncio.run(runner._evaluate_parameter_study_async(None))
+        else:
+            runner._evaluate_parameter_study(None)

@@ -23,3 +23,10 @@ prune .githooks
 prune .github
 exclude uv.lock
 exclude RELEASE_BLOCKED
+
+prune _csv
+
+include _docs/local-csv.md
+
+# Repository-only local input examples and downloads.
+prune _local

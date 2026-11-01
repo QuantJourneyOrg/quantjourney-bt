@@ -16,7 +16,11 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from backtester.sdk.client import BacktesterAccessError, PrepareValidationError
+from backtester.sdk.client import (
+    BacktesterAccessError,
+    MissingCredentialsError,
+    PrepareValidationError,
+)
 
 _FIELD_LABELS = {
     "instruments": "Instruments",
@@ -167,14 +171,24 @@ def main(argv: list[str] | None = None) -> int:
 
     strategy_path = Path(args[0]).resolve()
     os.environ.setdefault("QJ_FRIENDLY_ERRORS", "1")
+    previous_requirement = os.environ.get("QJ_REQUIRE_CREDENTIALS")
+    os.environ["QJ_REQUIRE_CREDENTIALS"] = "1"
     try:
         runpy.run_path(str(strategy_path), run_name="__main__")
+    except MissingCredentialsError as error:
+        print(str(error), file=sys.stderr)
+        return 1
     except BacktesterAccessError as error:
         render_backtester_access_error(error)
         return 2
     except PrepareValidationError as error:
         render_prepare_validation_error(error)
         return 2
+    finally:
+        if previous_requirement is None:
+            os.environ.pop("QJ_REQUIRE_CREDENTIALS", None)
+        else:
+            os.environ["QJ_REQUIRE_CREDENTIALS"] = previous_requirement
     return 0
 
 

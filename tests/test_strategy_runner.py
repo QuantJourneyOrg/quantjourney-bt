@@ -8,10 +8,27 @@ from __future__ import annotations
 
 from io import StringIO
 
+import pytest
 from rich.console import Console
 
 from backtester.cli import strategy_runner
 from backtester.sdk.client import BacktesterAccessError, PrepareValidationError
+
+
+def test_missing_credentials_keep_guidance_and_failure_exit(monkeypatch, capsys) -> None:
+    from backtester.sdk.client import MissingCredentialsError
+
+    def missing_credentials(*args, **kwargs):
+        raise MissingCredentialsError()
+
+    monkeypatch.setattr(strategy_runner.runpy, "run_path", missing_credentials)
+    monkeypatch.setenv("QJ_STRICT_DATA_FETCH", "0")
+    assert strategy_runner.main(["configured_strategy.py"]) == 1
+    output = capsys.readouterr().err
+    assert "No credentials set" in output
+    assert "QJ_API_KEY" in output
+    assert "--sample-data" in output
+    assert "Traceback" not in output
 
 
 def _prepare_error() -> PrepareValidationError:
@@ -91,3 +108,52 @@ def test_process_boundary_catches_product_access_error(monkeypatch, capsys) -> N
     output = capsys.readouterr().err
     assert "Backtester access required" in output
     assert "Traceback" not in output
+
+
+@pytest.mark.parametrize("kind", ["grid", "grid_async", "optuna"])
+def test_optimizers_keep_missing_credentials_fatal(kind, monkeypatch) -> None:
+    import asyncio
+
+    from backtester.sdk.client import MissingCredentialsError
+    from backtester.walkforward.optimization.grid import GridSearchOptimizer
+    from backtester.walkforward.optimization.optuna_ import OptunaOptimizer
+
+    optimizer = (
+        OptunaOptimizer(param_space={}, n_trials=1, sampler="random")
+        if kind == "optuna"
+        else GridSearchOptimizer(param_grid={"period": [2]})
+    )
+
+    def missing_credentials(*args, **kwargs):
+        raise MissingCredentialsError()
+
+    monkeypatch.setenv("QJ_REQUIRE_CREDENTIALS", "1")
+    with pytest.raises(MissingCredentialsError):
+        if kind == "grid_async":
+            asyncio.run(optimizer.optimize(missing_credentials, "2020-01-02", "2020-01-06", {}))
+        else:
+            optimizer.optimize_fn(missing_credentials)
+
+    def ordinary_failure(*args, **kwargs):
+        raise ValueError("Test-only invalid trial parameter")
+
+    if kind == "grid_async":
+        result = asyncio.run(optimizer.optimize(ordinary_failure, "2020-01-02", "2020-01-06", {}))
+    else:
+        result = optimizer.optimize_fn(ordinary_failure)
+    assert result.trials and all(trial.state == "FAIL" for trial in result.trials)
+
+
+def test_strategy_process_restores_credential_policy(monkeypatch) -> None:
+    import os
+
+    monkeypatch.delenv("QJ_REQUIRE_CREDENTIALS", raising=False)
+    observed = []
+    monkeypatch.setattr(
+        strategy_runner.runpy,
+        "run_path",
+        lambda *args, **kwargs: observed.append(os.getenv("QJ_REQUIRE_CREDENTIALS")),
+    )
+    assert strategy_runner.main(["configured_local.py"]) == 0
+    assert observed == ["1"]
+    assert "QJ_REQUIRE_CREDENTIALS" not in os.environ
