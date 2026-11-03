@@ -15,7 +15,7 @@ documents what ships here versus what is provided by the hosted platform.
   folds with explicit pre-OOS purging; fail-closed date-bounded refits; grid
   search and Optuna (TPE); deflated Sharpe with effective-trial reporting;
   rolling top-K rank stability and overfit-ratio interpretation.
-- 50 example strategies (25 weights-based, 20 order-based, 5 walk-forward)
+- 51 example strategies (26 weights-based, 20 order-based, 5 walk-forward)
   with a reproducible sample-data mode that requires no account.
 - Static report generation: metrics, PNG chart pack, and a static HTML
   dashboard.

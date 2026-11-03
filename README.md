@@ -327,7 +327,7 @@ use `skills/qj-strategy-reviewer/SKILL.md`; to make sense of the output, use
 
 ## Quick Start
 
-For a full catalog of all 50 example strategies — each with a one-line
+For a full catalog of all 51 example strategies — each with a one-line
 description, a link to its source, and a link to its results page — see
 [strategies/README.md](strategies/README.md) or the summary below.
 

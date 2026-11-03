@@ -167,6 +167,7 @@ sdist strategies/example_weights_22_macd_trend.py
 sdist strategies/example_weights_23_fx_time_series_momentum.py
 sdist strategies/example_weights_24_fx_cross_sectional_momentum.py
 sdist strategies/example_weights_25_continuous_futures_trend.py
+sdist strategies/example_weights_26_adanos_snapshot_replay.py
 sdist strategies/example_wf_01_rolling_walkforward.py
 sdist strategies/example_wf_02_expanding_walkforward.py
 sdist strategies/example_wf_03_anchored_purge_embargo.py

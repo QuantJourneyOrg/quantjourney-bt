@@ -1,7 +1,7 @@
 # Strategy Examples
 
-This folder contains **50 runnable example strategies** for the QuantJourney
-Backtester — **25 weight-based**, **20 order-based**, and **5 walk-forward /
+This folder contains **51 runnable example strategies** for the QuantJourney
+Backtester — **26 weight-based**, **20 order-based**, and **5 walk-forward /
 optimization** examples. Each file is a complete, self-contained template: copy
 the one closest to your idea, change the rule, and you are testing your own
 strategy in minutes.
@@ -38,7 +38,7 @@ Naming: `example_<mode>_<NN>_<name>.py`, where mode is `weights`, `orders`, or
 
 ---
 
-## Weight-based strategies (25)
+## Weight-based strategies (26)
 
 Portfolio thinking — produce target weights, let the rebalance engine (and any
 risk overlay) trade them. Includes long/cash, market-neutral long/short, and
@@ -71,6 +71,7 @@ risk-overlay templates.
 | W23 | FX Time-Series Momentum | Six-month trend across USD-quoted spot pairs; inverse-vol weights | [source](./example_weights_23_fx_time_series_momentum.py) | [view](https://backtester.quantjourney.cloud/strategies/example-weights-23-fx-time-series-momentum) |
 | W24 | FX Cross-Sectional Momentum | Long strongest / short weakest XXX/USD pair; monthly | [source](./example_weights_24_fx_cross_sectional_momentum.py) | [view](https://backtester.quantjourney.cloud/strategies/example-weights-24-fx-cross-sectional-momentum) |
 | W25 | Continuous Futures Trend Proxy | Diversified long/short trend on provider continuous series | [source](./example_weights_25_continuous_futures_trend.py) | [view](https://backtester.quantjourney.cloud/strategies/example-weights-25-continuous-futures-trend) |
+| W26 | Adanos Own-Observation Replay | Offline replay of sentiment received before each decision | [source](./example_weights_26_adanos_snapshot_replay.py) | Synthetic demo only |
 
 The long/short examples (W13–W16) are market-neutral; short borrow/financing is
 not modeled (a documented research approximation).
@@ -78,6 +79,71 @@ not modeled (a documented research approximation).
 W23-W25 are price-return research proxies. They do not apply FX lots or futures
 multipliers to PnL and do not model financing, margin, or controlled futures
 rolls.
+
+### Own-observation Adanos research
+
+W26 uses [Adanos](https://adanos.org/) Reddit Stocks sentiment as an optional
+research input, separate from local prices. Its generated demo prices and observations
+are synthetic, not historical Adanos coverage or evidence of profitable trading.
+
+```bash
+./strategy.sh example_weights_26_adanos_snapshot_replay --check
+./strategy.sh example_weights_26_adanos_snapshot_replay --output ./reports/adanos-demo
+./strategy.sh example_weights_26_adanos_snapshot_replay --sample-data --output ./reports/adanos-demo
+```
+
+For private research, supply both matching inputs. No replay downloads data.
+
+```bash
+ADANOS_SNAPSHOT_FILE=./research/observations.json \
+  ./strategy.sh example_weights_26_adanos_snapshot_replay \
+  --data-file ./research/prices.csv --output ./reports/adanos-own-observations
+```
+
+The archive has a `reddit_stocks` source, one `ticker`, a `synthetic` flag, and
+an `observations` list. Each observation preserves `observed_at`, `data_date`,
+`found`, nullable `mentions`, and nullable `sentiment_score`. See the
+[example's synthetic input](example_weights_26_adanos_snapshot_replay.py) for its format.
+Keep observation times recorded when responses were actually received. Never
+substitute a historical data date for an observation time.
+
+Optional acquisition is a separate, explicit call before replay. Set
+`ADANOS_API_KEY` privately in the process environment, then run from this checkout:
+
+```python
+import json
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
+from strategies.example_weights_26_adanos_snapshot_replay import capture_snapshot
+
+snapshot = capture_snapshot(ticker="AAPL", day=datetime.now(UTC).date() - timedelta(days=1))
+with Path("observations.json").open("x", encoding="utf-8") as stream:
+    json.dump(snapshot, stream, indent=2)
+```
+
+This calls only `/reddit/stocks/v1/stock/{ticker}`, with inclusive UTC `from` and
+`to` selecting one completed day. It never sends the deprecated `days` parameter.
+It is not a full API client. Adanos is commercial with a limited free plan;
+source access, quotas and historical windows depend on the plan. HTTP failures
+are errors, not neutral observations. See the [API documentation](https://api.adanos.com/docs).
+
+To accumulate observations, retain earlier entries and save each enlarged archive
+as a new file. The example provides no scheduler, mutable shared cache or refresh
+during execution. Collected values must not be relabelled as synthetic or backdated.
+
+For each daily price row, the rule uses only a capture received strictly before
+that row's midnight UTC. A capture's completed data day may be at most three
+calendar days old. Missing, stale or zero-activity observations choose cash;
+observed zero sentiment remains distinguishable in `run_metadata.json`.
+The native bar shift, close-based rebalance, trading costs and cash buffer still
+apply. Cash can therefore differ from a same-day target-weight calculation.
+
+A historical response downloaded today supplies no observations before today.
+A one-day lag does not remove revision bias. Even private observation archives
+are not a provider-wide historical point-in-time dataset or a guarantee about
+price-history revisions. Start with prospective observations and inspect the
+saved input hash and per-decision provenance before interpreting any report.
 
 ## Order-based strategies (20)
 
