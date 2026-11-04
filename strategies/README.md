@@ -1,7 +1,7 @@
 # Strategy Examples
 
-This folder contains **50 runnable example strategies** for the QuantJourney
-Backtester — **25 weight-based**, **20 order-based**, and **5 walk-forward /
+This folder contains **51 runnable example strategies** for the QuantJourney
+Backtester — **26 weight-based**, **20 order-based**, and **5 walk-forward /
 optimization** examples. Each file is a complete, self-contained template: copy
 the one closest to your idea, change the rule, and you are testing your own
 strategy in minutes.
@@ -38,7 +38,7 @@ Naming: `example_<mode>_<NN>_<name>.py`, where mode is `weights`, `orders`, or
 
 ---
 
-## Weight-based strategies (25)
+## Weight-based strategies (26)
 
 Portfolio thinking — produce target weights, let the rebalance engine (and any
 risk overlay) trade them. Includes long/cash, market-neutral long/short, and
@@ -71,6 +71,7 @@ risk-overlay templates.
 | W23 | FX Time-Series Momentum | Six-month trend across USD-quoted spot pairs; inverse-vol weights | [source](./example_weights_23_fx_time_series_momentum.py) | [view](https://backtester.quantjourney.cloud/strategies/example-weights-23-fx-time-series-momentum) |
 | W24 | FX Cross-Sectional Momentum | Long strongest / short weakest XXX/USD pair; monthly | [source](./example_weights_24_fx_cross_sectional_momentum.py) | [view](https://backtester.quantjourney.cloud/strategies/example-weights-24-fx-cross-sectional-momentum) |
 | W25 | Continuous Futures Trend Proxy | Diversified long/short trend on provider continuous series | [source](./example_weights_25_continuous_futures_trend.py) | [view](https://backtester.quantjourney.cloud/strategies/example-weights-25-continuous-futures-trend) |
+| W26 | Saved Sentiment Replay | Hold after a usable positive observation; shared time alignment and provenance | [source](./example_weights_26_adanos_observations.py) | Empty sample or own archive |
 
 The long/short examples (W13–W16) are market-neutral; short borrow/financing is
 not modeled (a documented research approximation).
@@ -78,6 +79,31 @@ not modeled (a documented research approximation).
 W23-W25 are price-return research proxies. They do not apply FX lots or futures
 multipliers to PnL and do not model financing, margin, or controlled futures
 rolls.
+
+### Saved observations: sentiment and other sources
+
+W26 keeps the trading rule in the strategy. The optional shared module handles
+receipt-time alignment, freshness, input hashes and per-decision provenance.
+Its universe, period and freshness limit are explicit in `main()`.
+
+```bash
+# Native sample prices with an explicitly empty sentiment archive; no key.
+./strategy.sh example_weights_26_adanos_observations --output reports/observations-empty
+
+# Own local prices and saved observations; no data download during replay.
+ADANOS_SNAPSHOT_FILE=research/observations.json \
+  ./strategy.sh example_weights_26_adanos_observations \
+  --data-file research/prices.csv --output reports/observations-own
+```
+
+Edit the configured period to match your research inputs. Do not combine local
+files with `--sample-data`. The default empty sample holds cash and does not
+claim historical Adanos coverage. Two-year synthetic fixtures are under
+`tests/fixtures/observations`; they are not real provider data.
+See [the observation guide](../_docs/observations.md) for their run command,
+explicit one-shot capture, archive format, and other-source adapters.
+Adanos is an external commercial provider. Access and history depend on its plan.
+The provider adapter is adapted from [PR #6](https://github.com/QuantJourneyOrg/quantjourney-bt/pull/6).
 
 ## Order-based strategies (20)
 

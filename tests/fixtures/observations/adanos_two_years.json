@@ -1,0 +1,3431 @@
+{
+  "source": "reddit_stocks",
+  "ticker": "AAPL",
+  "synthetic": true,
+  "description": "SYNTHETIC TWO-YEAR DEMO. Invented prices and sentiment; no historical Adanos observations or investment evidence.",
+  "observations": [
+    {
+      "observed_at": "2024-11-14T06:00:00+00:00",
+      "data_date": "2024-11-13",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": 0.3863
+    },
+    {
+      "observed_at": "2024-11-15T06:00:00+00:00",
+      "data_date": "2024-11-14",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": 0.4321
+    },
+    {
+      "observed_at": "2024-11-16T06:00:00+00:00",
+      "data_date": "2024-11-15",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": 0.4744
+    },
+    {
+      "observed_at": "2024-11-19T06:00:00+00:00",
+      "data_date": "2024-11-18",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": 0.5128
+    },
+    {
+      "observed_at": "2024-11-20T06:00:00+00:00",
+      "data_date": "2024-11-19",
+      "found": true,
+      "mentions": 21,
+      "sentiment_score": 0.547
+    },
+    {
+      "observed_at": "2024-11-21T06:00:00+00:00",
+      "data_date": "2024-11-20",
+      "found": true,
+      "mentions": 22,
+      "sentiment_score": 0.5766
+    },
+    {
+      "observed_at": "2024-11-22T06:00:00+00:00",
+      "data_date": "2024-11-21",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": 0.6014
+    },
+    {
+      "observed_at": "2024-11-23T06:00:00+00:00",
+      "data_date": "2024-11-22",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": 0.6213
+    },
+    {
+      "observed_at": "2024-11-26T06:00:00+00:00",
+      "data_date": "2024-11-25",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": 0.6361
+    },
+    {
+      "observed_at": "2024-11-27T06:00:00+00:00",
+      "data_date": "2024-11-26",
+      "found": true,
+      "mentions": 26,
+      "sentiment_score": 0.6456
+    },
+    {
+      "observed_at": "2024-11-28T06:00:00+00:00",
+      "data_date": "2024-11-27",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": 0.6498
+    },
+    {
+      "observed_at": "2024-11-29T06:00:00+00:00",
+      "data_date": "2024-11-28",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": 0.6486
+    },
+    {
+      "observed_at": "2024-11-30T06:00:00+00:00",
+      "data_date": "2024-11-29",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": 0.6421
+    },
+    {
+      "observed_at": "2024-12-03T06:00:00+00:00",
+      "data_date": "2024-12-02",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": 0.6302
+    },
+    {
+      "observed_at": "2024-12-04T06:00:00+00:00",
+      "data_date": "2024-12-03",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": 0.6132
+    },
+    {
+      "observed_at": "2024-12-05T06:00:00+00:00",
+      "data_date": "2024-12-04",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": 0.591
+    },
+    {
+      "observed_at": "2024-12-06T06:00:00+00:00",
+      "data_date": "2024-12-05",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": 0.564
+    },
+    {
+      "observed_at": "2024-12-07T06:00:00+00:00",
+      "data_date": "2024-12-06",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": 0.5324
+    },
+    {
+      "observed_at": "2024-12-10T06:00:00+00:00",
+      "data_date": "2024-12-09",
+      "found": true,
+      "mentions": 35,
+      "sentiment_score": 0.4963
+    },
+    {
+      "observed_at": "2024-12-11T06:00:00+00:00",
+      "data_date": "2024-12-10",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": 0.4562
+    },
+    {
+      "observed_at": "2024-12-12T06:00:00+00:00",
+      "data_date": "2024-12-11",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": 0.4123
+    },
+    {
+      "observed_at": "2024-12-13T06:00:00+00:00",
+      "data_date": "2024-12-12",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": 0.3649
+    },
+    {
+      "observed_at": "2024-12-14T06:00:00+00:00",
+      "data_date": "2024-12-13",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": 0.3146
+    },
+    {
+      "observed_at": "2024-12-14T18:00:00+00:00",
+      "data_date": "2024-12-13",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2024-12-17T06:00:00+00:00",
+      "data_date": "2024-12-16",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": 0.2617
+    },
+    {
+      "observed_at": "2024-12-18T06:00:00+00:00",
+      "data_date": "2024-12-17",
+      "found": true,
+      "mentions": 11,
+      "sentiment_score": 0.2066
+    },
+    {
+      "observed_at": "2024-12-19T06:00:00+00:00",
+      "data_date": "2024-12-18",
+      "found": true,
+      "mentions": 12,
+      "sentiment_score": 0.1498
+    },
+    {
+      "observed_at": "2024-12-20T06:00:00+00:00",
+      "data_date": "2024-12-19",
+      "found": true,
+      "mentions": 13,
+      "sentiment_score": 0.0917
+    },
+    {
+      "observed_at": "2024-12-21T06:00:00+00:00",
+      "data_date": "2024-12-20",
+      "found": true,
+      "mentions": 14,
+      "sentiment_score": 0.0329
+    },
+    {
+      "observed_at": "2024-12-24T06:00:00+00:00",
+      "data_date": "2024-12-23",
+      "found": true,
+      "mentions": 15,
+      "sentiment_score": -0.0261
+    },
+    {
+      "observed_at": "2024-12-25T06:00:00+00:00",
+      "data_date": "2024-12-24",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": -0.085
+    },
+    {
+      "observed_at": "2024-12-26T06:00:00+00:00",
+      "data_date": "2024-12-25",
+      "found": true,
+      "mentions": 0,
+      "sentiment_score": -0.1431
+    },
+    {
+      "observed_at": "2024-12-27T06:00:00+00:00",
+      "data_date": "2024-12-26",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": -0.2001
+    },
+    {
+      "observed_at": "2024-12-28T06:00:00+00:00",
+      "data_date": "2024-12-27",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": -0.2554
+    },
+    {
+      "observed_at": "2024-12-31T06:00:00+00:00",
+      "data_date": "2024-12-30",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": -0.3086
+    },
+    {
+      "observed_at": "2025-01-01T06:00:00+00:00",
+      "data_date": "2024-12-31",
+      "found": true,
+      "mentions": null,
+      "sentiment_score": -0.3593
+    },
+    {
+      "observed_at": "2025-01-02T06:00:00+00:00",
+      "data_date": "2025-01-01",
+      "found": true,
+      "mentions": 22,
+      "sentiment_score": -0.407
+    },
+    {
+      "observed_at": "2025-01-03T06:00:00+00:00",
+      "data_date": "2025-01-02",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": null
+    },
+    {
+      "observed_at": "2025-01-04T06:00:00+00:00",
+      "data_date": "2025-01-03",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": -0.4919
+    },
+    {
+      "observed_at": "2025-01-07T06:00:00+00:00",
+      "data_date": "2025-01-06",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": -0.5285
+    },
+    {
+      "observed_at": "2025-01-08T06:00:00+00:00",
+      "data_date": "2025-01-07",
+      "found": true,
+      "mentions": 26,
+      "sentiment_score": -0.5606
+    },
+    {
+      "observed_at": "2025-01-09T06:00:00+00:00",
+      "data_date": "2025-01-08",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": -0.5882
+    },
+    {
+      "observed_at": "2025-01-10T06:00:00+00:00",
+      "data_date": "2025-01-09",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": -0.6109
+    },
+    {
+      "observed_at": "2025-01-11T06:00:00+00:00",
+      "data_date": "2025-01-10",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": -0.6285
+    },
+    {
+      "observed_at": "2025-01-14T06:00:00+00:00",
+      "data_date": "2025-01-13",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": -0.641
+    },
+    {
+      "observed_at": "2025-01-15T06:00:00+00:00",
+      "data_date": "2025-01-14",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": -0.6481
+    },
+    {
+      "observed_at": "2025-01-16T06:00:00+00:00",
+      "data_date": "2025-01-15",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": -0.6499
+    },
+    {
+      "observed_at": "2025-01-17T06:00:00+00:00",
+      "data_date": "2025-01-16",
+      "found": false,
+      "mentions": 33,
+      "sentiment_score": -0.6464
+    },
+    {
+      "observed_at": "2025-01-18T06:00:00+00:00",
+      "data_date": "2025-01-17",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": -0.6375
+    },
+    {
+      "observed_at": "2025-01-21T06:00:00+00:00",
+      "data_date": "2025-01-20",
+      "found": true,
+      "mentions": 35,
+      "sentiment_score": -0.6233
+    },
+    {
+      "observed_at": "2025-01-22T06:00:00+00:00",
+      "data_date": "2025-01-21",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": -0.604
+    },
+    {
+      "observed_at": "2025-01-23T06:00:00+00:00",
+      "data_date": "2025-01-22",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": -0.5797
+    },
+    {
+      "observed_at": "2025-01-24T06:00:00+00:00",
+      "data_date": "2025-01-23",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": -0.5506
+    },
+    {
+      "observed_at": "2025-01-24T18:00:00+00:00",
+      "data_date": "2025-01-23",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2025-01-25T06:00:00+00:00",
+      "data_date": "2025-01-24",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": -0.517
+    },
+    {
+      "observed_at": "2025-01-28T06:00:00+00:00",
+      "data_date": "2025-01-27",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": -0.4791
+    },
+    {
+      "observed_at": "2025-01-29T06:00:00+00:00",
+      "data_date": "2025-01-28",
+      "found": true,
+      "mentions": 11,
+      "sentiment_score": -0.4372
+    },
+    {
+      "observed_at": "2025-01-30T06:00:00+00:00",
+      "data_date": "2025-01-29",
+      "found": true,
+      "mentions": 12,
+      "sentiment_score": -0.3917
+    },
+    {
+      "observed_at": "2025-01-31T06:00:00+00:00",
+      "data_date": "2025-01-30",
+      "found": true,
+      "mentions": 13,
+      "sentiment_score": -0.343
+    },
+    {
+      "observed_at": "2025-02-01T06:00:00+00:00",
+      "data_date": "2025-01-31",
+      "found": true,
+      "mentions": 14,
+      "sentiment_score": -0.2915
+    },
+    {
+      "observed_at": "2025-02-04T06:00:00+00:00",
+      "data_date": "2025-02-03",
+      "found": true,
+      "mentions": 15,
+      "sentiment_score": -0.2375
+    },
+    {
+      "observed_at": "2025-02-05T06:00:00+00:00",
+      "data_date": "2025-02-04",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": -0.1816
+    },
+    {
+      "observed_at": "2025-02-06T06:00:00+00:00",
+      "data_date": "2025-02-05",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": -0.1242
+    },
+    {
+      "observed_at": "2025-02-07T06:00:00+00:00",
+      "data_date": "2025-02-06",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": -0.0658
+    },
+    {
+      "observed_at": "2025-02-08T06:00:00+00:00",
+      "data_date": "2025-02-07",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": -0.0068
+    },
+    {
+      "observed_at": "2025-02-11T06:00:00+00:00",
+      "data_date": "2025-02-10",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": 0.0522
+    },
+    {
+      "observed_at": "2025-02-12T06:00:00+00:00",
+      "data_date": "2025-02-11",
+      "found": true,
+      "mentions": 21,
+      "sentiment_score": 0.1108
+    },
+    {
+      "observed_at": "2025-02-13T06:00:00+00:00",
+      "data_date": "2025-02-12",
+      "found": true,
+      "mentions": 22,
+      "sentiment_score": 0.1685
+    },
+    {
+      "observed_at": "2025-02-14T06:00:00+00:00",
+      "data_date": "2025-02-13",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": 0.2248
+    },
+    {
+      "observed_at": "2025-02-15T06:00:00+00:00",
+      "data_date": "2025-02-14",
+      "found": true,
+      "mentions": 0,
+      "sentiment_score": 0.2793
+    },
+    {
+      "observed_at": "2025-02-18T06:00:00+00:00",
+      "data_date": "2025-02-17",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": 0.3314
+    },
+    {
+      "observed_at": "2025-02-19T06:00:00+00:00",
+      "data_date": "2025-02-18",
+      "found": true,
+      "mentions": 26,
+      "sentiment_score": 0.3808
+    },
+    {
+      "observed_at": "2025-02-20T06:00:00+00:00",
+      "data_date": "2025-02-19",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": 0.427
+    },
+    {
+      "observed_at": "2025-02-21T06:00:00+00:00",
+      "data_date": "2025-02-20",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": 0.4698
+    },
+    {
+      "observed_at": "2025-02-22T06:00:00+00:00",
+      "data_date": "2025-02-21",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": 0.5086
+    },
+    {
+      "observed_at": "2025-03-06T06:00:00+00:00",
+      "data_date": "2025-03-05",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": 0.649
+    },
+    {
+      "observed_at": "2025-03-06T18:00:00+00:00",
+      "data_date": "2025-03-05",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2025-03-07T06:00:00+00:00",
+      "data_date": "2025-03-06",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": 0.6431
+    },
+    {
+      "observed_at": "2025-03-08T06:00:00+00:00",
+      "data_date": "2025-03-07",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": 0.6318
+    },
+    {
+      "observed_at": "2025-03-11T06:00:00+00:00",
+      "data_date": "2025-03-10",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": 0.6154
+    },
+    {
+      "observed_at": "2025-03-12T06:00:00+00:00",
+      "data_date": "2025-03-11",
+      "found": true,
+      "mentions": 11,
+      "sentiment_score": 0.5938
+    },
+    {
+      "observed_at": "2025-03-13T06:00:00+00:00",
+      "data_date": "2025-03-12",
+      "found": true,
+      "mentions": 12,
+      "sentiment_score": 0.5674
+    },
+    {
+      "observed_at": "2025-03-14T06:00:00+00:00",
+      "data_date": "2025-03-13",
+      "found": true,
+      "mentions": 13,
+      "sentiment_score": 0.5363
+    },
+    {
+      "observed_at": "2025-03-15T06:00:00+00:00",
+      "data_date": "2025-03-14",
+      "found": true,
+      "mentions": 14,
+      "sentiment_score": 0.5007
+    },
+    {
+      "observed_at": "2025-03-18T06:00:00+00:00",
+      "data_date": "2025-03-17",
+      "found": true,
+      "mentions": 15,
+      "sentiment_score": 0.461
+    },
+    {
+      "observed_at": "2025-03-19T06:00:00+00:00",
+      "data_date": "2025-03-18",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": 0.4175
+    },
+    {
+      "observed_at": "2025-03-20T06:00:00+00:00",
+      "data_date": "2025-03-19",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": 0.3705
+    },
+    {
+      "observed_at": "2025-03-21T06:00:00+00:00",
+      "data_date": "2025-03-20",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": 0.3205
+    },
+    {
+      "observed_at": "2025-03-22T06:00:00+00:00",
+      "data_date": "2025-03-21",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": 0.2679
+    },
+    {
+      "observed_at": "2025-03-25T06:00:00+00:00",
+      "data_date": "2025-03-24",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": 0.213
+    },
+    {
+      "observed_at": "2025-03-26T06:00:00+00:00",
+      "data_date": "2025-03-25",
+      "found": true,
+      "mentions": 21,
+      "sentiment_score": 0.1564
+    },
+    {
+      "observed_at": "2025-03-27T06:00:00+00:00",
+      "data_date": "2025-03-26",
+      "found": true,
+      "mentions": 22,
+      "sentiment_score": 0.0985
+    },
+    {
+      "observed_at": "2025-03-28T06:00:00+00:00",
+      "data_date": "2025-03-27",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": 0.0397
+    },
+    {
+      "observed_at": "2025-03-29T06:00:00+00:00",
+      "data_date": "2025-03-28",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": -0.0193
+    },
+    {
+      "observed_at": "2025-04-01T06:00:00+00:00",
+      "data_date": "2025-03-31",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": -0.0782
+    },
+    {
+      "observed_at": "2025-04-02T06:00:00+00:00",
+      "data_date": "2025-04-01",
+      "found": false,
+      "mentions": 26,
+      "sentiment_score": -0.1365
+    },
+    {
+      "observed_at": "2025-04-03T06:00:00+00:00",
+      "data_date": "2025-04-02",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": -0.1936
+    },
+    {
+      "observed_at": "2025-04-04T06:00:00+00:00",
+      "data_date": "2025-04-03",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": -0.2492
+    },
+    {
+      "observed_at": "2025-04-05T06:00:00+00:00",
+      "data_date": "2025-04-04",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": -0.3026
+    },
+    {
+      "observed_at": "2025-04-08T06:00:00+00:00",
+      "data_date": "2025-04-07",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": -0.3536
+    },
+    {
+      "observed_at": "2025-04-09T06:00:00+00:00",
+      "data_date": "2025-04-08",
+      "found": true,
+      "mentions": 0,
+      "sentiment_score": -0.4017
+    },
+    {
+      "observed_at": "2025-04-10T06:00:00+00:00",
+      "data_date": "2025-04-09",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": -0.4464
+    },
+    {
+      "observed_at": "2025-04-11T06:00:00+00:00",
+      "data_date": "2025-04-10",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": -0.4875
+    },
+    {
+      "observed_at": "2025-04-12T06:00:00+00:00",
+      "data_date": "2025-04-11",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": -0.5245
+    },
+    {
+      "observed_at": "2025-04-15T06:00:00+00:00",
+      "data_date": "2025-04-14",
+      "found": true,
+      "mentions": 35,
+      "sentiment_score": -0.5572
+    },
+    {
+      "observed_at": "2025-04-16T06:00:00+00:00",
+      "data_date": "2025-04-15",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": -0.5853
+    },
+    {
+      "observed_at": "2025-04-16T18:00:00+00:00",
+      "data_date": "2025-04-15",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2025-04-17T06:00:00+00:00",
+      "data_date": "2025-04-16",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": -0.6085
+    },
+    {
+      "observed_at": "2025-04-18T06:00:00+00:00",
+      "data_date": "2025-04-17",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": -0.6267
+    },
+    {
+      "observed_at": "2025-04-19T06:00:00+00:00",
+      "data_date": "2025-04-18",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": -0.6398
+    },
+    {
+      "observed_at": "2025-04-22T06:00:00+00:00",
+      "data_date": "2025-04-21",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": -0.6476
+    },
+    {
+      "observed_at": "2025-04-23T06:00:00+00:00",
+      "data_date": "2025-04-22",
+      "found": true,
+      "mentions": 11,
+      "sentiment_score": -0.65
+    },
+    {
+      "observed_at": "2025-04-24T06:00:00+00:00",
+      "data_date": "2025-04-23",
+      "found": true,
+      "mentions": 12,
+      "sentiment_score": -0.647
+    },
+    {
+      "observed_at": "2025-04-25T06:00:00+00:00",
+      "data_date": "2025-04-24",
+      "found": true,
+      "mentions": null,
+      "sentiment_score": -0.6388
+    },
+    {
+      "observed_at": "2025-04-26T06:00:00+00:00",
+      "data_date": "2025-04-25",
+      "found": true,
+      "mentions": 14,
+      "sentiment_score": -0.6252
+    },
+    {
+      "observed_at": "2025-04-29T06:00:00+00:00",
+      "data_date": "2025-04-28",
+      "found": true,
+      "mentions": 15,
+      "sentiment_score": -0.6065
+    },
+    {
+      "observed_at": "2025-04-30T06:00:00+00:00",
+      "data_date": "2025-04-29",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": -0.5827
+    },
+    {
+      "observed_at": "2025-05-01T06:00:00+00:00",
+      "data_date": "2025-04-30",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": -0.5542
+    },
+    {
+      "observed_at": "2025-05-02T06:00:00+00:00",
+      "data_date": "2025-05-01",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": -0.5211
+    },
+    {
+      "observed_at": "2025-05-03T06:00:00+00:00",
+      "data_date": "2025-05-02",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": null
+    },
+    {
+      "observed_at": "2025-05-06T06:00:00+00:00",
+      "data_date": "2025-05-05",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": -0.4422
+    },
+    {
+      "observed_at": "2025-05-07T06:00:00+00:00",
+      "data_date": "2025-05-06",
+      "found": true,
+      "mentions": 21,
+      "sentiment_score": -0.3971
+    },
+    {
+      "observed_at": "2025-05-08T06:00:00+00:00",
+      "data_date": "2025-05-07",
+      "found": true,
+      "mentions": 22,
+      "sentiment_score": -0.3488
+    },
+    {
+      "observed_at": "2025-05-09T06:00:00+00:00",
+      "data_date": "2025-05-08",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": -0.2975
+    },
+    {
+      "observed_at": "2025-05-10T06:00:00+00:00",
+      "data_date": "2025-05-09",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": -0.2438
+    },
+    {
+      "observed_at": "2025-05-13T06:00:00+00:00",
+      "data_date": "2025-05-12",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": -0.1881
+    },
+    {
+      "observed_at": "2025-05-14T06:00:00+00:00",
+      "data_date": "2025-05-13",
+      "found": true,
+      "mentions": 26,
+      "sentiment_score": -0.1309
+    },
+    {
+      "observed_at": "2025-05-15T06:00:00+00:00",
+      "data_date": "2025-05-14",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": -0.0725
+    },
+    {
+      "observed_at": "2025-05-16T06:00:00+00:00",
+      "data_date": "2025-05-15",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": -0.0136
+    },
+    {
+      "observed_at": "2025-05-17T06:00:00+00:00",
+      "data_date": "2025-05-16",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": 0.0455
+    },
+    {
+      "observed_at": "2025-05-20T06:00:00+00:00",
+      "data_date": "2025-05-19",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": 0.1041
+    },
+    {
+      "observed_at": "2025-05-21T06:00:00+00:00",
+      "data_date": "2025-05-20",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": 0.162
+    },
+    {
+      "observed_at": "2025-05-22T06:00:00+00:00",
+      "data_date": "2025-05-21",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": 0.2184
+    },
+    {
+      "observed_at": "2025-05-23T06:00:00+00:00",
+      "data_date": "2025-05-22",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": 0.2731
+    },
+    {
+      "observed_at": "2025-05-24T06:00:00+00:00",
+      "data_date": "2025-05-23",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": 0.3255
+    },
+    {
+      "observed_at": "2025-05-27T06:00:00+00:00",
+      "data_date": "2025-05-26",
+      "found": true,
+      "mentions": 35,
+      "sentiment_score": 0.3753
+    },
+    {
+      "observed_at": "2025-05-27T18:00:00+00:00",
+      "data_date": "2025-05-26",
+      "found": true,
+      "mentions": 35,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2025-05-28T06:00:00+00:00",
+      "data_date": "2025-05-27",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": 0.4219
+    },
+    {
+      "observed_at": "2025-05-29T06:00:00+00:00",
+      "data_date": "2025-05-28",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": 0.465
+    },
+    {
+      "observed_at": "2025-05-30T06:00:00+00:00",
+      "data_date": "2025-05-29",
+      "found": true,
+      "mentions": 0,
+      "sentiment_score": 0.5043
+    },
+    {
+      "observed_at": "2025-05-31T06:00:00+00:00",
+      "data_date": "2025-05-30",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": 0.5395
+    },
+    {
+      "observed_at": "2025-06-03T06:00:00+00:00",
+      "data_date": "2025-06-02",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": 0.5702
+    },
+    {
+      "observed_at": "2025-06-04T06:00:00+00:00",
+      "data_date": "2025-06-03",
+      "found": true,
+      "mentions": 11,
+      "sentiment_score": 0.5962
+    },
+    {
+      "observed_at": "2025-06-05T06:00:00+00:00",
+      "data_date": "2025-06-04",
+      "found": true,
+      "mentions": 12,
+      "sentiment_score": 0.6172
+    },
+    {
+      "observed_at": "2025-06-06T06:00:00+00:00",
+      "data_date": "2025-06-05",
+      "found": true,
+      "mentions": 13,
+      "sentiment_score": 0.6332
+    },
+    {
+      "observed_at": "2025-06-07T06:00:00+00:00",
+      "data_date": "2025-06-06",
+      "found": true,
+      "mentions": 14,
+      "sentiment_score": 0.6439
+    },
+    {
+      "observed_at": "2025-06-10T06:00:00+00:00",
+      "data_date": "2025-06-09",
+      "found": true,
+      "mentions": 15,
+      "sentiment_score": 0.6493
+    },
+    {
+      "observed_at": "2025-06-11T06:00:00+00:00",
+      "data_date": "2025-06-10",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": 0.6494
+    },
+    {
+      "observed_at": "2025-06-12T06:00:00+00:00",
+      "data_date": "2025-06-11",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": 0.644
+    },
+    {
+      "observed_at": "2025-06-13T06:00:00+00:00",
+      "data_date": "2025-06-12",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": 0.6334
+    },
+    {
+      "observed_at": "2025-06-14T06:00:00+00:00",
+      "data_date": "2025-06-13",
+      "found": false,
+      "mentions": 19,
+      "sentiment_score": 0.6175
+    },
+    {
+      "observed_at": "2025-06-26T06:00:00+00:00",
+      "data_date": "2025-06-25",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": 0.3264
+    },
+    {
+      "observed_at": "2025-06-27T06:00:00+00:00",
+      "data_date": "2025-06-26",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": 0.2741
+    },
+    {
+      "observed_at": "2025-06-28T06:00:00+00:00",
+      "data_date": "2025-06-27",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": 0.2194
+    },
+    {
+      "observed_at": "2025-07-01T06:00:00+00:00",
+      "data_date": "2025-06-30",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": 0.163
+    },
+    {
+      "observed_at": "2025-07-02T06:00:00+00:00",
+      "data_date": "2025-07-01",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": 0.1052
+    },
+    {
+      "observed_at": "2025-07-03T06:00:00+00:00",
+      "data_date": "2025-07-02",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": null
+    },
+    {
+      "observed_at": "2025-07-04T06:00:00+00:00",
+      "data_date": "2025-07-03",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": -0.0126
+    },
+    {
+      "observed_at": "2025-07-05T06:00:00+00:00",
+      "data_date": "2025-07-04",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": -0.0715
+    },
+    {
+      "observed_at": "2025-07-05T18:00:00+00:00",
+      "data_date": "2025-07-04",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2025-07-08T06:00:00+00:00",
+      "data_date": "2025-07-07",
+      "found": true,
+      "mentions": 35,
+      "sentiment_score": -0.1299
+    },
+    {
+      "observed_at": "2025-07-09T06:00:00+00:00",
+      "data_date": "2025-07-08",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": -0.1871
+    },
+    {
+      "observed_at": "2025-07-10T06:00:00+00:00",
+      "data_date": "2025-07-09",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": -0.2429
+    },
+    {
+      "observed_at": "2025-07-11T06:00:00+00:00",
+      "data_date": "2025-07-10",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": -0.2966
+    },
+    {
+      "observed_at": "2025-07-12T06:00:00+00:00",
+      "data_date": "2025-07-11",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": -0.3479
+    },
+    {
+      "observed_at": "2025-07-15T06:00:00+00:00",
+      "data_date": "2025-07-14",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": -0.3963
+    },
+    {
+      "observed_at": "2025-07-16T06:00:00+00:00",
+      "data_date": "2025-07-15",
+      "found": true,
+      "mentions": 11,
+      "sentiment_score": -0.4414
+    },
+    {
+      "observed_at": "2025-07-17T06:00:00+00:00",
+      "data_date": "2025-07-16",
+      "found": true,
+      "mentions": 12,
+      "sentiment_score": -0.4829
+    },
+    {
+      "observed_at": "2025-07-18T06:00:00+00:00",
+      "data_date": "2025-07-17",
+      "found": true,
+      "mentions": 13,
+      "sentiment_score": -0.5204
+    },
+    {
+      "observed_at": "2025-07-19T06:00:00+00:00",
+      "data_date": "2025-07-18",
+      "found": true,
+      "mentions": 14,
+      "sentiment_score": -0.5536
+    },
+    {
+      "observed_at": "2025-07-22T06:00:00+00:00",
+      "data_date": "2025-07-21",
+      "found": true,
+      "mentions": 0,
+      "sentiment_score": -0.5823
+    },
+    {
+      "observed_at": "2025-07-23T06:00:00+00:00",
+      "data_date": "2025-07-22",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": -0.6061
+    },
+    {
+      "observed_at": "2025-07-24T06:00:00+00:00",
+      "data_date": "2025-07-23",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": -0.6249
+    },
+    {
+      "observed_at": "2025-07-25T06:00:00+00:00",
+      "data_date": "2025-07-24",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": -0.6386
+    },
+    {
+      "observed_at": "2025-07-26T06:00:00+00:00",
+      "data_date": "2025-07-25",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": -0.6469
+    },
+    {
+      "observed_at": "2025-07-29T06:00:00+00:00",
+      "data_date": "2025-07-28",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": -0.65
+    },
+    {
+      "observed_at": "2025-07-30T06:00:00+00:00",
+      "data_date": "2025-07-29",
+      "found": true,
+      "mentions": 21,
+      "sentiment_score": -0.6477
+    },
+    {
+      "observed_at": "2025-07-31T06:00:00+00:00",
+      "data_date": "2025-07-30",
+      "found": true,
+      "mentions": 22,
+      "sentiment_score": -0.64
+    },
+    {
+      "observed_at": "2025-08-01T06:00:00+00:00",
+      "data_date": "2025-07-31",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": -0.627
+    },
+    {
+      "observed_at": "2025-08-02T06:00:00+00:00",
+      "data_date": "2025-08-01",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": -0.6089
+    },
+    {
+      "observed_at": "2025-08-05T06:00:00+00:00",
+      "data_date": "2025-08-04",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": -0.5857
+    },
+    {
+      "observed_at": "2025-08-06T06:00:00+00:00",
+      "data_date": "2025-08-05",
+      "found": true,
+      "mentions": 26,
+      "sentiment_score": -0.5577
+    },
+    {
+      "observed_at": "2025-08-07T06:00:00+00:00",
+      "data_date": "2025-08-06",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": -0.5251
+    },
+    {
+      "observed_at": "2025-08-08T06:00:00+00:00",
+      "data_date": "2025-08-07",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": -0.4881
+    },
+    {
+      "observed_at": "2025-08-09T06:00:00+00:00",
+      "data_date": "2025-08-08",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": -0.4472
+    },
+    {
+      "observed_at": "2025-08-12T06:00:00+00:00",
+      "data_date": "2025-08-11",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": -0.4025
+    },
+    {
+      "observed_at": "2025-08-13T06:00:00+00:00",
+      "data_date": "2025-08-12",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": -0.3545
+    },
+    {
+      "observed_at": "2025-08-14T06:00:00+00:00",
+      "data_date": "2025-08-13",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": -0.3036
+    },
+    {
+      "observed_at": "2025-08-15T06:00:00+00:00",
+      "data_date": "2025-08-14",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": -0.2501
+    },
+    {
+      "observed_at": "2025-08-15T18:00:00+00:00",
+      "data_date": "2025-08-14",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2025-08-16T06:00:00+00:00",
+      "data_date": "2025-08-15",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": -0.1946
+    },
+    {
+      "observed_at": "2025-08-19T06:00:00+00:00",
+      "data_date": "2025-08-18",
+      "found": true,
+      "mentions": null,
+      "sentiment_score": -0.1375
+    },
+    {
+      "observed_at": "2025-08-20T06:00:00+00:00",
+      "data_date": "2025-08-19",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": -0.0793
+    },
+    {
+      "observed_at": "2025-08-21T06:00:00+00:00",
+      "data_date": "2025-08-20",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": -0.0204
+    },
+    {
+      "observed_at": "2025-08-22T06:00:00+00:00",
+      "data_date": "2025-08-21",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": 0.0387
+    },
+    {
+      "observed_at": "2025-08-23T06:00:00+00:00",
+      "data_date": "2025-08-22",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": 0.0974
+    },
+    {
+      "observed_at": "2025-08-26T06:00:00+00:00",
+      "data_date": "2025-08-25",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": 0.1554
+    },
+    {
+      "observed_at": "2025-08-27T06:00:00+00:00",
+      "data_date": "2025-08-26",
+      "found": true,
+      "mentions": 11,
+      "sentiment_score": 0.212
+    },
+    {
+      "observed_at": "2025-08-28T06:00:00+00:00",
+      "data_date": "2025-08-27",
+      "found": false,
+      "mentions": 12,
+      "sentiment_score": 0.2669
+    },
+    {
+      "observed_at": "2025-08-29T06:00:00+00:00",
+      "data_date": "2025-08-28",
+      "found": true,
+      "mentions": 13,
+      "sentiment_score": 0.3196
+    },
+    {
+      "observed_at": "2025-08-30T06:00:00+00:00",
+      "data_date": "2025-08-29",
+      "found": true,
+      "mentions": 14,
+      "sentiment_score": 0.3697
+    },
+    {
+      "observed_at": "2025-09-02T06:00:00+00:00",
+      "data_date": "2025-09-01",
+      "found": true,
+      "mentions": 15,
+      "sentiment_score": null
+    },
+    {
+      "observed_at": "2025-09-03T06:00:00+00:00",
+      "data_date": "2025-09-02",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": 0.4603
+    },
+    {
+      "observed_at": "2025-09-04T06:00:00+00:00",
+      "data_date": "2025-09-03",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": 0.5
+    },
+    {
+      "observed_at": "2025-09-05T06:00:00+00:00",
+      "data_date": "2025-09-04",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": 0.5357
+    },
+    {
+      "observed_at": "2025-09-06T06:00:00+00:00",
+      "data_date": "2025-09-05",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": 0.5669
+    },
+    {
+      "observed_at": "2025-09-09T06:00:00+00:00",
+      "data_date": "2025-09-08",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": 0.5934
+    },
+    {
+      "observed_at": "2025-09-10T06:00:00+00:00",
+      "data_date": "2025-09-09",
+      "found": true,
+      "mentions": 21,
+      "sentiment_score": 0.615
+    },
+    {
+      "observed_at": "2025-09-11T06:00:00+00:00",
+      "data_date": "2025-09-10",
+      "found": true,
+      "mentions": 0,
+      "sentiment_score": 0.6316
+    },
+    {
+      "observed_at": "2025-09-12T06:00:00+00:00",
+      "data_date": "2025-09-11",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": 0.6429
+    },
+    {
+      "observed_at": "2025-09-13T06:00:00+00:00",
+      "data_date": "2025-09-12",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": 0.649
+    },
+    {
+      "observed_at": "2025-09-16T06:00:00+00:00",
+      "data_date": "2025-09-15",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": 0.6496
+    },
+    {
+      "observed_at": "2025-09-17T06:00:00+00:00",
+      "data_date": "2025-09-16",
+      "found": true,
+      "mentions": 26,
+      "sentiment_score": 0.6449
+    },
+    {
+      "observed_at": "2025-09-18T06:00:00+00:00",
+      "data_date": "2025-09-17",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": 0.6349
+    },
+    {
+      "observed_at": "2025-09-19T06:00:00+00:00",
+      "data_date": "2025-09-18",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": 0.6196
+    },
+    {
+      "observed_at": "2025-09-20T06:00:00+00:00",
+      "data_date": "2025-09-19",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": 0.5992
+    },
+    {
+      "observed_at": "2025-09-23T06:00:00+00:00",
+      "data_date": "2025-09-22",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": 0.5739
+    },
+    {
+      "observed_at": "2025-09-24T06:00:00+00:00",
+      "data_date": "2025-09-23",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": 0.5438
+    },
+    {
+      "observed_at": "2025-09-25T06:00:00+00:00",
+      "data_date": "2025-09-24",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": 0.5093
+    },
+    {
+      "observed_at": "2025-09-25T18:00:00+00:00",
+      "data_date": "2025-09-24",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2025-09-26T06:00:00+00:00",
+      "data_date": "2025-09-25",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": 0.4705
+    },
+    {
+      "observed_at": "2025-09-27T06:00:00+00:00",
+      "data_date": "2025-09-26",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": 0.4278
+    },
+    {
+      "observed_at": "2025-09-30T06:00:00+00:00",
+      "data_date": "2025-09-29",
+      "found": true,
+      "mentions": 35,
+      "sentiment_score": 0.3816
+    },
+    {
+      "observed_at": "2025-10-01T06:00:00+00:00",
+      "data_date": "2025-09-30",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": 0.3323
+    },
+    {
+      "observed_at": "2025-10-02T06:00:00+00:00",
+      "data_date": "2025-10-01",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": 0.2802
+    },
+    {
+      "observed_at": "2025-10-03T06:00:00+00:00",
+      "data_date": "2025-10-02",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": 0.2258
+    },
+    {
+      "observed_at": "2025-10-04T06:00:00+00:00",
+      "data_date": "2025-10-03",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": 0.1695
+    },
+    {
+      "observed_at": "2025-10-16T06:00:00+00:00",
+      "data_date": "2025-10-15",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": -0.2905
+    },
+    {
+      "observed_at": "2025-10-17T06:00:00+00:00",
+      "data_date": "2025-10-16",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": -0.3421
+    },
+    {
+      "observed_at": "2025-10-18T06:00:00+00:00",
+      "data_date": "2025-10-17",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": -0.3909
+    },
+    {
+      "observed_at": "2025-10-21T06:00:00+00:00",
+      "data_date": "2025-10-20",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": -0.4364
+    },
+    {
+      "observed_at": "2025-10-22T06:00:00+00:00",
+      "data_date": "2025-10-21",
+      "found": true,
+      "mentions": 21,
+      "sentiment_score": -0.4784
+    },
+    {
+      "observed_at": "2025-10-23T06:00:00+00:00",
+      "data_date": "2025-10-22",
+      "found": true,
+      "mentions": 22,
+      "sentiment_score": -0.5163
+    },
+    {
+      "observed_at": "2025-10-24T06:00:00+00:00",
+      "data_date": "2025-10-23",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": -0.55
+    },
+    {
+      "observed_at": "2025-10-25T06:00:00+00:00",
+      "data_date": "2025-10-24",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": -0.5792
+    },
+    {
+      "observed_at": "2025-10-28T06:00:00+00:00",
+      "data_date": "2025-10-27",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": -0.6036
+    },
+    {
+      "observed_at": "2025-10-29T06:00:00+00:00",
+      "data_date": "2025-10-28",
+      "found": true,
+      "mentions": 26,
+      "sentiment_score": -0.623
+    },
+    {
+      "observed_at": "2025-10-30T06:00:00+00:00",
+      "data_date": "2025-10-29",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": -0.6373
+    },
+    {
+      "observed_at": "2025-10-31T06:00:00+00:00",
+      "data_date": "2025-10-30",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": null
+    },
+    {
+      "observed_at": "2025-11-01T06:00:00+00:00",
+      "data_date": "2025-10-31",
+      "found": true,
+      "mentions": 0,
+      "sentiment_score": -0.6499
+    },
+    {
+      "observed_at": "2025-11-04T06:00:00+00:00",
+      "data_date": "2025-11-03",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": -0.6482
+    },
+    {
+      "observed_at": "2025-11-05T06:00:00+00:00",
+      "data_date": "2025-11-04",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": -0.6411
+    },
+    {
+      "observed_at": "2025-11-05T18:00:00+00:00",
+      "data_date": "2025-11-04",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2025-11-06T06:00:00+00:00",
+      "data_date": "2025-11-05",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": -0.6288
+    },
+    {
+      "observed_at": "2025-11-07T06:00:00+00:00",
+      "data_date": "2025-11-06",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": -0.6112
+    },
+    {
+      "observed_at": "2025-11-08T06:00:00+00:00",
+      "data_date": "2025-11-07",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": -0.5886
+    },
+    {
+      "observed_at": "2025-11-11T06:00:00+00:00",
+      "data_date": "2025-11-10",
+      "found": false,
+      "mentions": 35,
+      "sentiment_score": -0.5612
+    },
+    {
+      "observed_at": "2025-11-12T06:00:00+00:00",
+      "data_date": "2025-11-11",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": -0.5291
+    },
+    {
+      "observed_at": "2025-11-13T06:00:00+00:00",
+      "data_date": "2025-11-12",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": -0.4926
+    },
+    {
+      "observed_at": "2025-11-14T06:00:00+00:00",
+      "data_date": "2025-11-13",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": -0.4521
+    },
+    {
+      "observed_at": "2025-11-15T06:00:00+00:00",
+      "data_date": "2025-11-14",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": -0.4078
+    },
+    {
+      "observed_at": "2025-11-18T06:00:00+00:00",
+      "data_date": "2025-11-17",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": -0.3602
+    },
+    {
+      "observed_at": "2025-11-19T06:00:00+00:00",
+      "data_date": "2025-11-18",
+      "found": true,
+      "mentions": 11,
+      "sentiment_score": -0.3096
+    },
+    {
+      "observed_at": "2025-11-20T06:00:00+00:00",
+      "data_date": "2025-11-19",
+      "found": true,
+      "mentions": 12,
+      "sentiment_score": -0.2564
+    },
+    {
+      "observed_at": "2025-11-21T06:00:00+00:00",
+      "data_date": "2025-11-20",
+      "found": true,
+      "mentions": 13,
+      "sentiment_score": -0.2011
+    },
+    {
+      "observed_at": "2025-11-22T06:00:00+00:00",
+      "data_date": "2025-11-21",
+      "found": true,
+      "mentions": 14,
+      "sentiment_score": -0.1442
+    },
+    {
+      "observed_at": "2025-11-25T06:00:00+00:00",
+      "data_date": "2025-11-24",
+      "found": true,
+      "mentions": 15,
+      "sentiment_score": -0.086
+    },
+    {
+      "observed_at": "2025-11-26T06:00:00+00:00",
+      "data_date": "2025-11-25",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": -0.0272
+    },
+    {
+      "observed_at": "2025-11-27T06:00:00+00:00",
+      "data_date": "2025-11-26",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": 0.0319
+    },
+    {
+      "observed_at": "2025-11-28T06:00:00+00:00",
+      "data_date": "2025-11-27",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": 0.0907
+    },
+    {
+      "observed_at": "2025-11-29T06:00:00+00:00",
+      "data_date": "2025-11-28",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": 0.1488
+    },
+    {
+      "observed_at": "2025-12-02T06:00:00+00:00",
+      "data_date": "2025-12-01",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": 0.2056
+    },
+    {
+      "observed_at": "2025-12-03T06:00:00+00:00",
+      "data_date": "2025-12-02",
+      "found": true,
+      "mentions": 21,
+      "sentiment_score": 0.2607
+    },
+    {
+      "observed_at": "2025-12-04T06:00:00+00:00",
+      "data_date": "2025-12-03",
+      "found": true,
+      "mentions": 22,
+      "sentiment_score": 0.3137
+    },
+    {
+      "observed_at": "2025-12-05T06:00:00+00:00",
+      "data_date": "2025-12-04",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": 0.3641
+    },
+    {
+      "observed_at": "2025-12-06T06:00:00+00:00",
+      "data_date": "2025-12-05",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": 0.4115
+    },
+    {
+      "observed_at": "2025-12-09T06:00:00+00:00",
+      "data_date": "2025-12-08",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": 0.4554
+    },
+    {
+      "observed_at": "2025-12-10T06:00:00+00:00",
+      "data_date": "2025-12-09",
+      "found": true,
+      "mentions": 26,
+      "sentiment_score": 0.4957
+    },
+    {
+      "observed_at": "2025-12-11T06:00:00+00:00",
+      "data_date": "2025-12-10",
+      "found": true,
+      "mentions": null,
+      "sentiment_score": 0.5318
+    },
+    {
+      "observed_at": "2025-12-12T06:00:00+00:00",
+      "data_date": "2025-12-11",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": 0.5635
+    },
+    {
+      "observed_at": "2025-12-13T06:00:00+00:00",
+      "data_date": "2025-12-12",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": 0.5906
+    },
+    {
+      "observed_at": "2025-12-16T06:00:00+00:00",
+      "data_date": "2025-12-15",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": 0.6128
+    },
+    {
+      "observed_at": "2025-12-16T18:00:00+00:00",
+      "data_date": "2025-12-15",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2025-12-17T06:00:00+00:00",
+      "data_date": "2025-12-16",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": 0.63
+    },
+    {
+      "observed_at": "2025-12-18T06:00:00+00:00",
+      "data_date": "2025-12-17",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": 0.6419
+    },
+    {
+      "observed_at": "2025-12-19T06:00:00+00:00",
+      "data_date": "2025-12-18",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": 0.6485
+    },
+    {
+      "observed_at": "2025-12-20T06:00:00+00:00",
+      "data_date": "2025-12-19",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": 0.6498
+    },
+    {
+      "observed_at": "2025-12-23T06:00:00+00:00",
+      "data_date": "2025-12-22",
+      "found": true,
+      "mentions": 35,
+      "sentiment_score": 0.6457
+    },
+    {
+      "observed_at": "2025-12-24T06:00:00+00:00",
+      "data_date": "2025-12-23",
+      "found": true,
+      "mentions": 0,
+      "sentiment_score": 0.6363
+    },
+    {
+      "observed_at": "2025-12-25T06:00:00+00:00",
+      "data_date": "2025-12-24",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": 0.6216
+    },
+    {
+      "observed_at": "2025-12-26T06:00:00+00:00",
+      "data_date": "2025-12-25",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": 0.6018
+    },
+    {
+      "observed_at": "2025-12-27T06:00:00+00:00",
+      "data_date": "2025-12-26",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": 0.5771
+    },
+    {
+      "observed_at": "2025-12-30T06:00:00+00:00",
+      "data_date": "2025-12-29",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": 0.5475
+    },
+    {
+      "observed_at": "2025-12-31T06:00:00+00:00",
+      "data_date": "2025-12-30",
+      "found": true,
+      "mentions": 11,
+      "sentiment_score": null
+    },
+    {
+      "observed_at": "2026-01-01T06:00:00+00:00",
+      "data_date": "2025-12-31",
+      "found": true,
+      "mentions": 12,
+      "sentiment_score": 0.4752
+    },
+    {
+      "observed_at": "2026-01-02T06:00:00+00:00",
+      "data_date": "2026-01-01",
+      "found": true,
+      "mentions": 13,
+      "sentiment_score": 0.4329
+    },
+    {
+      "observed_at": "2026-01-03T06:00:00+00:00",
+      "data_date": "2026-01-02",
+      "found": true,
+      "mentions": 14,
+      "sentiment_score": 0.3871
+    },
+    {
+      "observed_at": "2026-01-06T06:00:00+00:00",
+      "data_date": "2026-01-05",
+      "found": true,
+      "mentions": 15,
+      "sentiment_score": 0.3381
+    },
+    {
+      "observed_at": "2026-01-07T06:00:00+00:00",
+      "data_date": "2026-01-06",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": 0.2863
+    },
+    {
+      "observed_at": "2026-01-08T06:00:00+00:00",
+      "data_date": "2026-01-07",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": 0.2322
+    },
+    {
+      "observed_at": "2026-01-09T06:00:00+00:00",
+      "data_date": "2026-01-08",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": 0.1761
+    },
+    {
+      "observed_at": "2026-01-10T06:00:00+00:00",
+      "data_date": "2026-01-09",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": 0.1186
+    },
+    {
+      "observed_at": "2026-01-13T06:00:00+00:00",
+      "data_date": "2026-01-12",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": 0.06
+    },
+    {
+      "observed_at": "2026-01-14T06:00:00+00:00",
+      "data_date": "2026-01-13",
+      "found": true,
+      "mentions": 21,
+      "sentiment_score": 0.001
+    },
+    {
+      "observed_at": "2026-01-15T06:00:00+00:00",
+      "data_date": "2026-01-14",
+      "found": true,
+      "mentions": 22,
+      "sentiment_score": -0.058
+    },
+    {
+      "observed_at": "2026-01-16T06:00:00+00:00",
+      "data_date": "2026-01-15",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": -0.1165
+    },
+    {
+      "observed_at": "2026-01-17T06:00:00+00:00",
+      "data_date": "2026-01-16",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": -0.1741
+    },
+    {
+      "observed_at": "2026-01-20T06:00:00+00:00",
+      "data_date": "2026-01-19",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": -0.2302
+    },
+    {
+      "observed_at": "2026-01-21T06:00:00+00:00",
+      "data_date": "2026-01-20",
+      "found": true,
+      "mentions": 26,
+      "sentiment_score": -0.2844
+    },
+    {
+      "observed_at": "2026-01-22T06:00:00+00:00",
+      "data_date": "2026-01-21",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": -0.3363
+    },
+    {
+      "observed_at": "2026-01-23T06:00:00+00:00",
+      "data_date": "2026-01-22",
+      "found": false,
+      "mentions": 28,
+      "sentiment_score": -0.3854
+    },
+    {
+      "observed_at": "2026-01-24T06:00:00+00:00",
+      "data_date": "2026-01-23",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": -0.4314
+    },
+    {
+      "observed_at": "2026-01-24T18:00:00+00:00",
+      "data_date": "2026-01-23",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2026-02-05T06:00:00+00:00",
+      "data_date": "2026-02-04",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": -0.6455
+    },
+    {
+      "observed_at": "2026-02-06T06:00:00+00:00",
+      "data_date": "2026-02-05",
+      "found": true,
+      "mentions": null,
+      "sentiment_score": -0.6498
+    },
+    {
+      "observed_at": "2026-02-07T06:00:00+00:00",
+      "data_date": "2026-02-06",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": -0.6487
+    },
+    {
+      "observed_at": "2026-02-10T06:00:00+00:00",
+      "data_date": "2026-02-09",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": -0.6422
+    },
+    {
+      "observed_at": "2026-02-11T06:00:00+00:00",
+      "data_date": "2026-02-10",
+      "found": true,
+      "mentions": 11,
+      "sentiment_score": -0.6305
+    },
+    {
+      "observed_at": "2026-02-12T06:00:00+00:00",
+      "data_date": "2026-02-11",
+      "found": true,
+      "mentions": 12,
+      "sentiment_score": -0.6135
+    },
+    {
+      "observed_at": "2026-02-13T06:00:00+00:00",
+      "data_date": "2026-02-12",
+      "found": true,
+      "mentions": 0,
+      "sentiment_score": -0.5915
+    },
+    {
+      "observed_at": "2026-02-14T06:00:00+00:00",
+      "data_date": "2026-02-13",
+      "found": true,
+      "mentions": 14,
+      "sentiment_score": -0.5646
+    },
+    {
+      "observed_at": "2026-02-17T06:00:00+00:00",
+      "data_date": "2026-02-16",
+      "found": true,
+      "mentions": 15,
+      "sentiment_score": -0.533
+    },
+    {
+      "observed_at": "2026-02-18T06:00:00+00:00",
+      "data_date": "2026-02-17",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": -0.497
+    },
+    {
+      "observed_at": "2026-02-19T06:00:00+00:00",
+      "data_date": "2026-02-18",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": -0.4569
+    },
+    {
+      "observed_at": "2026-02-20T06:00:00+00:00",
+      "data_date": "2026-02-19",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": -0.4131
+    },
+    {
+      "observed_at": "2026-02-21T06:00:00+00:00",
+      "data_date": "2026-02-20",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": -0.3658
+    },
+    {
+      "observed_at": "2026-02-24T06:00:00+00:00",
+      "data_date": "2026-02-23",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": -0.3155
+    },
+    {
+      "observed_at": "2026-02-25T06:00:00+00:00",
+      "data_date": "2026-02-24",
+      "found": true,
+      "mentions": 21,
+      "sentiment_score": -0.2626
+    },
+    {
+      "observed_at": "2026-02-26T06:00:00+00:00",
+      "data_date": "2026-02-25",
+      "found": true,
+      "mentions": 22,
+      "sentiment_score": -0.2076
+    },
+    {
+      "observed_at": "2026-02-27T06:00:00+00:00",
+      "data_date": "2026-02-26",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": -0.1508
+    },
+    {
+      "observed_at": "2026-02-28T06:00:00+00:00",
+      "data_date": "2026-02-27",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": null
+    },
+    {
+      "observed_at": "2026-03-03T06:00:00+00:00",
+      "data_date": "2026-03-02",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": -0.034
+    },
+    {
+      "observed_at": "2026-03-04T06:00:00+00:00",
+      "data_date": "2026-03-03",
+      "found": true,
+      "mentions": 26,
+      "sentiment_score": 0.0251
+    },
+    {
+      "observed_at": "2026-03-05T06:00:00+00:00",
+      "data_date": "2026-03-04",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": 0.084
+    },
+    {
+      "observed_at": "2026-03-06T06:00:00+00:00",
+      "data_date": "2026-03-05",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": 0.1421
+    },
+    {
+      "observed_at": "2026-03-06T18:00:00+00:00",
+      "data_date": "2026-03-05",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2026-03-07T06:00:00+00:00",
+      "data_date": "2026-03-06",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": 0.1991
+    },
+    {
+      "observed_at": "2026-03-10T06:00:00+00:00",
+      "data_date": "2026-03-09",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": 0.2545
+    },
+    {
+      "observed_at": "2026-03-11T06:00:00+00:00",
+      "data_date": "2026-03-10",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": 0.3077
+    },
+    {
+      "observed_at": "2026-03-12T06:00:00+00:00",
+      "data_date": "2026-03-11",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": 0.3584
+    },
+    {
+      "observed_at": "2026-03-13T06:00:00+00:00",
+      "data_date": "2026-03-12",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": 0.4062
+    },
+    {
+      "observed_at": "2026-03-14T06:00:00+00:00",
+      "data_date": "2026-03-13",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": 0.4506
+    },
+    {
+      "observed_at": "2026-03-17T06:00:00+00:00",
+      "data_date": "2026-03-16",
+      "found": true,
+      "mentions": 35,
+      "sentiment_score": 0.4912
+    },
+    {
+      "observed_at": "2026-03-18T06:00:00+00:00",
+      "data_date": "2026-03-17",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": 0.5279
+    },
+    {
+      "observed_at": "2026-03-19T06:00:00+00:00",
+      "data_date": "2026-03-18",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": 0.5601
+    },
+    {
+      "observed_at": "2026-03-20T06:00:00+00:00",
+      "data_date": "2026-03-19",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": 0.5877
+    },
+    {
+      "observed_at": "2026-03-21T06:00:00+00:00",
+      "data_date": "2026-03-20",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": 0.6105
+    },
+    {
+      "observed_at": "2026-03-24T06:00:00+00:00",
+      "data_date": "2026-03-23",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": 0.6282
+    },
+    {
+      "observed_at": "2026-03-25T06:00:00+00:00",
+      "data_date": "2026-03-24",
+      "found": true,
+      "mentions": 11,
+      "sentiment_score": 0.6408
+    },
+    {
+      "observed_at": "2026-03-26T06:00:00+00:00",
+      "data_date": "2026-03-25",
+      "found": true,
+      "mentions": 12,
+      "sentiment_score": 0.648
+    },
+    {
+      "observed_at": "2026-03-27T06:00:00+00:00",
+      "data_date": "2026-03-26",
+      "found": true,
+      "mentions": 13,
+      "sentiment_score": 0.6499
+    },
+    {
+      "observed_at": "2026-03-28T06:00:00+00:00",
+      "data_date": "2026-03-27",
+      "found": true,
+      "mentions": 14,
+      "sentiment_score": 0.6465
+    },
+    {
+      "observed_at": "2026-03-31T06:00:00+00:00",
+      "data_date": "2026-03-30",
+      "found": true,
+      "mentions": 15,
+      "sentiment_score": 0.6377
+    },
+    {
+      "observed_at": "2026-04-01T06:00:00+00:00",
+      "data_date": "2026-03-31",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": 0.6236
+    },
+    {
+      "observed_at": "2026-04-02T06:00:00+00:00",
+      "data_date": "2026-04-01",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": 0.6044
+    },
+    {
+      "observed_at": "2026-04-03T06:00:00+00:00",
+      "data_date": "2026-04-02",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": 0.5802
+    },
+    {
+      "observed_at": "2026-04-04T06:00:00+00:00",
+      "data_date": "2026-04-03",
+      "found": true,
+      "mentions": null,
+      "sentiment_score": 0.5512
+    },
+    {
+      "observed_at": "2026-04-07T06:00:00+00:00",
+      "data_date": "2026-04-06",
+      "found": true,
+      "mentions": 0,
+      "sentiment_score": 0.5176
+    },
+    {
+      "observed_at": "2026-04-08T06:00:00+00:00",
+      "data_date": "2026-04-07",
+      "found": false,
+      "mentions": 21,
+      "sentiment_score": 0.4798
+    },
+    {
+      "observed_at": "2026-04-09T06:00:00+00:00",
+      "data_date": "2026-04-08",
+      "found": true,
+      "mentions": 22,
+      "sentiment_score": 0.438
+    },
+    {
+      "observed_at": "2026-04-10T06:00:00+00:00",
+      "data_date": "2026-04-09",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": 0.3926
+    },
+    {
+      "observed_at": "2026-04-11T06:00:00+00:00",
+      "data_date": "2026-04-10",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": 0.3439
+    },
+    {
+      "observed_at": "2026-04-14T06:00:00+00:00",
+      "data_date": "2026-04-13",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": 0.2924
+    },
+    {
+      "observed_at": "2026-04-15T06:00:00+00:00",
+      "data_date": "2026-04-14",
+      "found": true,
+      "mentions": 26,
+      "sentiment_score": 0.2385
+    },
+    {
+      "observed_at": "2026-04-16T06:00:00+00:00",
+      "data_date": "2026-04-15",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": 0.1826
+    },
+    {
+      "observed_at": "2026-04-16T18:00:00+00:00",
+      "data_date": "2026-04-15",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2026-04-17T06:00:00+00:00",
+      "data_date": "2026-04-16",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": 0.1252
+    },
+    {
+      "observed_at": "2026-04-18T06:00:00+00:00",
+      "data_date": "2026-04-17",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": 0.0668
+    },
+    {
+      "observed_at": "2026-04-21T06:00:00+00:00",
+      "data_date": "2026-04-20",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": 0.0078
+    },
+    {
+      "observed_at": "2026-04-22T06:00:00+00:00",
+      "data_date": "2026-04-21",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": -0.0512
+    },
+    {
+      "observed_at": "2026-04-23T06:00:00+00:00",
+      "data_date": "2026-04-22",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": -0.1098
+    },
+    {
+      "observed_at": "2026-04-24T06:00:00+00:00",
+      "data_date": "2026-04-23",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": -0.1675
+    },
+    {
+      "observed_at": "2026-04-25T06:00:00+00:00",
+      "data_date": "2026-04-24",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": -0.2238
+    },
+    {
+      "observed_at": "2026-04-28T06:00:00+00:00",
+      "data_date": "2026-04-27",
+      "found": true,
+      "mentions": 35,
+      "sentiment_score": -0.2783
+    },
+    {
+      "observed_at": "2026-04-29T06:00:00+00:00",
+      "data_date": "2026-04-28",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": -0.3305
+    },
+    {
+      "observed_at": "2026-04-30T06:00:00+00:00",
+      "data_date": "2026-04-29",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": null
+    },
+    {
+      "observed_at": "2026-05-01T06:00:00+00:00",
+      "data_date": "2026-04-30",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": -0.4263
+    },
+    {
+      "observed_at": "2026-05-02T06:00:00+00:00",
+      "data_date": "2026-05-01",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": -0.469
+    },
+    {
+      "observed_at": "2026-05-05T06:00:00+00:00",
+      "data_date": "2026-05-04",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": -0.508
+    },
+    {
+      "observed_at": "2026-05-06T06:00:00+00:00",
+      "data_date": "2026-05-05",
+      "found": true,
+      "mentions": 11,
+      "sentiment_score": -0.5427
+    },
+    {
+      "observed_at": "2026-05-07T06:00:00+00:00",
+      "data_date": "2026-05-06",
+      "found": true,
+      "mentions": 12,
+      "sentiment_score": -0.5729
+    },
+    {
+      "observed_at": "2026-05-08T06:00:00+00:00",
+      "data_date": "2026-05-07",
+      "found": true,
+      "mentions": 13,
+      "sentiment_score": -0.5984
+    },
+    {
+      "observed_at": "2026-05-09T06:00:00+00:00",
+      "data_date": "2026-05-08",
+      "found": true,
+      "mentions": 14,
+      "sentiment_score": -0.619
+    },
+    {
+      "observed_at": "2026-05-12T06:00:00+00:00",
+      "data_date": "2026-05-11",
+      "found": true,
+      "mentions": 15,
+      "sentiment_score": -0.6344
+    },
+    {
+      "observed_at": "2026-05-13T06:00:00+00:00",
+      "data_date": "2026-05-12",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": -0.6447
+    },
+    {
+      "observed_at": "2026-05-14T06:00:00+00:00",
+      "data_date": "2026-05-13",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": -0.6495
+    },
+    {
+      "observed_at": "2026-05-15T06:00:00+00:00",
+      "data_date": "2026-05-14",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": -0.6491
+    },
+    {
+      "observed_at": "2026-05-16T06:00:00+00:00",
+      "data_date": "2026-05-15",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": -0.6432
+    },
+    {
+      "observed_at": "2026-05-28T06:00:00+00:00",
+      "data_date": "2026-05-27",
+      "found": true,
+      "mentions": 0,
+      "sentiment_score": -0.4183
+    },
+    {
+      "observed_at": "2026-05-29T06:00:00+00:00",
+      "data_date": "2026-05-28",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": -0.3714
+    },
+    {
+      "observed_at": "2026-05-30T06:00:00+00:00",
+      "data_date": "2026-05-29",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": -0.3214
+    },
+    {
+      "observed_at": "2026-06-02T06:00:00+00:00",
+      "data_date": "2026-06-01",
+      "found": true,
+      "mentions": null,
+      "sentiment_score": -0.2688
+    },
+    {
+      "observed_at": "2026-06-03T06:00:00+00:00",
+      "data_date": "2026-06-02",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": -0.214
+    },
+    {
+      "observed_at": "2026-06-04T06:00:00+00:00",
+      "data_date": "2026-06-03",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": -0.1574
+    },
+    {
+      "observed_at": "2026-06-05T06:00:00+00:00",
+      "data_date": "2026-06-04",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": -0.0995
+    },
+    {
+      "observed_at": "2026-06-06T06:00:00+00:00",
+      "data_date": "2026-06-05",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": -0.0408
+    },
+    {
+      "observed_at": "2026-06-09T06:00:00+00:00",
+      "data_date": "2026-06-08",
+      "found": true,
+      "mentions": 35,
+      "sentiment_score": 0.0183
+    },
+    {
+      "observed_at": "2026-06-10T06:00:00+00:00",
+      "data_date": "2026-06-09",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": 0.0772
+    },
+    {
+      "observed_at": "2026-06-11T06:00:00+00:00",
+      "data_date": "2026-06-10",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": 0.1355
+    },
+    {
+      "observed_at": "2026-06-12T06:00:00+00:00",
+      "data_date": "2026-06-11",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": 0.1926
+    },
+    {
+      "observed_at": "2026-06-13T06:00:00+00:00",
+      "data_date": "2026-06-12",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": 0.2482
+    },
+    {
+      "observed_at": "2026-06-16T06:00:00+00:00",
+      "data_date": "2026-06-15",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": 0.3017
+    },
+    {
+      "observed_at": "2026-06-17T06:00:00+00:00",
+      "data_date": "2026-06-16",
+      "found": true,
+      "mentions": 11,
+      "sentiment_score": 0.3527
+    },
+    {
+      "observed_at": "2026-06-18T06:00:00+00:00",
+      "data_date": "2026-06-17",
+      "found": true,
+      "mentions": 12,
+      "sentiment_score": 0.4008
+    },
+    {
+      "observed_at": "2026-06-19T06:00:00+00:00",
+      "data_date": "2026-06-18",
+      "found": true,
+      "mentions": 13,
+      "sentiment_score": 0.4456
+    },
+    {
+      "observed_at": "2026-06-20T06:00:00+00:00",
+      "data_date": "2026-06-19",
+      "found": false,
+      "mentions": 14,
+      "sentiment_score": 0.4868
+    },
+    {
+      "observed_at": "2026-06-23T06:00:00+00:00",
+      "data_date": "2026-06-22",
+      "found": true,
+      "mentions": 15,
+      "sentiment_score": 0.5239
+    },
+    {
+      "observed_at": "2026-06-24T06:00:00+00:00",
+      "data_date": "2026-06-23",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": 0.5566
+    },
+    {
+      "observed_at": "2026-06-25T06:00:00+00:00",
+      "data_date": "2026-06-24",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": 0.5848
+    },
+    {
+      "observed_at": "2026-06-26T06:00:00+00:00",
+      "data_date": "2026-06-25",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": 0.6081
+    },
+    {
+      "observed_at": "2026-06-27T06:00:00+00:00",
+      "data_date": "2026-06-26",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": 0.6265
+    },
+    {
+      "observed_at": "2026-06-30T06:00:00+00:00",
+      "data_date": "2026-06-29",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": null
+    },
+    {
+      "observed_at": "2026-07-01T06:00:00+00:00",
+      "data_date": "2026-06-30",
+      "found": true,
+      "mentions": 21,
+      "sentiment_score": 0.6475
+    },
+    {
+      "observed_at": "2026-07-02T06:00:00+00:00",
+      "data_date": "2026-07-01",
+      "found": true,
+      "mentions": 22,
+      "sentiment_score": 0.65
+    },
+    {
+      "observed_at": "2026-07-03T06:00:00+00:00",
+      "data_date": "2026-07-02",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": 0.6471
+    },
+    {
+      "observed_at": "2026-07-04T06:00:00+00:00",
+      "data_date": "2026-07-03",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": 0.639
+    },
+    {
+      "observed_at": "2026-07-07T06:00:00+00:00",
+      "data_date": "2026-07-06",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": 0.6255
+    },
+    {
+      "observed_at": "2026-07-07T18:00:00+00:00",
+      "data_date": "2026-07-06",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2026-07-08T06:00:00+00:00",
+      "data_date": "2026-07-07",
+      "found": true,
+      "mentions": 26,
+      "sentiment_score": 0.6068
+    },
+    {
+      "observed_at": "2026-07-09T06:00:00+00:00",
+      "data_date": "2026-07-08",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": 0.5832
+    },
+    {
+      "observed_at": "2026-07-10T06:00:00+00:00",
+      "data_date": "2026-07-09",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": 0.5547
+    },
+    {
+      "observed_at": "2026-07-11T06:00:00+00:00",
+      "data_date": "2026-07-10",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": 0.5217
+    },
+    {
+      "observed_at": "2026-07-14T06:00:00+00:00",
+      "data_date": "2026-07-13",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": 0.4843
+    },
+    {
+      "observed_at": "2026-07-15T06:00:00+00:00",
+      "data_date": "2026-07-14",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": 0.443
+    },
+    {
+      "observed_at": "2026-07-16T06:00:00+00:00",
+      "data_date": "2026-07-15",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": 0.398
+    },
+    {
+      "observed_at": "2026-07-17T06:00:00+00:00",
+      "data_date": "2026-07-16",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": 0.3497
+    },
+    {
+      "observed_at": "2026-07-18T06:00:00+00:00",
+      "data_date": "2026-07-17",
+      "found": true,
+      "mentions": 0,
+      "sentiment_score": 0.2985
+    },
+    {
+      "observed_at": "2026-07-21T06:00:00+00:00",
+      "data_date": "2026-07-20",
+      "found": true,
+      "mentions": 35,
+      "sentiment_score": 0.2448
+    },
+    {
+      "observed_at": "2026-07-22T06:00:00+00:00",
+      "data_date": "2026-07-21",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": 0.1891
+    },
+    {
+      "observed_at": "2026-07-23T06:00:00+00:00",
+      "data_date": "2026-07-22",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": 0.1319
+    },
+    {
+      "observed_at": "2026-07-24T06:00:00+00:00",
+      "data_date": "2026-07-23",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": 0.0736
+    },
+    {
+      "observed_at": "2026-07-25T06:00:00+00:00",
+      "data_date": "2026-07-24",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": 0.0146
+    },
+    {
+      "observed_at": "2026-07-28T06:00:00+00:00",
+      "data_date": "2026-07-27",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": -0.0444
+    },
+    {
+      "observed_at": "2026-07-29T06:00:00+00:00",
+      "data_date": "2026-07-28",
+      "found": true,
+      "mentions": null,
+      "sentiment_score": -0.1031
+    },
+    {
+      "observed_at": "2026-07-30T06:00:00+00:00",
+      "data_date": "2026-07-29",
+      "found": true,
+      "mentions": 12,
+      "sentiment_score": -0.1609
+    },
+    {
+      "observed_at": "2026-07-31T06:00:00+00:00",
+      "data_date": "2026-07-30",
+      "found": true,
+      "mentions": 13,
+      "sentiment_score": -0.2174
+    },
+    {
+      "observed_at": "2026-08-01T06:00:00+00:00",
+      "data_date": "2026-07-31",
+      "found": true,
+      "mentions": 14,
+      "sentiment_score": -0.2722
+    },
+    {
+      "observed_at": "2026-08-04T06:00:00+00:00",
+      "data_date": "2026-08-03",
+      "found": true,
+      "mentions": 15,
+      "sentiment_score": -0.3246
+    },
+    {
+      "observed_at": "2026-08-05T06:00:00+00:00",
+      "data_date": "2026-08-04",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": -0.3744
+    },
+    {
+      "observed_at": "2026-08-06T06:00:00+00:00",
+      "data_date": "2026-08-05",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": -0.4211
+    },
+    {
+      "observed_at": "2026-08-07T06:00:00+00:00",
+      "data_date": "2026-08-06",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": -0.4643
+    },
+    {
+      "observed_at": "2026-08-08T06:00:00+00:00",
+      "data_date": "2026-08-07",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": -0.5037
+    },
+    {
+      "observed_at": "2026-08-11T06:00:00+00:00",
+      "data_date": "2026-08-10",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": -0.5389
+    },
+    {
+      "observed_at": "2026-08-12T06:00:00+00:00",
+      "data_date": "2026-08-11",
+      "found": true,
+      "mentions": 21,
+      "sentiment_score": -0.5697
+    },
+    {
+      "observed_at": "2026-08-13T06:00:00+00:00",
+      "data_date": "2026-08-12",
+      "found": true,
+      "mentions": 22,
+      "sentiment_score": -0.5957
+    },
+    {
+      "observed_at": "2026-08-14T06:00:00+00:00",
+      "data_date": "2026-08-13",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": -0.6169
+    },
+    {
+      "observed_at": "2026-08-15T06:00:00+00:00",
+      "data_date": "2026-08-14",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": -0.6329
+    },
+    {
+      "observed_at": "2026-08-15T18:00:00+00:00",
+      "data_date": "2026-08-14",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2026-08-18T06:00:00+00:00",
+      "data_date": "2026-08-17",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": -0.6438
+    },
+    {
+      "observed_at": "2026-08-19T06:00:00+00:00",
+      "data_date": "2026-08-18",
+      "found": true,
+      "mentions": 26,
+      "sentiment_score": -0.6493
+    },
+    {
+      "observed_at": "2026-08-20T06:00:00+00:00",
+      "data_date": "2026-08-19",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": -0.6494
+    },
+    {
+      "observed_at": "2026-08-21T06:00:00+00:00",
+      "data_date": "2026-08-20",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": -0.6442
+    },
+    {
+      "observed_at": "2026-08-22T06:00:00+00:00",
+      "data_date": "2026-08-21",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": -0.6336
+    },
+    {
+      "observed_at": "2026-08-25T06:00:00+00:00",
+      "data_date": "2026-08-24",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": -0.6179
+    },
+    {
+      "observed_at": "2026-08-26T06:00:00+00:00",
+      "data_date": "2026-08-25",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": -0.597
+    },
+    {
+      "observed_at": "2026-08-27T06:00:00+00:00",
+      "data_date": "2026-08-26",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": -0.5712
+    },
+    {
+      "observed_at": "2026-08-28T06:00:00+00:00",
+      "data_date": "2026-08-27",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": null
+    },
+    {
+      "observed_at": "2026-08-29T06:00:00+00:00",
+      "data_date": "2026-08-28",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": -0.5057
+    },
+    {
+      "observed_at": "2026-09-01T06:00:00+00:00",
+      "data_date": "2026-08-31",
+      "found": true,
+      "mentions": 35,
+      "sentiment_score": -0.4665
+    },
+    {
+      "observed_at": "2026-09-02T06:00:00+00:00",
+      "data_date": "2026-09-01",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": -0.4235
+    },
+    {
+      "observed_at": "2026-09-03T06:00:00+00:00",
+      "data_date": "2026-09-02",
+      "found": false,
+      "mentions": 37,
+      "sentiment_score": -0.377
+    },
+    {
+      "observed_at": "2026-09-04T06:00:00+00:00",
+      "data_date": "2026-09-03",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": -0.3273
+    },
+    {
+      "observed_at": "2026-09-05T06:00:00+00:00",
+      "data_date": "2026-09-04",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": -0.275
+    },
+    {
+      "observed_at": "2026-09-17T06:00:00+00:00",
+      "data_date": "2026-09-16",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": 0.1861
+    },
+    {
+      "observed_at": "2026-09-18T06:00:00+00:00",
+      "data_date": "2026-09-17",
+      "found": true,
+      "mentions": 18,
+      "sentiment_score": 0.2419
+    },
+    {
+      "observed_at": "2026-09-19T06:00:00+00:00",
+      "data_date": "2026-09-18",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": 0.2957
+    },
+    {
+      "observed_at": "2026-09-22T06:00:00+00:00",
+      "data_date": "2026-09-21",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": 0.347
+    },
+    {
+      "observed_at": "2026-09-23T06:00:00+00:00",
+      "data_date": "2026-09-22",
+      "found": true,
+      "mentions": 21,
+      "sentiment_score": 0.3955
+    },
+    {
+      "observed_at": "2026-09-24T06:00:00+00:00",
+      "data_date": "2026-09-23",
+      "found": true,
+      "mentions": null,
+      "sentiment_score": 0.4407
+    },
+    {
+      "observed_at": "2026-09-25T06:00:00+00:00",
+      "data_date": "2026-09-24",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": 0.4822
+    },
+    {
+      "observed_at": "2026-09-25T18:00:00+00:00",
+      "data_date": "2026-09-24",
+      "found": true,
+      "mentions": 23,
+      "sentiment_score": -0.4
+    },
+    {
+      "observed_at": "2026-09-26T06:00:00+00:00",
+      "data_date": "2026-09-25",
+      "found": true,
+      "mentions": 24,
+      "sentiment_score": 0.5198
+    },
+    {
+      "observed_at": "2026-09-29T06:00:00+00:00",
+      "data_date": "2026-09-28",
+      "found": true,
+      "mentions": 25,
+      "sentiment_score": 0.5531
+    },
+    {
+      "observed_at": "2026-09-30T06:00:00+00:00",
+      "data_date": "2026-09-29",
+      "found": true,
+      "mentions": 26,
+      "sentiment_score": 0.5818
+    },
+    {
+      "observed_at": "2026-10-01T06:00:00+00:00",
+      "data_date": "2026-09-30",
+      "found": true,
+      "mentions": 27,
+      "sentiment_score": 0.6057
+    },
+    {
+      "observed_at": "2026-10-02T06:00:00+00:00",
+      "data_date": "2026-10-01",
+      "found": true,
+      "mentions": 28,
+      "sentiment_score": 0.6246
+    },
+    {
+      "observed_at": "2026-10-03T06:00:00+00:00",
+      "data_date": "2026-10-02",
+      "found": true,
+      "mentions": 29,
+      "sentiment_score": 0.6384
+    },
+    {
+      "observed_at": "2026-10-06T06:00:00+00:00",
+      "data_date": "2026-10-05",
+      "found": true,
+      "mentions": 30,
+      "sentiment_score": 0.6468
+    },
+    {
+      "observed_at": "2026-10-07T06:00:00+00:00",
+      "data_date": "2026-10-06",
+      "found": true,
+      "mentions": 31,
+      "sentiment_score": 0.65
+    },
+    {
+      "observed_at": "2026-10-08T06:00:00+00:00",
+      "data_date": "2026-10-07",
+      "found": true,
+      "mentions": 32,
+      "sentiment_score": 0.6477
+    },
+    {
+      "observed_at": "2026-10-09T06:00:00+00:00",
+      "data_date": "2026-10-08",
+      "found": true,
+      "mentions": 33,
+      "sentiment_score": 0.6402
+    },
+    {
+      "observed_at": "2026-10-10T06:00:00+00:00",
+      "data_date": "2026-10-09",
+      "found": true,
+      "mentions": 34,
+      "sentiment_score": 0.6273
+    },
+    {
+      "observed_at": "2026-10-13T06:00:00+00:00",
+      "data_date": "2026-10-12",
+      "found": true,
+      "mentions": 35,
+      "sentiment_score": 0.6092
+    },
+    {
+      "observed_at": "2026-10-14T06:00:00+00:00",
+      "data_date": "2026-10-13",
+      "found": true,
+      "mentions": 36,
+      "sentiment_score": 0.5862
+    },
+    {
+      "observed_at": "2026-10-15T06:00:00+00:00",
+      "data_date": "2026-10-14",
+      "found": true,
+      "mentions": 37,
+      "sentiment_score": 0.5582
+    },
+    {
+      "observed_at": "2026-10-16T06:00:00+00:00",
+      "data_date": "2026-10-15",
+      "found": true,
+      "mentions": 38,
+      "sentiment_score": 0.5257
+    },
+    {
+      "observed_at": "2026-10-17T06:00:00+00:00",
+      "data_date": "2026-10-16",
+      "found": true,
+      "mentions": 39,
+      "sentiment_score": 0.4888
+    },
+    {
+      "observed_at": "2026-10-20T06:00:00+00:00",
+      "data_date": "2026-10-19",
+      "found": true,
+      "mentions": 10,
+      "sentiment_score": 0.4479
+    },
+    {
+      "observed_at": "2026-10-21T06:00:00+00:00",
+      "data_date": "2026-10-20",
+      "found": true,
+      "mentions": 11,
+      "sentiment_score": 0.4033
+    },
+    {
+      "observed_at": "2026-10-22T06:00:00+00:00",
+      "data_date": "2026-10-21",
+      "found": true,
+      "mentions": 12,
+      "sentiment_score": 0.3554
+    },
+    {
+      "observed_at": "2026-10-23T06:00:00+00:00",
+      "data_date": "2026-10-22",
+      "found": true,
+      "mentions": 13,
+      "sentiment_score": 0.3045
+    },
+    {
+      "observed_at": "2026-10-24T06:00:00+00:00",
+      "data_date": "2026-10-23",
+      "found": true,
+      "mentions": 14,
+      "sentiment_score": 0.2511
+    },
+    {
+      "observed_at": "2026-10-27T06:00:00+00:00",
+      "data_date": "2026-10-26",
+      "found": true,
+      "mentions": 15,
+      "sentiment_score": 0.1956
+    },
+    {
+      "observed_at": "2026-10-28T06:00:00+00:00",
+      "data_date": "2026-10-27",
+      "found": true,
+      "mentions": 16,
+      "sentiment_score": null
+    },
+    {
+      "observed_at": "2026-10-29T06:00:00+00:00",
+      "data_date": "2026-10-28",
+      "found": true,
+      "mentions": 17,
+      "sentiment_score": 0.0803
+    },
+    {
+      "observed_at": "2026-10-30T06:00:00+00:00",
+      "data_date": "2026-10-29",
+      "found": true,
+      "mentions": 0,
+      "sentiment_score": 0.0214
+    },
+    {
+      "observed_at": "2026-10-31T06:00:00+00:00",
+      "data_date": "2026-10-30",
+      "found": true,
+      "mentions": 19,
+      "sentiment_score": -0.0376
+    },
+    {
+      "observed_at": "2026-11-03T06:00:00+00:00",
+      "data_date": "2026-11-02",
+      "found": true,
+      "mentions": 20,
+      "sentiment_score": -0.0964
+    },
+    {
+      "observed_at": "2026-11-04T06:00:00+00:00",
+      "data_date": "2026-11-03",
+      "found": true,
+      "mentions": 21,
+      "sentiment_score": -0.1543
+    }
+  ]
+}

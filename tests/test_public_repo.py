@@ -72,9 +72,9 @@ def test_strategy_suite_has_expected_strategy_families() -> None:
     order_files = [path for path in files if path.name.startswith("example_orders_")]
     weight_files = [path for path in files if path.name.startswith("example_weights_")]
 
-    assert len(files) == 50
+    assert len(files) == 51
     assert len(order_files) == 20
-    assert len(weight_files) == 25
+    assert len(weight_files) == 26
 
 
 def test_approved_public_execution_components_are_present() -> None:

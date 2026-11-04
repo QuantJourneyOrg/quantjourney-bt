@@ -1,6 +1,18 @@
 # QuantJourney Backtester Changelog
 
-## 0.13.0 - Unreleased
+## 0.13.1 - 2026-11-04
+
+### Added
+- Add the optional `backtester.observations` extension for single-instrument
+  availability alignment and automatic input hashes and decision provenance.
+- Add W26, a short Adanos sentiment strategy with explicit universe, dates and
+  freshness. Its default uses native sample prices and an empty observation
+  archive. Own archives replay offline. The optional Reddit Stocks adapter is
+  adapted from the contribution proposed in [PR #6](https://github.com/QuantJourneyOrg/quantjourney-bt/pull/6).
+- Document explicit sentiment capture and adapters for other observation sources
+  in `_docs/observations.md`.
+
+## 0.13.0 - 2026-11-01
 
 ### Added
 - Read daily USD equity observations from CSV, Parquet or a pandas DataFrame without Cloud credentials.

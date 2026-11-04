@@ -30,3 +30,5 @@ include _docs/local-csv.md
 
 # Repository-only local input examples and downloads.
 prune _local
+
+include _docs/observations.md

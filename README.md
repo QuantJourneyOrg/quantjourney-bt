@@ -327,8 +327,8 @@ use `skills/qj-strategy-reviewer/SKILL.md`; to make sense of the output, use
 
 ## Quick Start
 
-For a full catalog of all 50 example strategies — each with a one-line
-description, a link to its source, and a link to its results page — see
+For a full catalog of all 51 example strategies — each with a one-line
+description, source links and available result links — see
 [strategies/README.md](strategies/README.md) or the summary below.
 
 List available strategies:
@@ -398,11 +398,11 @@ without printing a Python traceback.
 
 ## Strategy Catalog
 
-The repository ships **50 runnable example strategies** — 25 weight-based, 20
-order-based, and 5 walk-forward / optimization. Each has source and results-page
-links in the [full catalog](strategies/README.md); a summary follows.
+The repository ships **51 runnable example strategies** — 26 weight-based, 20
+order-based, and 5 walk-forward / optimization. Source and available result
+links are in the [full catalog](strategies/README.md); a summary follows.
 
-**Weight-based (25)** — target-weight portfolios, market-neutral long/short, and risk overlays:
+**Weight-based (26)** — target-weight portfolios, market-neutral long/short, and risk overlays:
 
 | # | Strategy | Idea | Code | Results |
 |:--|:--|:--|:--|:--|
@@ -431,6 +431,7 @@ links in the [full catalog](strategies/README.md); a summary follows.
 | W23 | FX Time-Series Momentum | Six-month trend across USD-quoted spot pairs; inverse-vol weights | [source](strategies/example_weights_23_fx_time_series_momentum.py) | [view](https://backtester.quantjourney.cloud/strategies/example-weights-23-fx-time-series-momentum) |
 | W24 | FX Cross-Sectional Momentum | Long strongest / short weakest XXX/USD pair; monthly | [source](strategies/example_weights_24_fx_cross_sectional_momentum.py) | [view](https://backtester.quantjourney.cloud/strategies/example-weights-24-fx-cross-sectional-momentum) |
 | W25 | Continuous Futures Trend Proxy | Diversified long/short trend on provider continuous series | [source](strategies/example_weights_25_continuous_futures_trend.py) | [view](https://backtester.quantjourney.cloud/strategies/example-weights-25-continuous-futures-trend) |
+| W26 | Saved Sentiment Replay | Hold after a usable positive observation; shared availability and provenance | [source](strategies/example_weights_26_adanos_observations.py) | Local replay; see [guide](_docs/observations.md) |
 
 W23-W25 are price-return research proxies. They do not apply FX lots or futures
 multipliers to PnL and do not model financing, margin, or controlled futures

@@ -24,9 +24,12 @@ build/
 /plots/
 
 # Local/private planning notes.
+# Editorial drafts stay local; publish them separately after review.
+/_blog/
 /_requests/
 
 # Local data/cache artifacts.
+/research/
 /data/
 /cache/
 /tmp/

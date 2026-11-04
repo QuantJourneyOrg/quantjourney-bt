@@ -177,3 +177,8 @@ sdist strategy.bat
 sdist strategy.py
 sdist strategy.sh
 sdist _docs/local-csv.md
+
+both backtester/observations/__init__.py
+both backtester/observations/adanos.py
+sdist strategies/example_weights_26_adanos_observations.py
+sdist _docs/observations.md

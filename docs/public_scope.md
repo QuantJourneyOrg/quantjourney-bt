@@ -15,8 +15,9 @@ documents what ships here versus what is provided by the hosted platform.
   folds with explicit pre-OOS purging; fail-closed date-bounded refits; grid
   search and Optuna (TPE); deflated Sharpe with effective-trial reporting;
   rolling top-K rank stability and overfit-ratio interpretation.
-- 50 example strategies (25 weights-based, 20 order-based, 5 walk-forward)
-  with a reproducible sample-data mode that requires no account.
+- 51 example strategies (26 weights-based, 20 order-based, 5 walk-forward)
+  with sample modes that require no account. W26 uses an explicitly empty
+  observation archive by default; non-empty replay requires supplied observations.
 - Static report generation: metrics, PNG chart pack, and a static HTML
   dashboard.
 - Validated local daily USD equity CSV input, with an explicit universe option for the daily SMA example.
